@@ -1,7 +1,7 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
 /*
  * Linux implementation of platform interface for Availink demod/tuner drivers
  *
- * SPDX-License-Identifier: GPL-2.0-or-later
  * Copyright (C) 2020 Availink, Inc. (opensource@availink.com)
  *
  */
