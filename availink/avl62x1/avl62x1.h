@@ -16,14 +16,16 @@
 
 #include "avl62x1_lib.h"
 
-#define xstr(a) str(a)
 #define str(a) #a
+#define xstr(a) str(a)
+
+#define AVL62X1_FIRMWARE	"availink/dvb-fe-avl62x1.fw"
 
 //MAJOR.minor.build
 //MAJOR = public API rev
 //minor = SDK API rev (a.k.a. SDK API MAJOR rev)
 //build number = increment on every change to implementation
-#define AVL62X1_VERSION "1." xstr(AVL62X1_API_VER_MAJOR) ".0"
+#define AVL62X1_VERSION "1." xstr(AVL62X1_SDK_VER_MAJOR) ".0"
 
 struct avl62x1_priv
 {

@@ -788,7 +788,7 @@ struct dvb_frontend *avl62x1_attach(struct avl62x1_config *config,
 	dev_info(&priv->i2c->dev, KBUILD_MODNAME ": found AVL62x1 id=0x%x", id);
 
 	fw_status = request_firmware(&priv->fw,
-				     "availink/dvb-fe-avl62x1.fw",
+				     AVL62X1_FIRMWARE,
 				     i2c->dev.parent);
 	if (fw_status != 0)
 	{
@@ -850,3 +850,4 @@ MODULE_DESCRIPTION("Availink AVL62X1 DVB-S/S2/S2X demodulator driver");
 MODULE_AUTHOR("Availink, Inc. (opensource@availink.com)");
 MODULE_LICENSE("GPL");
 MODULE_VERSION(AVL62X1_VERSION);
+MODULE_FIRMWARE(AVL62X1_FIRMWARE);
