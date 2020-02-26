@@ -20,7 +20,7 @@
 #endif
 #include <stddef.h>
 
-typedef uint8_t avl_sem_t;
+typedef struct mutex avl_sem_t;
 /********************************/
 
 

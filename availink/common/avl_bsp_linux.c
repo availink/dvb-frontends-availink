@@ -16,6 +16,7 @@
 #include <linux/bitrev.h>
 #include <linux/i2c.h>
 #include <linux/delay.h>
+#include <linux/mutex.h>
 
 #include "avl_lib.h"
 
@@ -121,16 +122,19 @@ int32_t avl_bsp_dispose(void)
 
 int32_t avl_bsp_init_semaphore(avl_sem_t *sem)
 {
+	mutex_init(sem);
 	return (0);
 }
 
 int32_t avl_bsp_release_semaphore(avl_sem_t *sem)
 {
+	mutex_unlock(sem);
 	return (0);
 }
 
 int32_t avl_bsp_wait_semaphore(avl_sem_t *sem)
 {
+	mutex_lock(sem);
 	return (0);
 }
 
