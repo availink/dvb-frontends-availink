@@ -430,6 +430,8 @@ uint16_t __avl62x1_drive_agc(
 		r |= avl_bms_write32((chip->chip_pub->i2c_addr),
 				     gpio_debug__agc2_sel,
 				     6);
+		
+		chip->chip_priv->agc_driven = 1;
 	}
 	else if (avl62x1_off == state)
 	{
@@ -448,9 +450,12 @@ uint16_t __avl62x1_drive_agc(
 		r |= avl_bms_write32((chip->chip_pub->i2c_addr),
 				     gpio_debug__agc2_sel,
 				     2); //high-Z
+		
+		chip->chip_priv->agc_driven = 0;
 	}
 	else
 	{
+		chip->chip_priv->agc_driven = 0;
 		r |= AVL_EC_GENERAL_FAIL;
 	}
 	return (r);

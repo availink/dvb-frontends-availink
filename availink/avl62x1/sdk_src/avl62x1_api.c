@@ -18,6 +18,8 @@ uint16_t avl62x1_init_chip_object(struct avl62x1_chip *chip)
 
 	r |= avl_bms_initialize(chip->chip_pub->i2c_addr);
 
+	chip->chip_priv->agc_driven = 0;
+
 	return (r);
 }
 
@@ -462,14 +464,12 @@ uint16_t avl62x1_lock_tp(struct avl62x1_carrier_info *carrier_info,
 			 struct avl62x1_chip *chip)
 {
 	uint16_t r = AVL_EC_OK;
-	static uint8_t AGC_enabled = 0;
 
 	r |= __avl62x1_send_cmd(CMD_HALT, chip);
 
-	if (AGC_enabled == 0)
+	if (chip->chip_priv->agc_driven == 0)
 	{
 		r |= __avl62x1_drive_agc(avl62x1_on, chip);
-		AGC_enabled = 1;
 	}
 
 	if (blind_sym_rate)
@@ -1618,7 +1618,10 @@ uint16_t avl62x1_blindscan_start(
 	uint32_t samp_rate_Hz = 0;
 	uint16_t samp_rate_ratio = 0;
 
-	//r |= __avl62x1_send_cmd(CMD_ACQUIRE, chip);
+	if (chip->chip_priv->agc_driven == 0)
+	{
+		r |= __avl62x1_drive_agc(avl62x1_on, chip);
+	}
 
 	r |= avl_bms_read32(chip->chip_pub->i2c_addr,
 			    c_AVL62X1_S2X_sample_rate_Hz_iaddr,
@@ -1722,7 +1725,7 @@ uint16_t avl62x1_blindscan_get_status(
 	info->finished = (func_mode == avl62x1_funcmode_idle) &&
 			 (tmp8 != 255);
 
-	info->num_streams = 0; //DEPRECATED
+	//info->num_streams = 0; //DEPRECATED
 
 	r |= avl_bms_read32(chip->chip_pub->i2c_addr,
 			    s_AVL62X1_S2X_bs_next_start_freq_Hz_iaddr,

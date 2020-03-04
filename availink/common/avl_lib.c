@@ -17,7 +17,7 @@ avl_sem_t avl_bms_sem[AVL_MAX_NUM_DEMODS];
 uint16_t avl_bms_initialize(uint16_t i2c_addr)
 {
 	uint16_t r = AVL_EC_OK;
-	uint8_t demod_id = (i2c_addr >> 8) & AVL_DEMOD_ID_MASK;
+	uint8_t demod_id = (i2c_addr >> AVL_DEMOD_ID_SHIFT) & AVL_DEMOD_ID_MASK;
 	r = avl_bsp_init_semaphore(&(avl_bms_sem[demod_id]));
 	avl_bsp_initialize();
 	return r;
@@ -33,7 +33,8 @@ uint16_t avl_bms_read(uint16_t slave_addr,
 	uint16_t us1 = 0;
 	uint32_t ui2 = 0;
 	uint16_t usSize = 0;
-	uint8_t demod_id = (slave_addr >> 8) & AVL_DEMOD_ID_MASK;
+	uint8_t demod_id = (slave_addr >> AVL_DEMOD_ID_SHIFT) &
+			   AVL_DEMOD_ID_MASK;
 
 	r = avl_bsp_wait_semaphore(&(avl_bms_sem[demod_id]));
 	if (AVL_EC_OK == r)
@@ -115,7 +116,8 @@ uint16_t avl_bms_read_direct(uint16_t slave_addr, uint8_t *buf, uint16_t size)
 	uint16_t ui1 = 0;
 	uint32_t ui2 = 0;
 	uint16_t t_size = 0;
-	uint8_t demod_id = (slave_addr >> 8) & AVL_DEMOD_ID_MASK;
+	uint8_t demod_id = (slave_addr >> AVL_DEMOD_ID_SHIFT) &
+			   AVL_DEMOD_ID_MASK;
 
 	r = avl_bsp_wait_semaphore(&(avl_bms_sem[demod_id]));
 	if (AVL_EC_OK == r)
@@ -146,7 +148,8 @@ uint16_t avl_bms_write_direct(uint16_t slave_addr, uint8_t *buf, uint16_t size)
 	uint32_t ui2 = 0;
 	uint32_t tmp = 0;
 	uint32_t t_size = 0;
-	uint8_t demod_id = (slave_addr >> 8) & AVL_DEMOD_ID_MASK;
+	uint8_t demod_id = (slave_addr >> AVL_DEMOD_ID_SHIFT) &
+			   AVL_DEMOD_ID_MASK;
 
 	r = avl_bsp_wait_semaphore(&(avl_bms_sem[demod_id]));
 	if (AVL_EC_OK == r)
@@ -178,7 +181,8 @@ uint16_t avl_bms_write(uint16_t slave_addr, uint8_t *buf, uint32_t size)
 	uint16_t tmp = 0;
 	uint32_t t_size = 0;
 	uint32_t t_addr = 0;
-	uint8_t demod_id = (slave_addr >> 8) & AVL_DEMOD_ID_MASK;
+	uint8_t demod_id = (slave_addr >> AVL_DEMOD_ID_SHIFT) &
+			   AVL_DEMOD_ID_MASK;
 
 	if (size < 3)
 	{

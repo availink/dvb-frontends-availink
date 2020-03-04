@@ -61,7 +61,11 @@ int32_t avl_bsp_delay(uint32_t delay_ms)
 {
 	//msleep(delay_ms);
 	//https://www.kernel.org/doc/Documentation/timers/timers-howto.txt
-	usleep_range(delay_ms * 1000, delay_ms * 2000);
+	if(delay_ms > 20) {
+		msleep(delay_ms);
+	} else {
+		usleep_range(delay_ms * 1000, delay_ms * 2000);
+	}
 	return (0);
 }
 

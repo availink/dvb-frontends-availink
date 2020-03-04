@@ -648,13 +648,14 @@ struct avl62x1_chip_priv
 	struct avl62x1_error_stats error_stats;
 
 	int32_t carrier_freq_offset_hz;
+	uint8_t agc_driven;
 };
 
 struct avl62x1_chip_pub
 {
 	/*
 	* demod ID and I2C slave address
-	* ((ID & 0x7)<<8) | (slv_addr & 0xFF)
+	* ((ID & AVL_DEMOD_ID_MASK)<<8) | (slv_addr & 0xFF)
 	*/
 	uint16_t i2c_addr;
 
@@ -708,7 +709,7 @@ struct avl62x1_blind_scan_info
 	/* 
 		* DEPRECATED: number of confirmed DVB output streams
 		*/
-	uint8_t num_streams;
+	//uint8_t num_streams;
 
 	/*
 		* Amount to move tuner (relative to its current position)

@@ -25,7 +25,17 @@
 //MAJOR = public API rev
 //minor = SDK API rev (a.k.a. SDK API MAJOR rev)
 //build number = increment on every change to implementation
-#define AVL62X1_VERSION "1." xstr(AVL62X1_SDK_VER_MAJOR) ".0"
+#define AVL62X1_VERSION "2." xstr(AVL62X1_SDK_VER_MAJOR) ".0"
+
+#define AVL62X1_BS_NEW_TUNE		(uint32_t)-1
+#define AVL62X1_BS_MORE_RESULTS		(uint32_t)-2
+
+#define AVL62X1_BS_STREAM_INVALID_SHIFT	30
+#define AVL62X1_BS_IS_T2MI_SHIFT	29
+#define AVL62X1_BS_T2MI_PID_SHIFT	16
+#define AVL62X1_BS_T2MI_PLP_ID_SHIFT	8
+
+#define AVL62X1_BS_CTRL_PROP		isdbt_sb_segment_idx
 
 struct avl62x1_priv
 {
@@ -48,6 +58,18 @@ struct avl62x1_config
 	//uint8_t demod_address; // demodulator i2c address
 
 
+};
+
+struct avl62x1_bs_state {
+	uint8_t bs_mode;
+	uint8_t num_carriers;
+	int8_t cur_carrier;
+	int8_t cur_stream;
+	int8_t cur_plp;
+	struct avl62x1_blind_scan_params params;
+	struct avl62x1_blind_scan_info info;
+	struct avl62x1_carrier_info *carriers;
+	struct avl62x1_stream_info *streams;
 };
 
 extern struct dvb_frontend *avl62x1_attach(struct avl62x1_config *config,
