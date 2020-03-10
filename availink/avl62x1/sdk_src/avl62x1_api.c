@@ -1434,6 +1434,11 @@ uint16_t avl62x1_diseqc_tone_off(struct avl62x1_chip *chip)
 		r |= avl_bms_write32(chip->chip_pub->i2c_addr,
 				     diseqc__diseqc_tx_cntrl,
 				     i1);
+		
+		if(r == AVL_EC_OK)
+		{
+			chip->chip_priv->diseqc_op_status = avl62x1_dos_init;
+		}
 	}
 
 	r |= avl_bsp_release_semaphore(&(chip->chip_priv->diseqc_sem));

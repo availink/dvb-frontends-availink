@@ -82,6 +82,8 @@ static const struct kernel_param_ops bs_min_sr_ops = {
 module_param_cb(bs_min_sr, &bs_min_sr_ops, &bs_min_sr, 0644);
 MODULE_PARM_DESC(bs_min_sr, " minimum symbol rate (Hz) for blindscan mode [1000000:55000000]");
 
+static int diseqc_set_voltage(struct dvb_frontend *fe,
+			      enum fe_sec_voltage voltage);
 
 struct avl_tuner default_avl_tuner = {
     .blindscan_mode = 0,
@@ -138,12 +140,7 @@ static int init_dvbs_s2(struct dvb_frontend *fe)
 		dbg_avl("Diseqc Init failed !\n");
 	}
 
-	r |= (int)avl62x1_set_gpio_dir(avl62x1_gpio_pin_lnb_pwr_en,
-				       avl62x1_gpio_dir_output,
-				       priv->chip);
-	r |= (int)avl62x1_set_gpio_dir(avl62x1_gpio_pin_lnb_pwr_sel,
-				       avl62x1_gpio_dir_output,
-				       priv->chip);
+	diseqc_set_voltage(fe, SEC_VOLTAGE_OFF);
 
 	return r;
 }
@@ -333,26 +330,33 @@ static int diseqc_set_tone(struct dvb_frontend *fe, enum fe_sec_tone_mode tone)
 	struct avl62x1_priv *priv = fe->demodulator_priv;
 	int r = AVL_EC_OK;
 
-	dbg_avl("tone: %d", tone);
+	dbg_avl("tone: %s", tone==SEC_TONE_ON ? "ON" : "OFF");
 	switch (tone)
 	{
 	case SEC_TONE_ON:
 		if (priv->chip->chip_priv->diseqc_op_status !=
 		    avl62x1_dos_continuous)
 		{
-			r = (int)avl62x1_diseqc_tone_off(priv->chip);
+			dbg_avl("call avl62x1_diseqc_tone_on()");
+			r = (int)avl62x1_diseqc_tone_on(priv->chip);
 		}
 		break;
 	case SEC_TONE_OFF:
 		if (priv->chip->chip_priv->diseqc_op_status ==
 		    avl62x1_dos_continuous)
 		{
-			r = (int)avl62x1_diseqc_tone_on(priv->chip);
+			dbg_avl("call avl62x1_diseqc_tone_off()");
+			r = (int)avl62x1_diseqc_tone_off(priv->chip);
 		}
 		break;
 	default:
 		return -EINVAL;
 	}
+
+	if(r != AVL_EC_OK) {
+		dbg_avl("diseqc_set_tone() FAILURE!");
+	}
+
 	return r;
 }
 
@@ -360,7 +364,7 @@ static int diseqc_set_voltage(struct dvb_frontend *fe,
 			      enum fe_sec_voltage voltage)
 {
 	struct avl62x1_priv *priv = fe->demodulator_priv;
-	avl62x1_gpio_pin_value pwr, vol;
+	avl62x1_gpio_pin_value enable, sel;
 	int ret;
 
 	dbg_avl("volt: %d", voltage);
@@ -368,28 +372,35 @@ static int diseqc_set_voltage(struct dvb_frontend *fe,
 	switch (voltage)
 	{
 	case SEC_VOLTAGE_OFF:
-		pwr = avl62x1_gpio_value_logic_0;
-		vol = avl62x1_gpio_value_logic_0;
+		enable = avl62x1_gpio_value_logic_0;
+		sel = avl62x1_gpio_value_logic_0;
 		break;
 	case SEC_VOLTAGE_13:
 		//power on
-		pwr = avl62x1_gpio_value_logic_1;
-		vol = avl62x1_gpio_value_logic_0;
+		enable = avl62x1_gpio_value_logic_1;
+		sel = avl62x1_gpio_value_logic_0;
 		break;
 	case SEC_VOLTAGE_18:
 		//power on
-		pwr = avl62x1_gpio_value_logic_1;
-		vol = avl62x1_gpio_value_high_z;
+		enable = avl62x1_gpio_value_logic_1;
+		sel = avl62x1_gpio_value_high_z;
 		break;
 	default:
 		return -EINVAL;
 	}
+
+	dbg_avl("lnb_pwr_en %d, lnb_pwr_sel %d",enable,sel);
+
 	ret = (int)avl62x1_set_gpio_value(avl62x1_gpio_pin_lnb_pwr_en,
-					  pwr,
+					  enable,
 					  priv->chip);
 	ret |= (int)avl62x1_set_gpio_value(avl62x1_gpio_pin_lnb_pwr_sel,
-					   vol,
+					   sel,
 					   priv->chip);
+
+	if(ret != AVL_EC_OK) {
+		dbg_avl("diseqc_set_voltage() FAILURE!");
+	}
 	return ret;
 }
 
