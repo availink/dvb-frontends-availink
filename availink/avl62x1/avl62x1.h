@@ -25,7 +25,7 @@
 //MAJOR = public API rev
 //minor = SDK API rev (a.k.a. SDK API MAJOR rev)
 //build number = increment on every change to implementation
-#define AVL62X1_VERSION "2." xstr(AVL62X1_SDK_VER_MAJOR) ".0"
+#define AVL62X1_VERSION "2." xstr(AVL62X1_SDK_VER_MAJOR) ".1"
 
 #define AVL62X1_BS_NEW_TUNE		(uint32_t)-1
 #define AVL62X1_BS_MORE_RESULTS		(uint32_t)-2

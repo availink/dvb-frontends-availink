@@ -43,9 +43,14 @@ static int bs_mode_set(const char *val, const struct kernel_param *kp)
 	printk("bs_mode = 0x%x\n",n);
 	return param_set_int(val, kp);
 }
+static int bs_mode_get(char *buffer, const struct kernel_param *kp)
+{
+	sprintf(buffer,"0x%.4x",bs_mode);
+	return strlen(buffer);
+}
 static const struct kernel_param_ops bs_mode_ops = {
 	.set	= bs_mode_set,
-	.get	= param_get_int
+	.get	= bs_mode_get
 };
 module_param_cb(bs_mode, &bs_mode_ops, &bs_mode, 0644);
 MODULE_PARM_DESC(bs_mode, " 16 bit encoding [15:0], one per demod. 1: operate in blindscan mode, 0: normal DVB acquisition mode");
@@ -1113,6 +1118,8 @@ struct dvb_frontend *avl62x1_attach(struct avl62x1_config *config,
 	u32 id;
 	int fw_status;
 	unsigned int fw_maj, fw_min, fw_build;
+
+	printk(KBUILD_MODNAME ": driver version %s\n", AVL62X1_VERSION);
 
 	dbg_avl("enter %s()", __FUNCTION__);
 
