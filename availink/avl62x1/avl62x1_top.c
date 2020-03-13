@@ -188,8 +188,23 @@ static int acquire_dvbs_s2(struct dvb_frontend *fe)
 	carrier_info.carrier_freq_offset_hz = 0;
 	carrier_info.symbol_rate_hz = c->symbol_rate;
 	carrier_info.pl_scrambling = AVL62X1_PL_SCRAM_AUTO;
-	stream_info.stream_type = avl62x1_transport;
-	stream_info.isi = c->stream_id;
+	if ((c->stream_id >> AVL62X1_BS_IS_T2MI_SHIFT) & 0x1)
+	{
+		stream_info.stream_type = avl62x1_t2mi;
+		stream_info.t2mi.pid =
+		    (c->stream_id >> AVL62X1_BS_T2MI_PID_SHIFT) & 0x1FFF;
+		stream_info.t2mi.plp_id =
+		    (c->stream_id >> AVL62X1_BS_T2MI_PLP_ID_SHIFT) & 0xFF;
+		stream_info.t2mi.raw_mode = 0;
+		stream_info.isi = c->stream_id & 0xFF;
+		printk("Acquire T2MI\n");
+	}
+	else
+	{
+		stream_info.stream_type = avl62x1_transport;
+		stream_info.isi = c->stream_id;
+		printk("Acquire TS\n");
+	}
 
 	r = avl62x1_lock_tp(&carrier_info,
 			    &stream_info,
@@ -717,6 +732,10 @@ static int blindscan_get_stream_list(struct dvb_frontend *fe)
 	    AVL_DEMOD_ID_MASK;
 	struct avl62x1_bs_state *state = &(bs_states[demod_id]);
 	uint8_t num_streams;
+	uint8_t t2mi_add_str;
+	uint8_t s,p,s1;
+	struct avl62x1_stream_info *tmp_strs;
+	
 
 	dbg_avl("ENTER");
 
@@ -728,11 +747,90 @@ static int blindscan_get_stream_list(struct dvb_frontend *fe)
 		state->streams = kzalloc(
 			num_streams * sizeof(struct avl62x1_stream_info),
 			GFP_KERNEL);
+		if(!state->streams)
+		{
+			return AVL_EC_MemoryRunout;
+		}
 	}
 
 	state->carriers[state->cur_carrier].num_streams = num_streams;
 
 	r |= avl62x1_get_stream_list(state->streams,num_streams,priv->chip);
+
+	//we're going to expand any non-unary PLP lists into
+	//  additional streams with unary PLP lists.
+	//so first count how many additional streams we need to add
+	t2mi_add_str = 0;
+	for (s = 0; s < num_streams; s++)
+	{
+		printk("ISI %d, Stream type %d\n",
+		       state->streams[s].isi,
+		       state->streams[s].stream_type);
+		if (state->streams[s].stream_type == avl62x1_t2mi)
+		{
+			printk("T2MI PID 0x%x\n",
+			       state->streams[s].t2mi.pid);
+			for (p = 0; p < state->streams[s].t2mi.plp_list.list_size; p++)
+			{
+				printk("PLP %d  ID %d\n",
+				       p,
+				       state->streams[s].t2mi.plp_list.list[p]);
+			}
+			if (state->streams[s].t2mi.plp_list.list_size > 0)
+			{
+				t2mi_add_str +=
+				    (state->streams[s].t2mi.plp_list.list_size - 1);
+			}
+		}
+	}
+	//printk("Adding %d streams for T2MI PLP's\n",t2mi_add_str);
+
+	//realloc with new number of streams
+	tmp_strs = kzalloc(
+	    (num_streams + t2mi_add_str) * sizeof(struct avl62x1_stream_info),
+	    GFP_KERNEL);
+	if(!tmp_strs)
+	{
+		return AVL_EC_MemoryRunout;
+	}
+
+	//copy original stream set to new buffer
+	memcpy(tmp_strs,
+	       state->streams,
+	       num_streams * sizeof(struct avl62x1_stream_info));
+
+	//free original
+	kfree(state->streams);
+
+	state->streams = tmp_strs;
+	
+	//now go back thru streams and expand non-unary PLP lists
+	s1 = num_streams; //first new stream entry
+	for (s = 0; s < num_streams; s++)
+	{
+		if ((state->streams[s].stream_type == avl62x1_t2mi) &&
+		    (state->streams[s].t2mi.plp_list.list_size > 1))
+		{
+			for (p = 1;
+			     p < state->streams[s].t2mi.plp_list.list_size;
+			     p++, s1++)
+			{
+				memcpy(&state->streams[s1],
+				       &state->streams[s],
+				       sizeof(struct avl62x1_stream_info));
+				
+				state->streams[s1].t2mi.plp_list.list_size = 1;
+				state->streams[s1].t2mi.plp_list.list[0] =
+				    state->streams[s].t2mi.plp_list.list[p];
+				// printk("expanded PLP ID %d\n",
+				//        state->streams[s1].t2mi.plp_list.list[0]);
+			}
+		}
+	}
+
+	//update number of streams
+	num_streams += t2mi_add_str;
+	state->carriers[state->cur_carrier].num_streams = num_streams;
 
 	dbg_avl("got %d streams",num_streams);
 	dbg_avl("EXIT");
@@ -755,7 +853,7 @@ static int blindscan_confirm_carrier(struct dvb_frontend *fe)
 	dbg_avl("ENTER");
 	dbg_avl("confirming carrier @ %d kHz...",
 		state->carriers[state->cur_carrier].rf_freq_khz);
-
+	
 	r = avl62x1_blindscan_confirm_carrier(
 	    &state->params,
 	    &state->carriers[state->cur_carrier],
@@ -770,6 +868,7 @@ static int blindscan_confirm_carrier(struct dvb_frontend *fe)
 		    priv->chip);
 		avl_bsp_delay(100);
 		cntr++;
+
 	} while ((status == avl62x1_discovery_running) &&
 		 (cntr < timeout) && (r == AVL_EC_OK));
 
@@ -852,9 +951,11 @@ static int blindscan_get_next_stream(struct dvb_frontend *fe)
 			{
 				c->stream_id |= (1 << AVL62X1_BS_IS_T2MI_SHIFT);
 				c->stream_id |=
-				    (stream->t2mi.pid & 0x1FFF) << AVL62X1_BS_T2MI_PID_SHIFT;
+				    (stream->t2mi.pid & 0x1FFF) <<
+					AVL62X1_BS_T2MI_PID_SHIFT;
 				c->stream_id |=
-				    (stream->t2mi.plp_id & 0xFF) << AVL62X1_BS_T2MI_PLP_ID_SHIFT;
+				    (stream->t2mi.plp_list.list[0] & 0xFF) <<
+					AVL62X1_BS_T2MI_PLP_ID_SHIFT;
 			}
 
 			//mark stream as valid
@@ -932,6 +1033,7 @@ static int blindscan_step(struct dvb_frontend *fe)
 			r = avl62x1_blindscan_get_status(&state->info,
 							 priv->chip);
 			cntr++;
+
 		} while (!state->info.finished &&
 			 (cntr < timeout) && (r == AVL_EC_OK));
 

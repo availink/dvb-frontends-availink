@@ -15,7 +15,7 @@
 
 #define AVL62X1_SDK_VER_MAJOR		2 //Public API rev
 #define AVL62X1_SDK_VER_MINOR		8 //SDK-FW API rev
-#define AVL62X1_SDK_VER_BUILD		0 //internal rev
+#define AVL62X1_SDK_VER_BUILD		1 //internal rev
 
 #define AVL62X1_CHIP_ID			0x62615ca8
 
@@ -512,20 +512,33 @@ struct avl62x1_t2mi_plp_list
 };
 
 /*
-	* N.B. this structure and the API calls that use it
-	* are extremely likely to change in the future
-	*/
+* N.B. this structure and the API calls that use it
+* are extremely likely to change in the future
+*/
 struct avl62x1_t2mi_info
 {
-	uint8_t plp_id; //config: desired PLP
+	//config: ID of PLP to output
+	uint8_t plp_id;
+
 	//uint16_t plp_id_scan_frames;
-	uint8_t raw_mode; //config: Raw T2MI mode
 
-	uint8_t pid_autodiscover; //config
-	uint16_t pid;		  //config: primary T2MI PID candidate, def 0x1000
-	uint16_t pid_1;		  //config: secondary T2MI PID candidate
+	//config: enable T2MI raw mode (outputs T2MI packets directly)
+	uint8_t raw_mode;
 
-	struct avl62x1_t2mi_plp_list plp_list; //status
+	//config: enable automatic detection of PID carrying T2MI
+	uint8_t pid_autodiscover;
+
+	//config: when not autodiscovering, this is the first
+	//  T2MI PID candidate.  Defaults to 0x1000
+	//status: when autodiscovering, this is the detected T2MI PID
+	uint16_t pid;
+
+	//config: when not autodiscovering, this is the second
+	//  T2MI PID candidate
+	uint16_t pid_1;
+
+	//status: list of PLP's found
+	struct avl62x1_t2mi_plp_list plp_list;
 };
 
 struct avl62x1_stream_info

@@ -511,16 +511,16 @@ uint16_t avl62x1_lock_tp(struct avl62x1_carrier_info *carrier_info,
 				    stream_info->t2mi.plp_id);
 		if(stream_info->t2mi.pid != 0) {
 			r |= avl_bms_write16(chip->chip_pub->i2c_addr,
-				     c_AVL62X1_SP_S2X_sp_t2mi_ts_pid_saddr_cur,
+				     c_AVL62X1_SP_S2X_sp_t2mi_ts_pid_cur_saddr,
 				     stream_info->t2mi.pid);
 		} else {
 			r |= avl_bms_write16(chip->chip_pub->i2c_addr,
-				     c_AVL62X1_SP_S2X_sp_t2mi_ts_pid_saddr_cur,
+				     c_AVL62X1_SP_S2X_sp_t2mi_ts_pid_cur_saddr,
 				     0x1000);
 		}
-		r |= avl_bms_write16(chip->chip_pub->i2c_addr,
-				     c_AVL62X1_SP_S2X_sp_t2mi_ts_pid_detect_auto_en,
-				     stream_info->t2mi.pid_autodiscover);
+		r |= avl_bms_write8(chip->chip_pub->i2c_addr,
+				    c_AVL62X1_SP_S2X_sp_t2mi_ts_pid_detect_auto_en_caddr,
+				    stream_info->t2mi.pid_autodiscover);
 		r |= avl_bms_write8(chip->chip_pub->i2c_addr,
 				    c_AVL62X1_SP_S2X_sp_raw_t2mi_mode_caddr,
 				    stream_info->t2mi.raw_mode);
@@ -685,19 +685,17 @@ uint16_t avl62x1_get_stream_list(
 					       AVL62X1_DVB_STREAM_PLP_ID_caddr,
 					   &tmp8);
 			*/
-			streams[stream].t2mi.plp_id = 0;
+			r |= avl62x1_get_t2mi_plp_list(
+			    &streams[stream].t2mi.plp_list,
+			    chip);
+			
 
-			// T2MI PID for every ISI when T2MI Stream
 			r |= avl_bms_read16(chip->chip_pub->i2c_addr,
 					    stream_list_ptr_2 + stream * 4,
 					    &tmp16);
 			streams[stream].t2mi.pid = tmp16;
 		}
-		else
-		{
-			streams[stream].t2mi.plp_id = 0;
-			streams[stream].t2mi.pid = 0;
-		}
+
 		r |= avl_bms_read8(chip->chip_pub->i2c_addr,
 				   stream_list_ptr +
 				       stream * AVL62X1_DVB_STREAM_struct_size +
@@ -732,16 +730,16 @@ uint16_t avl62x1_switch_stream(struct avl62x1_stream_info *stream_info,
 				    stream_info->t2mi.plp_id);
 		if(stream_info->t2mi.pid != 0) {
 			r |= avl_bms_write16(chip->chip_pub->i2c_addr,
-				     c_AVL62X1_SP_S2X_sp_t2mi_ts_pid_saddr_cur,
+				     c_AVL62X1_SP_S2X_sp_t2mi_ts_pid_cur_saddr,
 				     stream_info->t2mi.pid);
 		} else {
 			r |= avl_bms_write16(chip->chip_pub->i2c_addr,
-				     c_AVL62X1_SP_S2X_sp_t2mi_ts_pid_saddr_cur,
+				     c_AVL62X1_SP_S2X_sp_t2mi_ts_pid_cur_saddr,
 				     0x1000);
 		}
-		r |= avl_bms_write16(chip->chip_pub->i2c_addr,
-				     c_AVL62X1_SP_S2X_sp_t2mi_ts_pid_detect_auto_en,
-				     stream_info->t2mi.pid_autodiscover);
+		r |= avl_bms_write8(chip->chip_pub->i2c_addr,
+				    c_AVL62X1_SP_S2X_sp_t2mi_ts_pid_detect_auto_en_caddr,
+				    stream_info->t2mi.pid_autodiscover);
 		r |= avl_bms_write8(chip->chip_pub->i2c_addr,
 				    c_AVL62X1_SP_S2X_sp_raw_t2mi_mode_caddr,
 				    stream_info->t2mi.raw_mode);
@@ -1934,6 +1932,14 @@ uint16_t avl62x1_blindscan_confirm_carrier(
 			    c_AVL62X1_SP_S2X_sp_wanted_stream_id_caddr,
 			    0);
 
+	r |= avl_bms_write8(chip->chip_pub->i2c_addr,
+			    c_AVL62X1_SP_S2X_sp_t2mi_ts_pid_detect_auto_en_caddr,
+			    1);
+
+	r |= avl_bms_write8(chip->chip_pub->i2c_addr,
+			    c_AVL62X1_SP_S2X_sp_raw_t2mi_mode_caddr,
+			    0);
+
 	r |= __avl62x1_send_cmd(CMD_ACQUIRE, chip);
 	return (r);
 }
@@ -2053,8 +2059,8 @@ uint16_t avl62x1_manual_set_t2mi_pid_1(
 	uint16_t r = AVL_EC_OK;
 
 	r |= avl_bms_write16(chip->chip_pub->i2c_addr,
-	c_AVL62X1_SP_S2X_sp_t2mi_ts_pid_saddr_1,
-	pid); //default value 0x40 //Set T2MI ID
+			     c_AVL62X1_SP_S2X_sp_t2mi_ts_pid_1_saddr,
+			     pid); //default value 0x40 //Set T2MI ID
 
 	return (r);
 }
@@ -2067,8 +2073,8 @@ uint16_t avl62x1_get_current_stream_t2mi_pid(
 	uint16_t r = AVL_EC_OK;
 
 	r |= avl_bms_read16(chip->chip_pub->i2c_addr,
-	c_AVL62X1_SP_S2X_sp_t2mi_ts_pid_saddr_cur,
-	pid); //Get current T2MI stream T2MI PID
+			    c_AVL62X1_SP_S2X_sp_t2mi_ts_pid_cur_saddr,
+			    pid); //Get current T2MI stream T2MI PID
 
 	return (r);
 }
@@ -2080,8 +2086,8 @@ uint16_t avl62x1_set_current_stream_t2mi_pid(
 	uint16_t r = AVL_EC_OK;
 
 	r |= avl_bms_write16(chip->chip_pub->i2c_addr,
-	c_AVL62X1_SP_S2X_sp_t2mi_ts_pid_saddr_cur,
-	pid); //Set current T2MI stream T2MI PID
+			     c_AVL62X1_SP_S2X_sp_t2mi_ts_pid_cur_saddr,
+			     pid); //Set current T2MI stream T2MI PID
 
 	return (r);
 }
@@ -2116,7 +2122,7 @@ uint16_t avl62x1_get_t2mi_plp_list(
 	r |= avl62x1_get_stream_type(&StreamType, chip);
 
 	if ((lock_status == avl62x1_status_locked) &&
-	(avl62x1_t2mi == StreamType))
+	    (avl62x1_t2mi == StreamType))
 	{
 		do
 		{

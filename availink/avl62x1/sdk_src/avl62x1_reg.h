@@ -193,11 +193,11 @@
 #define c_AVL62X1_SP_S2X_sp_blind_scan_wait_frames_caddr  (AVL62X1_SP_S2X_config_regs_base + 0x00000011)
 #define c_AVL62X1_SP_S2X_sp_blind_scan_CarrierIndex_caddr (AVL62X1_SP_S2X_config_regs_base + 0x00000012)
 #define c_AVL62X1_SP_S2X_sp_t2mi_config_iaddr             (AVL62X1_SP_S2X_config_regs_base + 0x00000014)
-#define c_AVL62X1_SP_S2X_sp_t2mi_ts_pid_detect_auto_en    (AVL62X1_SP_S2X_config_regs_base + 0x00000014)
+#define c_AVL62X1_SP_S2X_sp_t2mi_ts_pid_detect_auto_en_caddr    (AVL62X1_SP_S2X_config_regs_base + 0x00000014)
 #define c_AVL62X1_SP_S2X_sp_t2mi_mplp_id_scan_time_caddr  (AVL62X1_SP_S2X_config_regs_base + 0x00000015)
 #define c_AVL62X1_SP_S2X_sp_t2mi_ts_pid_saddr             (AVL62X1_SP_S2X_config_regs_base + 0x00000016)
-#define c_AVL62X1_SP_S2X_sp_t2mi_ts_pid_saddr_1           (AVL62X1_SP_S2X_config_regs_base + 0x00000018)
-#define c_AVL62X1_SP_S2X_sp_t2mi_ts_pid_saddr_cur         (AVL62X1_SP_S2X_config_regs_base + 0x0000001a) 
+#define c_AVL62X1_SP_S2X_sp_t2mi_ts_pid_1_saddr           (AVL62X1_SP_S2X_config_regs_base + 0x00000018)
+#define c_AVL62X1_SP_S2X_sp_t2mi_ts_pid_cur_saddr         (AVL62X1_SP_S2X_config_regs_base + 0x0000001a) 
 
 #ifndef AVL62X1_DEMOD_status_regs_base
 #define AVL62X1_DEMOD_status_regs_base (0x000000a4)
