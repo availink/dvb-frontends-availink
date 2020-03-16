@@ -905,7 +905,7 @@ static int blindscan_get_next_stream(struct dvb_frontend *fe)
 
 	//mark stream as invalid in case none of the carriers
 	//  can be confirmed
-	c->stream_id = (1<<AVL62X1_BS_STREAM_INVALID_SHIFT);
+	c->AVL62X1_BS_CTRL_PROP = 0;
 
 	//get next stream
 	//if at end of current stream list, go get another
@@ -963,7 +963,8 @@ static int blindscan_get_next_stream(struct dvb_frontend *fe)
 			}
 
 			//mark stream as valid
-			c->stream_id &= ~(1<<AVL62X1_BS_STREAM_INVALID_SHIFT);
+			c->AVL62X1_BS_CTRL_PROP |=
+			    AVL62X1_BS_CTRL_VALID_STREAM_MASK;
 
 			state->cur_stream++;
 			dbg_avl("next stream %d", state->cur_stream);
@@ -982,14 +983,14 @@ static int blindscan_get_next_stream(struct dvb_frontend *fe)
 	    (state->cur_carrier >= (state->info.num_carriers-1)))
 	{
 		//no more streams. signal back the tuner step
-		c->AVL62X1_BS_CTRL_PROP = state->info.next_freq_step_hz;
+		c->AVL62X1_BS_CTRL_PROP |= state->info.next_freq_step_hz/1000;
 		dbg_avl("no more streams. step tuner by %d",
 			c->AVL62X1_BS_CTRL_PROP);
 	}
 	else
 	{
 		//there are more streams
-		c->AVL62X1_BS_CTRL_PROP = AVL62X1_BS_MORE_RESULTS;
+		c->AVL62X1_BS_CTRL_PROP |= AVL62X1_BS_CTRL_MORE_RESULTS_MASK;
 	}
 
 	dbg_avl("EXIT");
@@ -1014,7 +1015,7 @@ static int blindscan_step(struct dvb_frontend *fe)
 
 	dbg_avl("BS CTRL %d",c->AVL62X1_BS_CTRL_PROP);
 	
-	if(c->AVL62X1_BS_CTRL_PROP == AVL62X1_BS_NEW_TUNE) {
+	if(c->AVL62X1_BS_CTRL_PROP & AVL62X1_BS_CTRL_NEW_TUNE_MASK) {
 		//allow tuner time to settle
 		avl_bsp_delay(250);
 
@@ -1073,8 +1074,6 @@ static int blindscan_step(struct dvb_frontend *fe)
 			r = blindscan_get_next_stream(fe);
 		} else {
 			//no carriers detected
-			//mark stream as invalid
-			c->stream_id = (1<<AVL62X1_BS_STREAM_INVALID_SHIFT);
 			//signal back the tuner step
 			c->AVL62X1_BS_CTRL_PROP = state->info.next_freq_step_hz;
 		}
@@ -1102,7 +1101,7 @@ static int set_frontend(struct dvb_frontend *fe)
 	/* tune tuner if necessary*/
 	if (fe->ops.tuner_ops.set_params &&
 	    ((bs_states[demod_id].bs_mode &&
-	      c->AVL62X1_BS_CTRL_PROP == AVL62X1_BS_NEW_TUNE) ||
+	      (c->AVL62X1_BS_CTRL_PROP & AVL62X1_BS_CTRL_NEW_TUNE_MASK)) ||
 	     !bs_states[demod_id].bs_mode))
 	{
 		if (fe->ops.i2c_gate_ctrl)

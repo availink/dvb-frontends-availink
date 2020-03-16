@@ -25,17 +25,20 @@
 //MAJOR = public API rev
 //minor = SDK API rev (a.k.a. SDK API MAJOR rev)
 //build number = increment on every change to implementation
-#define AVL62X1_VERSION "2." xstr(AVL62X1_SDK_VER_MAJOR) ".2"
+#define AVL62X1_VERSION "2." xstr(AVL62X1_SDK_VER_MAJOR) ".3"
 
-#define AVL62X1_BS_NEW_TUNE		(uint32_t)-1
-#define AVL62X1_BS_MORE_RESULTS		(uint32_t)-2
+#define AVL62X1_BS_CTRL_PROP			isdbt_sb_segment_idx
+//isdbt_sb_segment_idx fields
+#define AVL62X1_BS_CTRL_VALID_STREAM_MASK	(0x80000000)
+#define AVL62X1_BS_CTRL_NEW_TUNE_MASK		(0x40000000)
+#define AVL62X1_BS_CTRL_MORE_RESULTS_MASK	(0x20000000)
 
-#define AVL62X1_BS_STREAM_INVALID_SHIFT	30
+//stream_id fields
 #define AVL62X1_BS_IS_T2MI_SHIFT	29
 #define AVL62X1_BS_T2MI_PID_SHIFT	16
 #define AVL62X1_BS_T2MI_PLP_ID_SHIFT	8
 
-#define AVL62X1_BS_CTRL_PROP		isdbt_sb_segment_idx
+
 
 struct avl62x1_priv
 {
