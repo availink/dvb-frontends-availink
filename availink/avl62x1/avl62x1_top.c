@@ -741,16 +741,14 @@ static int blindscan_get_stream_list(struct dvb_frontend *fe)
 
 	r = avl62x1_get_num_streams(&num_streams, priv->chip);
 	
-	if(state->carriers[state->cur_carrier].num_streams < num_streams) {
-		if(state->streams != NULL)
-			kfree(state->streams);
-		state->streams = kzalloc(
-			num_streams * sizeof(struct avl62x1_stream_info),
-			GFP_KERNEL);
-		if(!state->streams)
-		{
-			return AVL_EC_MemoryRunout;
-		}
+	if(state->streams != NULL)
+		kfree(state->streams);
+	state->streams = kzalloc(
+		num_streams * sizeof(struct avl62x1_stream_info),
+		GFP_KERNEL);
+	if(!state->streams)
+	{
+		return AVL_EC_MemoryRunout;
 	}
 
 	state->carriers[state->cur_carrier].num_streams = num_streams;
@@ -783,7 +781,7 @@ static int blindscan_get_stream_list(struct dvb_frontend *fe)
 			}
 		}
 	}
-	//printk("Adding %d streams for T2MI PLP's\n",t2mi_add_str);
+	dbg_avl("Adding %d streams for T2MI PLP's",t2mi_add_str);
 
 	//realloc with new number of streams
 	tmp_strs = kzalloc(
@@ -818,12 +816,12 @@ static int blindscan_get_stream_list(struct dvb_frontend *fe)
 				memcpy(&state->streams[s1],
 				       &state->streams[s],
 				       sizeof(struct avl62x1_stream_info));
-				
+
 				state->streams[s1].t2mi.plp_list.list_size = 1;
 				state->streams[s1].t2mi.plp_list.list[0] =
 				    state->streams[s].t2mi.plp_list.list[p];
-				// printk("expanded PLP ID %d\n",
-				//        state->streams[s1].t2mi.plp_list.list[0]);
+				dbg_avl("expanded PLP ID %d",
+					state->streams[s1].t2mi.plp_list.list[0]);
 			}
 		}
 	}
@@ -848,7 +846,8 @@ static int blindscan_confirm_carrier(struct dvb_frontend *fe)
 	struct avl62x1_bs_state *state = &(bs_states[demod_id]);
 	uint16_t cntr;
 	enum avl62x1_discovery_status status;
-	const uint16_t timeout = 10;
+	const uint16_t timeout = 20;
+	const uint32_t delay = 100;
 
 	dbg_avl("ENTER");
 	dbg_avl("confirming carrier @ %d kHz...",
@@ -863,10 +862,11 @@ static int blindscan_confirm_carrier(struct dvb_frontend *fe)
 	cntr = 0;
 	do
 	{
+		dbg_avl("CC %dms",cntr*delay);
 		r |= avl62x1_get_discovery_status(
 		    &status,
 		    priv->chip);
-		avl_bsp_delay(100);
+		avl_bsp_delay(delay);
 		cntr++;
 
 	} while ((status == avl62x1_discovery_running) &&
@@ -912,6 +912,7 @@ static int blindscan_get_next_stream(struct dvb_frontend *fe)
 	//  from the next carrier, if there is one.
 	while (state->cur_carrier < state->info.num_carriers)
 	{
+		dbg_avl("cur_carrier %d",state->cur_carrier);
 		carrier = &state->carriers[state->cur_carrier];
 		stream = NULL;
 
@@ -931,6 +932,9 @@ static int blindscan_get_next_stream(struct dvb_frontend *fe)
 				//go to next carrier
 				state->cur_stream = 0;
 				carrier->num_streams = 0;
+				dbg_avl("carrier not confirmed");
+				state->cur_carrier++;
+				dbg_avl("next carrier %d", state->cur_carrier);
 				continue;
 			}
 		}
@@ -940,7 +944,7 @@ static int blindscan_get_next_stream(struct dvb_frontend *fe)
 		while ((state->cur_stream < carrier->num_streams) &&
 		       (stream == NULL))
 		{
-
+			dbg_avl("cur_stream %d",state->cur_stream);
 			stream = &state->streams[state->cur_stream];
 
 			//put current stream info into DVB props
@@ -1003,7 +1007,8 @@ static int blindscan_step(struct dvb_frontend *fe)
 	    AVL_DEMOD_ID_MASK;
 	struct avl62x1_bs_state *state = &(bs_states[demod_id]);
 	uint16_t cntr;
-	const uint16_t timeout = 300;
+	const uint16_t timeout = 30;
+	const uint32_t delay = 100;
 
 	dbg_avl("ENTER");
 
@@ -1029,9 +1034,10 @@ static int blindscan_step(struct dvb_frontend *fe)
 		cntr = 0;
 		do
 		{
-			avl_bsp_delay(50);
+			avl_bsp_delay(delay);
 			r = avl62x1_blindscan_get_status(&state->info,
 							 priv->chip);
+			dbg_avl("CS %dms",cntr*delay);
 			cntr++;
 
 		} while (!state->info.finished &&
@@ -1064,7 +1070,6 @@ static int blindscan_step(struct dvb_frontend *fe)
 			
 			state->cur_carrier = 0;
 			state->cur_stream = 0;
-			state->cur_plp = 0;
 			r = blindscan_get_next_stream(fe);
 		} else {
 			//no carriers detected
@@ -1361,7 +1366,6 @@ static int __init mod_init(void) {
 		bs_states[i].num_carriers = 0;
 		bs_states[i].cur_carrier = 0;
 		bs_states[i].cur_stream = 0;
-		bs_states[i].cur_plp = 0;
 		bs_states[i].carriers = NULL;
 		bs_states[i].streams = NULL;
 	}

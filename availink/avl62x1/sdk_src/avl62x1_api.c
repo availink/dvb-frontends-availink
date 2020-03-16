@@ -1766,6 +1766,7 @@ uint16_t avl62x1_blindscan_get_carrier_list(
 	for (carrier = 0; carrier < info->num_carriers; carrier++)
 	{
 		//TODO: this could be optimized to a single I2C burst read
+		carriers[carrier].pl_scrambling = AVL62X1_PL_SCRAM_AUTO;
 		carriers[carrier].carrier_idx = carrier;
 		carriers[carrier].roll_off = avl62x1_rolloff_unknown;
 
@@ -1774,10 +1775,11 @@ uint16_t avl62x1_blindscan_get_carrier_list(
 					carrier * AVL62X1_SAT_CARRIER_struct_size +
 					AVL62X1_SAT_CARRIER_CarrierFreqHz_iaddr,
 				    &tmp32);
+
 		carriers[carrier].carrier_freq_offset_hz = 0;
 		carriers[carrier].rf_freq_khz =
-		    params->tuner_center_freq_100khz * 100 +
-		    (tmp32 + 500) / 1000;
+		    ((int32_t)params->tuner_center_freq_100khz * 100) +
+		    (((int32_t)tmp32 + 500) / 1000);
 
 		r |= avl_bms_read32(chip->chip_pub->i2c_addr,
 				    carrier_list_ptr +

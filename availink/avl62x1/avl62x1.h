@@ -25,7 +25,7 @@
 //MAJOR = public API rev
 //minor = SDK API rev (a.k.a. SDK API MAJOR rev)
 //build number = increment on every change to implementation
-#define AVL62X1_VERSION "2." xstr(AVL62X1_SDK_VER_MAJOR) ".1"
+#define AVL62X1_VERSION "2." xstr(AVL62X1_SDK_VER_MAJOR) ".2"
 
 #define AVL62X1_BS_NEW_TUNE		(uint32_t)-1
 #define AVL62X1_BS_MORE_RESULTS		(uint32_t)-2
@@ -65,7 +65,6 @@ struct avl62x1_bs_state {
 	uint8_t num_carriers;
 	int8_t cur_carrier;
 	int8_t cur_stream;
-	int8_t cur_plp;
 	struct avl62x1_blind_scan_params params;
 	struct avl62x1_blind_scan_info info;
 	struct avl62x1_carrier_info *carriers;
