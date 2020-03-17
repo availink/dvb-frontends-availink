@@ -187,7 +187,6 @@ static int acquire_dvbs_s2(struct dvb_frontend *fe)
 	carrier_info.rf_freq_khz = c->frequency;
 	carrier_info.carrier_freq_offset_hz = 0;
 	carrier_info.symbol_rate_hz = c->symbol_rate;
-	carrier_info.pl_scrambling = AVL62X1_PL_SCRAM_AUTO;
 	if ((c->stream_id >> AVL62X1_BS_IS_T2MI_SHIFT) & 0x1)
 	{
 		stream_info.stream_type = avl62x1_t2mi;
@@ -197,12 +196,29 @@ static int acquire_dvbs_s2(struct dvb_frontend *fe)
 		    (c->stream_id >> AVL62X1_BS_T2MI_PLP_ID_SHIFT) & 0xFF;
 		stream_info.t2mi.raw_mode = 0;
 		stream_info.isi = c->stream_id & 0xFF;
+
+		carrier_info.pl_scrambling = AVL62X1_PL_SCRAM_AUTO;
 		printk("Acquire T2MI\n");
 	}
 	else
 	{
 		stream_info.stream_type = avl62x1_transport;
-		stream_info.isi = c->stream_id;
+		stream_info.isi = c->stream_id & 0xFF;
+#if DVB_VER_ATLEAST(5, 11)
+		//use scrambling_sequence_index if it's not the default n=0 val
+		if (c->scrambling_sequence_index)
+		{
+			carrier_info.pl_scrambling =
+			    c->scrambling_sequence_index;
+		}
+		else
+		{
+			carrier_info.pl_scrambling = AVL62X1_PL_SCRAM_AUTO;
+		}
+
+#else
+		carrier_info.pl_scrambling = AVL62X1_PL_SCRAM_AUTO;
+#endif
 		printk("Acquire TS\n");
 	}
 

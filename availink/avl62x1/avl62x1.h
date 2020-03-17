@@ -12,6 +12,7 @@
 
 #include <linux/firmware.h>
 #include <linux/dvb/frontend.h>
+#include <linux/dvb/version.h>
 #include <media/dvb_frontend.h>
 
 #include "avl62x1_lib.h"
@@ -19,13 +20,17 @@
 #define str(a) #a
 #define xstr(a) str(a)
 
+#define DVB_VER_INT(maj,min) (((maj) << 16) + (min))
+#define DVB_VER_ATLEAST(maj, min) \
+ (DVB_VER_INT(DVB_API_VERSION,  DVB_API_VERSION_MINOR) >= DVB_VER_INT(maj, min))
+
 #define AVL62X1_FIRMWARE	"availink/dvb-fe-avl62x1.fw"
 
 //MAJOR.minor.build
 //MAJOR = public API rev
 //minor = SDK API rev (a.k.a. SDK API MAJOR rev)
 //build number = increment on every change to implementation
-#define AVL62X1_VERSION "2." xstr(AVL62X1_SDK_VER_MAJOR) ".3"
+#define AVL62X1_VERSION "2." xstr(AVL62X1_SDK_VER_MAJOR) ".4"
 
 #define AVL62X1_BS_CTRL_PROP			isdbt_sb_segment_idx
 //isdbt_sb_segment_idx fields

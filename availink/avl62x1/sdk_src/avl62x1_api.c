@@ -675,33 +675,27 @@ uint16_t avl62x1_get_stream_list(
 				   &tmp8);
 		streams[stream].stream_type = (avl62x1_dvb_stream_type)tmp8;
 
-		if (streams[stream].stream_type == avl62x1_t2mi)
-		{
-			/*
-			 * FIXME: get PLP ID list out after blindscan
-			r |= avl_bms_read8(chip->chip_pub->i2c_addr,
-					   stream_list_ptr +
-					       stream * AVL62X1_DVB_STREAM_struct_size +
-					       AVL62X1_DVB_STREAM_PLP_ID_caddr,
-					   &tmp8);
-			*/
-			r |= avl62x1_get_t2mi_plp_list(
-			    &streams[stream].t2mi.plp_list,
-			    chip);
-			
-
-			r |= avl_bms_read16(chip->chip_pub->i2c_addr,
-					    stream_list_ptr_2 + stream * 4,
-					    &tmp16);
-			streams[stream].t2mi.pid = tmp16;
-		}
-
 		r |= avl_bms_read8(chip->chip_pub->i2c_addr,
 				   stream_list_ptr +
 				       stream * AVL62X1_DVB_STREAM_struct_size +
 				       AVL62X1_DVB_STREAM_ISI_caddr,
 				   &tmp8);
 		streams[stream].isi = tmp8;
+
+		if (streams[stream].stream_type == avl62x1_t2mi)
+		{
+			r |= avl_bms_read16(chip->chip_pub->i2c_addr,
+					    stream_list_ptr_2 + stream * 4,
+					    &tmp16);
+			streams[stream].t2mi.pid = tmp16;
+
+			r |= avl62x1_switch_stream(&streams[stream],chip);
+			avl_bsp_delay(500);
+			r |= avl62x1_get_t2mi_plp_list(
+			    &streams[stream].t2mi.plp_list,
+			    chip);
+		}
+
 	}
 
 	return (r);
