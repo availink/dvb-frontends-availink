@@ -217,7 +217,7 @@ avl_error_code_t ErrorStatMode_Demod(AVL_ErrorStatConfig stErrorStatConfig,AVL_C
     r |= avl_bms_write32(chip->usI2CAddr,
         stBaseAddrSet.hw_esm_base + tick_type_offset,(uint32_t)stErrorStatConfig.eAutoErrorStatType);
 
-    Multiply32_Demod(&time_tick_num, chip->uiTSFrequencyHz/1000, stErrorStatConfig.uiTimeThresholdMs);
+    avl_mult_32to64(&time_tick_num, chip->uiTSFrequencyHz/1000, stErrorStatConfig.uiTimeThresholdMs);
     r |= avl_bms_write32(chip->usI2CAddr,
         stBaseAddrSet.hw_esm_base + time_tick_low_offset,time_tick_num.low_word);
     r |= avl_bms_write32(chip->usI2CAddr,
@@ -622,7 +622,7 @@ avl_error_code_t IBase_SendRxOPWait_Demod(uint8_t ucOpCmd, AVL_ChipInternal *chi
     {
         pucBuff[0] = 0;
         pucBuff[1] = ucOpCmd;
-        uiTemp = DeChunk16_Demod(pucBuff);
+        uiTemp = avl_bytes_to_short(pucBuff);
         r |= avl_bms_write16(chip->usI2CAddr,  
             stBaseAddrSet.fw_config_reg_base + rc_fw_command_saddr_offset, uiTemp);
     }
@@ -1170,8 +1170,8 @@ avl_error_code_t GetBER_Demod(uint32_t *puiBERxe9, AVL_BER_Type eBERType, AVL_Ch
     chip->stAVLErrorStat.stBitErrors.low_word = chip->stAVLErrorStat.stSwCntBitErrors.low_word;
     avl_add_32to64(&chip->stAVLErrorStat.stBitErrors, uiHwCntBitErrors);
 
-    Multiply32_Demod(&uiTemp64, chip->stAVLErrorStat.stBitErrors.low_word, AVL_CONSTANT_10_TO_THE_9TH);
-    chip->stAVLErrorStat.uiBER = Divide64_Demod(chip->stAVLErrorStat.stNumBits, uiTemp64);
+    avl_mult_32to64(&uiTemp64, chip->stAVLErrorStat.stBitErrors.low_word, AVL_CONSTANT_10_TO_THE_9TH);
+    chip->stAVLErrorStat.uiBER = avl_divide_64(chip->stAVLErrorStat.stNumBits, uiTemp64);
 
     //keep the BER user wanted
     *puiBERxe9 = chip->stAVLErrorStat.uiBER;
@@ -1179,178 +1179,11 @@ avl_error_code_t GetBER_Demod(uint32_t *puiBERxe9, AVL_BER_Type eBERType, AVL_Ch
     return r;
 }
 
-void ChunkAddr_Demod(uint32_t uiaddr, uint8_t * pBuff)
-{
-    pBuff[0] =(uint8_t)(uiaddr>>16);
-    pBuff[1] =(uint8_t)(uiaddr>>8);
-    pBuff[2] =(uint8_t)(uiaddr);
-
-    return;
-}
-
-void Chunk16_Demod(uint16_t uidata, uint8_t * pBuff)
-{
-    pBuff[0] = (uint8_t)(uidata>>8);
-    pBuff[1] = (uint8_t)(uidata & 0xff);
-    return;
-}
-
-uint16_t DeChunk16_Demod(const uint8_t * pBuff)
-{
-    uint16_t uiData = 0;
-    uiData = pBuff[0];
-    uiData = (uint16_t)(uiData << 8) + pBuff[1];
-
-    return uiData;
-}
-
-void Chunk32_Demod(uint32_t uidata, uint8_t * pBuff)
-{
-    pBuff[0] = (uint8_t)(uidata>>24);
-    pBuff[1] = (uint8_t)(uidata>>16);
-    pBuff[2] = (uint8_t)(uidata>>8);
-    pBuff[3] = (uint8_t)(uidata);
-
-    return;
-}
-
-uint32_t DeChunk32_Demod(const uint8_t * pBuff)
-{
-    uint32_t uiData = 0;
-    uiData = pBuff[0];
-    uiData = (uiData << 8) + pBuff[1];
-    uiData = (uiData << 8) + pBuff[2];
-    uiData = (uiData << 8) + pBuff[3];
-
-    return uiData;
-}
-
-void Multiply32_Demod(struct avl_uint64 *pDst, uint32_t m1, uint32_t m2)
-{
-    pDst->low_word = (m1 & 0xFFFF) * (m2 & 0xFFFF);
-    pDst->high_word = 0;
-
-    AddScaled32To64_Demod(pDst, (m1 >> 16) * (m2 & 0xFFFF));
-    AddScaled32To64_Demod(pDst, (m2 >> 16) * (m1 & 0xFFFF));
-
-    pDst->high_word += (m1 >> 16) * (m2 >> 16);
-}
-
-void AddScaled32To64_Demod(struct avl_uint64 *pDst, uint32_t a)
-{
-    uint32_t saved = 0;
-
-    saved = pDst->low_word;
-    pDst->low_word += (a << 16);
-
-    pDst->low_word &= 0xFFFFFFFF;
-    pDst->high_word += ((pDst->low_word < saved) ? 1 : 0) + (a >> 16);
-}
 
 
-uint32_t Divide64_Demod(struct avl_uint64 divisor, struct avl_uint64 dividend)
-{
-    uint32_t uFlag = 0x0;
-    uint32_t uQuto = 0x0;
-    uint32_t i = 0;
-    uint32_t dividend_H = dividend.high_word;
-    uint32_t dividend_L = dividend.low_word;
-    uint32_t divisor_H = divisor.high_word; 
-    uint32_t divisor_L = divisor.low_word; 
 
-    if(((divisor_H == 0x0) && (divisor_L == 0x0)) || (dividend_H/divisor_L))
-    {   
-        return 0;
-    }
-    else if((divisor_H == 0x0)&&(dividend_H == 0x0))
-    {
-        return  dividend_L / divisor_L;
-    } 
-    else 
-    {  
-        if(divisor_H != 0)
-        {
-            while(divisor_H)
-            {
-                dividend_L /= 2;
-                if(dividend_H % 2)
-                {    
-                    dividend_L += 0x80000000;
-                }
-                dividend_H /= 2;
 
-                divisor_L /= 2;
-                if(divisor_H %2)
-                {    
-                    divisor_L += 0x80000000;
-                }
-                divisor_H /= 2;
-            }
-        }   
-        for   (i = 0; i <= 31; i++) 
-        { 
 
-            uFlag = (int32_t)dividend_H >> 31;
-
-            dividend_H = (dividend_H << 1)|(dividend_L >> 31);
-            dividend_L <<= 1; 
-
-            uQuto <<= 1;
-            if((dividend_H|uFlag) >= divisor_L)
-            { 
-                dividend_H -= divisor_L;   
-                uQuto++;   
-            }   
-        } 
-        return uQuto;
-    } 
-}
-
-uint32_t GreaterThanOrEqual64_Demod(struct avl_uint64 a, struct avl_uint64 b)
-{
-    uint32_t result =0;
-
-    if((a.high_word == b.high_word) && (a.low_word == b.low_word))
-    {
-        result = 1;
-    }
-    if(a.high_word > b.high_word)
-    {
-        result = 1;
-    }
-    else if(a.high_word == b.high_word)
-    {
-        if(a.low_word > b.low_word)
-        {
-            result = 1;
-        }
-    }
-
-    return result;
-}
-
-void Subtract64_Demod(struct avl_uint64 *pA, struct avl_uint64 b)
-{
-    struct avl_uint64 a = {0,0};
-    struct avl_uint64 temp = {0,0};
-
-    a.high_word = pA->high_word;
-    a.low_word = pA->low_word;
-
-    temp.high_word = a.high_word - b.high_word;
-    if(a.low_word >= b.low_word)
-    {
-        temp.low_word = a.low_word - b.low_word;
-    }
-    else
-    {
-        temp.low_word = b.low_word - a.low_word;
-        temp.high_word >>= 1;
-    }
-
-    pA->high_word = temp.high_word;
-    pA->low_word = temp.low_word;
-}
 
 avl_error_code_t TestSDRAM_Demod(uint32_t * puiTestResult, uint32_t * puiTestPattern, AVL_ChipInternal *chip)
 {
@@ -1385,14 +1218,14 @@ avl_error_code_t GetValidModeList_Demod(uint8_t * pucValidModeList, AVL_ChipInte
 
     uiMemberIDRegAddr = stBaseAddrSet.hw_member_ID_base;
 
-    ChunkAddr_Demod(uiMemberIDRegAddr, pucBuffAddr);
+    avl_int_to_3bytes(uiMemberIDRegAddr, pucBuffAddr);
 
     r = avl_bsp_wait_semaphore(&(chip->semI2C));
     r = avl_bsp_i2c_write(chip->usI2CAddr, pucBuffAddr, &usAddrSize);
     r |= avl_bsp_i2c_read(chip->usI2CAddr, pucBuffData, &usDataSize);
     r = avl_bsp_release_semaphore(&(chip->semI2C));
 
-    uiMemberID = DeChunk32_Demod(pucBuffData);
+    uiMemberID = avl_bytes_to_int(pucBuffData);
 
     switch(chip->uiFamilyID)
     {
@@ -1448,14 +1281,14 @@ avl_error_code_t GetFamilyID_Demod(uint32_t * puiFamilyID,AVL_ChipInternal *chip
     uint8_t pucBuffAddr[3] = {0};
     uint8_t pucBuffData[4]= {0};
 
-    ChunkAddr_Demod(ChipIDRegAddr, pucBuffAddr);
+    avl_int_to_3bytes(ChipIDRegAddr, pucBuffAddr);
 
     r = avl_bsp_wait_semaphore(&(chip->semI2C));
     r |= avl_bsp_i2c_write(chip->usI2CAddr, pucBuffAddr, &usAddrSize);
     r |= avl_bsp_i2c_read(chip->usI2CAddr, pucBuffData, &usDataSize);
     r |= avl_bsp_release_semaphore(&(chip->semI2C));
 
-    *puiFamilyID = DeChunk32_Demod(pucBuffData);
+    *puiFamilyID = avl_bytes_to_int(pucBuffData);
 
     return r;    
 }
@@ -1759,7 +1592,7 @@ avl_error_code_t AVL_ParseFwPatch_v0(AVL_ChipInternal *chip, uint8_t download_on
                     temp[0] = *(pPatchDatatemp -1);
                     temp[1] = *(pPatchDatatemp -2);
                     temp[2] = *(pPatchDatatemp -3);
-                    ChunkAddr_Demod(dest_addr, pPatchDatatemp1);
+                    avl_int_to_3bytes(dest_addr, pPatchDatatemp1);
 
                     r |= avl_bms_write((uint16_t)(chip->usI2CAddr), pPatchDatatemp1, (uint32_t)(length+3));
 
@@ -1838,7 +1671,7 @@ avl_error_code_t AVL_ParseFwPatch_v0(AVL_ChipInternal *chip, uint8_t download_on
                     tem[0] = *(pPatchDatatem -1);
                     tem[1] = *(pPatchDatatem -2);
                     tem[2] = *(pPatchDatatem -3);
-                    ChunkAddr_Demod(descr_addr, pPatchDatatem1);
+                    avl_int_to_3bytes(descr_addr, pPatchDatatem1);
 
                     for(d=0; d<num_descr; d++)
                     {
@@ -1927,7 +1760,7 @@ avl_error_code_t AVL_ParseFwPatch_v0(AVL_ChipInternal *chip, uint8_t download_on
                     temp[0] = *(pPatchData + patch_idx -1);
                     temp[1] = *(pPatchData + patch_idx -2);
                     temp[2] = *(pPatchData + patch_idx -3);
-                    ChunkAddr_Demod(descr_addr, pPatchData + patch_idx -3);
+                    avl_int_to_3bytes(descr_addr, pPatchData + patch_idx -3);
 
                     if(num_descr >0)
                     {

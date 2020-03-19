@@ -3,7 +3,7 @@
  * Availink AVL62X1 DVB-S/S2/S2X demodulator driver
  * Supports AVL6221 and AVL6261. NOT AVL6211
  *
- * Copyright (C) 2020 Availink, Inc. (opensource@availink.com)
+ * Copyright (C) 2020 Availink, Inc. (gpl@availink.com)
  *
  */
 

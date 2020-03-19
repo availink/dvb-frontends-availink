@@ -2,7 +2,7 @@
 /*
  * Library routines and defines for Availink demod and tuner drivers
  *
- * Copyright (C) 2020 Availink, Inc. (opensource@availink.com)
+ * Copyright (C) 2020 Availink, Inc. (gpl@availink.com)
  *
  */
 
@@ -22,17 +22,28 @@
 #define AVL_MAX_II2C_READ_SIZE	64
 #define AVL_MAX_II2C_WRITE_SIZE	64
 
-#define AVL_MIN(x, y) (((x) < (y)) ? (x) : (y))
-#define AVL_MAX(x, y) (((x) < (y)) ? (y) : (x))
-#define AVL_ABS(a) (((a) > 0) ? (a) : (-(a)))
+#define AVL_MIN(x, y)	(((x) < (y)) ? (x) : (y))
+#define AVL_MAX(x, y)	(((x) < (y)) ? (y) : (x))
+#define AVL_ABS(a)	(((a) > 0) ? (a) : (-(a)))
+
+#define AVL_min(x,y)	AVL_MIN(x,y)
+#define AVL_max(x,y)	AVL_MAX(x,y)
+#define AVL_floor(a)	(((a) == (int)(a))? ((int)(a)) : (((a) < 0)? ((int)((a)-1)) : ((int)(a))))
+#define AVL_ceil(a)	(((a) == (int)(a))? ((int)(a)) : (((a) < 0)? ((int)(a)) : ((int)((a)+1))))
+#define AVL_abs(a)	AVL_ABS(a)
 
 #define AVL_EC_OK		0 // There is no error.
 #define AVL_EC_GENERAL_FAIL	1 // A general failure has occurred.
 #define AVL_EC_RUNNING		2
 #define AVL_EC_MemoryRunout	4
 #define AVL_EC_TimeOut		8
+#define AVL_EC_TIMEOUT		8
 #define AVL_EC_COMMAND_FAILED	16
+#define AVL_EC_WARNING		32
+#define AVL_EC_SLEEP		64 // Demod in sleep mode
+#define AVL_EC_NOT_SUPPORTED	128 // Specified operation isn't support in current senario
 
+typedef uint16_t avl_error_code_t;
 
 typedef uint8_t avl_bool_t;
 

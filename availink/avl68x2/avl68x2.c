@@ -1,21 +1,9 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
 /*
- * Availink AVL68x2 DVB-S/S2/T/T2/C, ISDB-T, J.83B demodulator driver
+ * Availink AVL68x2 DVB-S/S2/T/T2/C, ISDB-T, J83.B demodulator driver
  *
- * Copyright (C) 2020 Availink, Inc. (opensource@availink.com)
+ * Copyright (C) 2020 Availink, Inc. (gpl@availink.com)
  *
- *    This program is free software; you can redistribute it and/or modify
- *    it under the terms of the GNU General Public License as published by
- *    the Free Software Foundation; either version 2 of the License, or
- *    (at your option) any later version.
- *
- *    This program is distributed in the hope that it will be useful,
- *    but WITHOUT ANY WARRANTY; without even the implied warranty of
- *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *    GNU General Public License for more details.
- *
- *    You should have received a copy of the GNU General Public License along
- *    with this program; if not, write to the Free Software Foundation, Inc.,
- *    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
 #include <linux/slab.h>
@@ -28,38 +16,39 @@
 #include <linux/bitrev.h>
 
 #include <media/dvb_frontend.h>
+
 #include "avl68x2.h"
+#include "avl_tuner.h"
 
 #include "AVL_Demod.h"
 //#include "avl_tuner.h"
 #include "AVL_Demod_DVBSx.h"
 
-#define dbg_avl(fmt, args...)                         \
-  do                                                  \
-  {                                                   \
-    if (debug_avl)                                    \
-      printk("AVL: %s: " fmt "\n", __func__, ##args); \
-  } while (0);
+#define dbg_avl(fmt, args...)                                           \
+	do                                                              \
+	{                                                               \
+		if (debug)                                              \
+			printk("AVL: %s: " fmt "\n", __func__, ##args); \
+	} while (0);
 
-MODULE_PARM_DESC(debug_avl, "\n\t\t Enable AVL demodulator debug information");
-static int debug_avl;
-module_param(debug_avl, int, 0644);
+MODULE_PARM_DESC(debug, "\n\t\t Enable AVL demodulator debug information");
+static int debug;
+module_param(debug, int, 0644);
 
-/*avl_tuner default_avl_tuner = {
-  .blindscan_mode = 0,
-  .more_params = NULL,
-  .initialize = NULL,
-  .lock = NULL,
-  .get_lock_status = NULL,
-  .get_rf_strength = NULL,
-  .get_max_lpf = NULL,
-  .get_min_lpf = NULL,
-  .get_lpf_step_size = NULL,
-  .get_agc_slope = NULL,
-  .get_min_gain_voltage = NULL,
-  .get_max_gain_voltage = NULL,
-  .get_rf_freq_step_size = NULL
-};*/
+struct avl_tuner default_avl_tuner = {
+    .blindscan_mode = 0,
+    .more_params = NULL,
+    .initialize = NULL,
+    .lock = NULL,
+    .get_lock_status = NULL,
+    .get_rf_strength = NULL,
+    .get_max_lpf = NULL,
+    .get_min_lpf = NULL,
+    .get_lpf_step_size = NULL,
+    .get_agc_slope = NULL,
+    .get_min_gain_voltage = NULL,
+    .get_max_gain_voltage = NULL,
+    .get_rf_freq_step_size = NULL};
 
 static int avl68x2_init_dvbs(struct dvb_frontend *fe)
 {
@@ -646,6 +635,6 @@ err:
 EXPORT_SYMBOL_GPL(avl68x2_attach);
 
 MODULE_DESCRIPTION("Availink AVL68x2 DVB-S/S2/T/T2/C, ISDB-T, J.83B demodulator driver");
-MODULE_AUTHOR("Availink, Inc. (opensource@availink.com)");
+MODULE_AUTHOR("Availink, Inc. (gpl@availink.com)");
 MODULE_LICENSE("GPL");
 MODULE_VERSION(AVL68x2_VERSION);

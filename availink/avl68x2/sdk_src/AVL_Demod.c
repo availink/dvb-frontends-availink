@@ -115,14 +115,14 @@ avl_error_code_t AVL_Demod_GetChipID(uint32_t * puiChipID,AVL_ChipInternal *chip
 
     uiMemberIDRegAddr = stBaseAddrSet.hw_member_ID_base;
 
-    ChunkAddr_Demod(uiMemberIDRegAddr, pucBuffAddr);
+    avl_int_to_3bytes(uiMemberIDRegAddr, pucBuffAddr);
 
     r = avl_bsp_wait_semaphore(&(chip->semI2C));
     r |= avl_bsp_i2c_write(chip->usI2CAddr, pucBuffAddr, &usAddrSize);
     r |= avl_bsp_i2c_read(chip->usI2CAddr, pucBuffData, &usDataSize);
     r |= avl_bsp_release_semaphore(&(chip->semI2C));
 
-    *puiChipID = DeChunk32_Demod(pucBuffData);
+    *puiChipID = avl_bytes_to_int(pucBuffData);
 
     return r;
 }
@@ -240,8 +240,8 @@ avl_error_code_t AVL_Demod_GetPER(uint32_t *puiPERxe9, AVL_ChipInternal *chip)
     chip->stAVLErrorStat.stPktErrors.low_word = chip->stAVLErrorStat.stSwCntPktErrors.low_word;
     avl_add_32to64(&chip->stAVLErrorStat.stPktErrors, uiHwCntPktErrors);
 
-    Multiply32_Demod(&uiTemp64, chip->stAVLErrorStat.stPktErrors.low_word, AVL_CONSTANT_10_TO_THE_9TH);
-    chip->stAVLErrorStat.uiPER = Divide64_Demod(chip->stAVLErrorStat.stNumPkts, uiTemp64);
+    avl_mult_32to64(&uiTemp64, chip->stAVLErrorStat.stPktErrors.low_word, AVL_CONSTANT_10_TO_THE_9TH);
+    chip->stAVLErrorStat.uiPER = avl_divide_64(chip->stAVLErrorStat.stNumPkts, uiTemp64);
 
     *puiPERxe9 = chip->stAVLErrorStat.uiPER;
 
@@ -547,7 +547,7 @@ avl_error_code_t AVL_Demod_GetVersion(AVL_DemodVersion *pstDemodVersion, AVL_Chi
         stBaseAddrSet.fw_status_reg_base + rs_patch_ver_iaddr_offset, &uiTemp);
     if( AVL_EC_OK == r )
     {
-        Chunk32_Demod(uiTemp, ucBuff);
+        avl_int_to_bytes(uiTemp, ucBuff);
         pstDemodVersion->stPatch.ucMajor = ucBuff[0];
         pstDemodVersion->stPatch.ucMinor = ucBuff[1];
         pstDemodVersion->stPatch.usBuild = ucBuff[2];

@@ -585,8 +585,8 @@ avl_error_code_t ISDBT_GetLayerPER_Demod(uint32_t *puiPERxe9, enum AVL_ISDBT_Lay
         gstISDBTLayerA_ErrorStats.stPktErrors.low_word = gstISDBTLayerA_ErrorStats.stSwCntPktErrors.low_word;
         avl_add_32to64(&gstISDBTLayerA_ErrorStats.stPktErrors, uiHwCntPktErrors);
 
-        Multiply32_Demod(&uiTemp64, gstISDBTLayerA_ErrorStats.stPktErrors.low_word, AVL_CONSTANT_10_TO_THE_9TH);
-        gstISDBTLayerA_ErrorStats.uiPER = Divide64_Demod(gstISDBTLayerA_ErrorStats.stNumPkts, uiTemp64);
+        avl_mult_32to64(&uiTemp64, gstISDBTLayerA_ErrorStats.stPktErrors.low_word, AVL_CONSTANT_10_TO_THE_9TH);
+        gstISDBTLayerA_ErrorStats.uiPER = avl_divide_64(gstISDBTLayerA_ErrorStats.stNumPkts, uiTemp64);
 
         *puiPERxe9 = gstISDBTLayerA_ErrorStats.uiPER;
     }
@@ -600,8 +600,8 @@ avl_error_code_t ISDBT_GetLayerPER_Demod(uint32_t *puiPERxe9, enum AVL_ISDBT_Lay
         gstISDBTLayerB_ErrorStats.stPktErrors.low_word = gstISDBTLayerB_ErrorStats.stSwCntPktErrors.low_word;
         avl_add_32to64(&gstISDBTLayerB_ErrorStats.stPktErrors, uiHwCntPktErrors);
 
-        Multiply32_Demod(&uiTemp64, gstISDBTLayerB_ErrorStats.stPktErrors.low_word, AVL_CONSTANT_10_TO_THE_9TH);
-        gstISDBTLayerB_ErrorStats.uiPER = Divide64_Demod(gstISDBTLayerB_ErrorStats.stNumPkts, uiTemp64);
+        avl_mult_32to64(&uiTemp64, gstISDBTLayerB_ErrorStats.stPktErrors.low_word, AVL_CONSTANT_10_TO_THE_9TH);
+        gstISDBTLayerB_ErrorStats.uiPER = avl_divide_64(gstISDBTLayerB_ErrorStats.stNumPkts, uiTemp64);
 
         *puiPERxe9 = gstISDBTLayerB_ErrorStats.uiPER;
     }
@@ -615,8 +615,8 @@ avl_error_code_t ISDBT_GetLayerPER_Demod(uint32_t *puiPERxe9, enum AVL_ISDBT_Lay
         gstISDBTLayerC_ErrorStats.stPktErrors.low_word = gstISDBTLayerC_ErrorStats.stSwCntPktErrors.low_word;
         avl_add_32to64(&gstISDBTLayerC_ErrorStats.stPktErrors, uiHwCntPktErrors);
 
-        Multiply32_Demod(&uiTemp64, gstISDBTLayerC_ErrorStats.stPktErrors.low_word, AVL_CONSTANT_10_TO_THE_9TH);
-        gstISDBTLayerC_ErrorStats.uiPER = Divide64_Demod(gstISDBTLayerC_ErrorStats.stNumPkts, uiTemp64);
+        avl_mult_32to64(&uiTemp64, gstISDBTLayerC_ErrorStats.stPktErrors.low_word, AVL_CONSTANT_10_TO_THE_9TH);
+        gstISDBTLayerC_ErrorStats.uiPER = avl_divide_64(gstISDBTLayerC_ErrorStats.stNumPkts, uiTemp64);
 
         *puiPERxe9 = gstISDBTLayerC_ErrorStats.uiPER;
     }

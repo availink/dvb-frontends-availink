@@ -2,7 +2,7 @@
 /*
  * Platform interface definition for Availink demod/tuner drivers
  *
- * Copyright (C) 2020 Availink, Inc. (opensource@availink.com)
+ * Copyright (C) 2020 Availink, Inc. (gpl@availink.com)
  *
  */
 

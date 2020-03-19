@@ -2,7 +2,7 @@
 /*
  * Library routines and defines for Availink demod and tuner drivers
  *
- * Copyright (C) 2020 Availink, Inc. (opensource@availink.com)
+ * Copyright (C) 2020 Availink, Inc. (gpl@availink.com)
  *
  */
 

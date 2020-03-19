@@ -759,16 +759,9 @@ extern "C" {
   avl_error_code_t IBase_SetSleepClock_Demod(AVL_ChipInternal *chip);
   avl_error_code_t GetMode_Demod(AVL_DemodMode* peCurrentMode, AVL_ChipInternal *chip);
   avl_error_code_t GetBER_Demod(uint32_t *puiBERxe9, AVL_BER_Type  enumBERType, AVL_ChipInternal *chip);
-  void ChunkAddr_Demod(uint32_t uiaddr, uint8_t * pBuff);
-  void Chunk16_Demod(uint16_t uidata, uint8_t * pBuff);
-  uint16_t DeChunk16_Demod(const uint8_t * pBuff);
-  void Chunk32_Demod(uint32_t uidata, uint8_t * pBuff);
-  uint32_t DeChunk32_Demod(const uint8_t * pBuff);
-  void Multiply32_Demod(struct avl_uint64 *pDst, uint32_t m1, uint32_t m2);
-  void AddScaled32To64_Demod(struct avl_uint64 *pDst, uint32_t a);
-  uint32_t Divide64_Demod(struct avl_uint64 y, struct avl_uint64 x);
-  uint32_t GreaterThanOrEqual64_Demod(struct avl_uint64 a, struct avl_uint64 b);
-  void Subtract64_Demod(struct avl_uint64 *pA, struct avl_uint64 b);
+  
+
+
   avl_error_code_t SetPLL0_Demod(AVL_ChipInternal *chip);
   avl_error_code_t SetSleepPLL0_Demod(AVL_ChipInternal *chip);
   avl_error_code_t TestSDRAM_Demod(uint32_t * puiTestResult, uint32_t * puiTestPattern, AVL_ChipInternal *chip);

@@ -2,7 +2,7 @@
 /*
  * Availink AVL6261 DVB-S/S2/S2X demodulator public APIs
  * 
- * Copyright (C) 2020 Availink, Inc. (opensource@availink.com)
+ * Copyright (C) 2020 Availink, Inc. (gpl@availink.com)
  *
  */
 

@@ -429,8 +429,7 @@ avl_error_code_t AVL_Demod_DVBSx_Diseqc_SendModulationData( uint8_t * pucBuff, u
             r |= avl_bms_write32(chip->usI2CAddr,
                 stBaseAddrSet.hw_diseqc_base + hw_diseqc_tx_cntrl_offset, i1);
 
-            //trunk address
-            ChunkAddr_Demod(stBaseAddrSet.hw_diseqc_base + hw_tx_fifo_map_offset, pucBuffTemp);
+            avl_int_to_3bytes(stBaseAddrSet.hw_diseqc_base + hw_tx_fifo_map_offset, pucBuffTemp);
             pucBuffTemp[3] = 0;
             pucBuffTemp[4] = 0;
             pucBuffTemp[5] = 0;
@@ -578,8 +577,7 @@ avl_error_code_t AVL_Demod_DVBSx_Diseqc_SendTone( uint8_t ucTone, uint8_t ucCoun
             r |= avl_bms_write32(chip->usI2CAddr,
                 stBaseAddrSet.hw_diseqc_base + hw_diseqc_tx_cntrl_offset, i1);
 
-            //trunk address
-            ChunkAddr_Demod(stBaseAddrSet.hw_diseqc_base + hw_tx_fifo_map_offset, pucBuffTemp);
+            avl_int_to_3bytes(stBaseAddrSet.hw_diseqc_base + hw_tx_fifo_map_offset, pucBuffTemp);
             pucBuffTemp[3] = 0;
             pucBuffTemp[4] = 0;
             pucBuffTemp[5] = 0;
