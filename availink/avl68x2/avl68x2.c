@@ -50,7 +50,9 @@ struct avl_tuner default_avl_tuner = {
     .get_max_gain_voltage = NULL,
     .get_rf_freq_step_size = NULL};
 
-static int avl68x2_init_dvbs(struct dvb_frontend *fe)
+
+
+static int init_dvbs_s2(struct dvb_frontend *fe)
 {
   struct avl68x2_priv *priv = fe->demodulator_priv;
   struct AVL_Diseqc_Para Diseqc_para;
@@ -69,12 +71,10 @@ static int avl68x2_init_dvbs(struct dvb_frontend *fe)
   }
   else
   {
-    priv->config->eDiseqcStatus = AVL_DOS_Initialized;
+    priv->chip->chip_pub->dvbsx_para.eDiseqcStatus = AVL_DOS_Initialized;
   }
 
-  //FIXME!!!!!
-  //r = (int)AVL62X1_SetGPIODir(AVL62X1_GPIO_Pin_LNB_PWR_EN, AVL62X1_GPIO_DIR_OUTPUT, priv->chip);
-  //r |= (int)AVL62X1_SetGPIODir(AVL62X1_GPIO_Pin_LNB_PWR_SEL, AVL62X1_GPIO_DIR_OUTPUT, priv->chip);
+  diseqc_set_voltage(fe, SEC_VOLTAGE_OFF);
 
   return r;
 }
@@ -109,13 +109,16 @@ static int avl68x2_set_dvbs(struct dvb_frontend *fe)
   return r;
 }
 
-static int avl68x2_set_dvbmode(struct dvb_frontend *fe,
+static int set_dvb_mode(struct dvb_frontend *fe,
                                enum fe_delivery_system delsys)
 {
   struct avl68x2_priv *priv = fe->demodulator_priv;
-  avl_error_code_t ret = AVL_EC_OK;
   avl_error_code_t r = AVL_EC_OK;
   struct AVL_DemodVersion ver_info;
+  int fw_status;
+  unsigned int fw_maj, fw_min, fw_build;
+  char fw_path[256];
+  AVL_DemodMode dmd_mode;
 
   /* already in desired mode */
   if (priv->delivery_system == delsys)
@@ -123,64 +126,134 @@ static int avl68x2_set_dvbmode(struct dvb_frontend *fe,
 
   dbg_avl("initing demod for delsys=%d", delsys);
 
+  //check for (FW) equivalent modes
   switch (priv->delivery_system)
   {
   case SYS_DVBS:
     if (delsys == SYS_DVBS2)
       return 0;
+    strncpy(fw_path,AVL68X2_DVBSX_FW,255);
+    dmd_mode = AVL_DVBSX;
     break;
   case SYS_DVBS2:
     if (delsys == SYS_DVBS)
       return 0;
+    strncpy(fw_path,AVL68X2_DVBSX_FW,255);
+    dmd_mode = AVL_DVBSX;
+    break;
+  case SYS_DVBT:
+    if(delsys == SYS_DVBT2)
+      return 0;
+    strncpy(fw_path,AVL68X2_DVBTX_FW,255);
+    dmd_mode = AVL_DVBTX;
+    break;
+  case SYS_DVBT2:
+    if(delsys == SYS_DVBT)
+      return 0;
+    strncpy(fw_path,AVL68X2_DVBTX_FW,255);
+    dmd_mode = AVL_DVBTX;
+    break;
+  case SYS_ISDBT:
+    strncpy(fw_path,AVL68X2_ISDBT_FW,255);
+    dmd_mode = AVL_ISDBT;
+    break;
+  case SYS_DVBC_ANNEX_A: //"DVB-C"
+    if(delsys == SYS_DVBC_ANNEX_B) //J.83-B
+      return 0;
+    strncpy(fw_path,AVL68X2_DVBC_FW,255);
+    dmd_mode = AVL_DVBC;
+    break;
+  case SYS_DVBC_ANNEX_B:
+    if(delsys == SYS_DVBC_ANNEX_A)
+      return 0;
+    strncpy(fw_path,AVL68X2_DVBC_FW,255);
+    dmd_mode = AVL_DVBC;
     break;
   default:
     break;
   }
   priv->delivery_system = delsys;
 
+  fw_status = request_firmware(&priv->fw, fw_path, priv->i2c->dev.parent);
+  if (fw_status != 0)
+  {
+    dev_err(&priv->i2c->dev,
+            KBUILD_MODNAME ": firmware file not found");
+    return fw_status;
+  }
+  else
+  {
+    priv->chip->chip_priv->patch_data = (unsigned char *)(priv->fw->data);
+    fw_maj = priv->chip->chip_priv->patch_data[24]; //major rev
+    fw_min = priv->chip->chip_priv->patch_data[25]; //SDK-FW API rev
+    fw_build = (priv->chip->chip_priv->patch_data[26] << 8) |
+               priv->chip->chip_priv->patch_data[27]; //internal rev
+    if (fw_min != AVL62X1_SDK_VER_MINOR)
+    {
+      //SDK-FW API rev must match
+      dev_err(&priv->i2c->dev,
+              KBUILD_MODNAME ": Firmware version %d.%d.%d incompatible with this driver version",
+              fw_maj, fw_min, fw_build);
+      dev_err(&priv->i2c->dev,
+              KBUILD_MODNAME ": Firmware minor version must be %d",
+              AVL62X1_SDK_VER_MINOR);
+      r = 1;
+      goto err;
+    }
+    else
+    {
+      dev_info(&priv->i2c->dev,
+               KBUILD_MODNAME ": Firmware version %d.%d.%d found",
+               fw_maj, fw_min, fw_build);
+    }
+  }
+
   //Reset Demod
   r = AVL_IBSP_Reset();
   if (AVL_EC_OK != r)
   {
     dbg_avl("Failed to Resed demod via BSP!\n");
-    return 0;
+    goto err;
   }
 
   // boot the firmware here
-  r |= AVL_Demod_Initialize(AVL_DVBSX, priv->chip, 0);
+  r |= AVL_Demod_Initialize(dmd_mode, priv->chip, 0);
   if (AVL_EC_OK != r)
   {
     dbg_avl("AVL_Demod_Initialize failed !\n");
-    return (r);
+    goto err;
   }
 
   r |= AVL_Demod_GetVersion(&ver_info, priv->chip);
   if (AVL_EC_OK != r)
   {
     dbg_avl("AVL_Demod_GetVersion failed\n");
-    return (r);
+    goto err;
   }
-  dbg_avl("FW version %d.%d.%d\n", ver_info.stPatch.ucMajor, ver_info.stPatch.ucMinor, ver_info.stPatch.usBuild);
-  dbg_avl("API version %d.%d.%d\n", ver_info.stAPI.ucMajor, ver_info.stAPI.ucMinor, ver_info.stAPI.usBuild);
+  dbg_avl("FW version %d.%d.%d\n", ver_info.firmware.major, ver_info.firmware.minor, ver_info.firmware.build);
+  dbg_avl("API version %d.%d.%d\n", ver_info.sdk.major, ver_info.sdk.minor, ver_info.sdk.build);
 
   switch (priv->delivery_system)
   {
   case SYS_DVBS:
   case SYS_DVBS2:
   default:
-    ret |= avl68x2_init_dvbs(fe);
+    r |= init_dvbs_s2(fe);
     break;
   }
 
-  ret |= InitErrorStat_Demod(priv->chip);
+  r |= InitErrorStat_Demod(priv->chip);
 
-  if (ret)
+  if (r)
   {
     dev_err(&priv->i2c->dev, "%s: demod init failed",
             KBUILD_MODNAME);
   }
 
-  return ret;
+err:
+  release_firmware(priv->fw);
+
+  return r;
 }
 
 avl_error_code_t AVL_SX_DiseqcSendCmd(struct avl68x2_priv *priv, uint8_t * pCmd, u8 CmdSize)
@@ -230,7 +303,7 @@ static int avl68x2_burst(struct dvb_frontend *fe, enum fe_sec_mini_cmd burst)
   return ret;
 }
 
-static int avl68x2_set_tone(struct dvb_frontend *fe, enum fe_sec_tone_mode tone)
+static int diseqc_set_tone(struct dvb_frontend *fe, enum fe_sec_tone_mode tone)
 {
   struct avl68x2_priv *priv = fe->demodulator_priv;
   int r = AVL_EC_OK;
@@ -239,15 +312,15 @@ static int avl68x2_set_tone(struct dvb_frontend *fe, enum fe_sec_tone_mode tone)
   switch (tone)
   {
   case SEC_TONE_ON:
-    if (priv->chip->stDVBSxPara.eDiseqcStatus != AVL_DOS_InContinuous)
+    if (priv->chip->chip_pub->dvbsx_para.eDiseqcStatus != AVL_DOS_InContinuous)
     {
-      //r = (int)AVL62X1_IDiseqc_Stop22K(priv->chip);
+      r = (int)AVL_Demod_DVBSx_Diseqc_StartContinuous(priv->chip);
     }
     break;
   case SEC_TONE_OFF:
-    if (priv->chip->stDVBSxPara.eDiseqcStatus == AVL_DOS_InContinuous)
+    if (priv->chip->chip_pub->dvbsx_para.eDiseqcStatus == AVL_DOS_InContinuous)
     {
-      //r = (int)AVL62X1_IDiseqc_Start22K(priv->chip);
+      r = (int)AVL_Demod_DVBSx_Diseqc_StopContinuous(priv->chip);
     }
     break;
   default:
@@ -256,7 +329,7 @@ static int avl68x2_set_tone(struct dvb_frontend *fe, enum fe_sec_tone_mode tone)
   return r;
 }
 
-static int avl68x2_set_voltage(struct dvb_frontend *fe, enum fe_sec_voltage voltage)
+static int diseqc_set_voltage(struct dvb_frontend *fe, enum fe_sec_voltage voltage)
 {
   struct avl68x2_priv *priv = fe->demodulator_priv;
   AVL_GPIOPinValue pwr, vol;
@@ -506,8 +579,8 @@ static struct dvb_frontend_ops avl68x2_ops = {
     .read_signal_strength = avl68x2_read_signal_strength,
     .read_snr = avl68x2_read_snr,
     .read_ber = avl68x2_read_ber,
-    .set_tone = avl68x2_set_tone,
-    .set_voltage = avl68x2_set_voltage,
+    .set_tone = diseqc_set_tone,
+    .set_voltage = diseqc_set_voltage,
     .diseqc_send_master_cmd = avl68x2_diseqc,
     .diseqc_send_burst = avl68x2_burst,
     .get_frontend_algo = avl68x2fe_algo,
@@ -522,9 +595,6 @@ struct dvb_frontend *avl68x2_attach(struct avl68x2_config *config,
   struct avl68x2_priv *priv;
   avl_error_code_t ret;
   u32 id;
-  int fw_status;
-  unsigned int fw_maj, fw_min, fw_build;
-  const struct firmware *fw;
 
   dbg_avl("start demod attach");
 
@@ -538,33 +608,35 @@ struct dvb_frontend *avl68x2_attach(struct avl68x2_config *config,
          sizeof(struct dvb_frontend_ops));
 
   priv->frontend.demodulator_priv = priv;
-  priv->config = config;
   priv->i2c = i2c;
-  priv->delivery_system = -1;
-  priv->chip = kzalloc(sizeof(struct AVL_ChipInternal), GFP_KERNEL);
+  priv->delivery_system = SYS_UNDEFINED;
+
+  priv->chip = kzalloc(sizeof(struct avl68x2_chip), GFP_KERNEL);
   if (priv->chip == NULL)
     goto err1;
-  dbg_avl("chip alloc'ed = %llx", (unsigned long long int)priv->chip);
   
-  //                               I2C slave address (8b)                       Demod ID (3b)
-  priv->chip->usI2CAddr = ((uint16_t)config->demod_address) | (((uint16_t)(config->i2c_id & 0x7)) << 8);
-  dbg_avl("usI2CAddr = %x", priv->chip->usI2CAddr);
-  priv->chip->eDemodXtal = Xtal_27M;
+  priv->chip->chip_priv = kzalloc(sizeof(struct avl68x2_chip_priv), GFP_KERNEL);
+  if(priv->chip->chip_priv == NULL)
+    goto err2;
+  
+  priv->chip->chip_pub = kzalloc(sizeof(struct avl68x2_chip_pub), GFP_KERNEL);
+  if(priv->chip->chip_pub == NULL)
+    goto err3;
 
-  //priv->chip->pTuner = &default_avl_tuner;
-  //priv->chip->e_TunerPol = AVL62X1_Spectrum_Invert;
-  priv->chip->stTSConfig.eMode = AVL_TS_PARALLEL;
-  priv->chip->stTSConfig.eClockEdge = AVL_MPCM_RISING;
-  priv->chip->eTSParallelPhase = AVL_TS_PARALLEL_PHASE_0;
-  priv->chip->stTSConfig.eClockMode = AVL_TS_CONTINUOUS_DISABLE;
-  priv->chip->stTSConfig.ePacketLen = AVL_TS_188;
-  priv->chip->eTSSerialPin = AVL_MPSP_DATA0;
-  //priv->chip->m_MPEGFrequency_Hz = 130000000;
-  dbg_avl("chip initialized");
+  /* copy (ephemeral?) public part of chip config into alloc'd area */
+	memcpy(priv->chip->chip_pub,
+	       config->chip_pub,
+	       sizeof(struct avl62x1_chip_pub));
 
-  // associate i2c_id/slaveAddr with i2c_adapter
-  AVL_IBSP_I2C_Adapter(priv->chip->usI2CAddr, i2c);
-  dbg_avl("i2c associated\n");
+	priv->chip->chip_pub->tuner = &default_avl_tuner;
+
+	dbg_avl("Demod ID %d, I2C addr 0x%x",
+		(priv->chip->chip_pub->i2c_addr >> AVL_DEMOD_ID_SHIFT) & AVL_DEMOD_ID_MASK,
+		priv->chip->chip_pub->i2c_addr & 0xFF);
+
+	// associate demod ID with i2c_adapter
+	avl_bsp_assoc_i2c_adapter(priv->chip->chip_pub->i2c_addr, i2c);
+  
 
   /* get chip id */
   ret = AVL_Demod_GetChipID(&id, priv->chip);
@@ -572,59 +644,33 @@ struct dvb_frontend *avl68x2_attach(struct avl68x2_config *config,
   {
     dev_err(&priv->i2c->dev, "%s: attach failed reading id",
             KBUILD_MODNAME);
-    goto err2;
+    goto err4;
   }
 
   dbg_avl("chip_id= %d\n", id);
 
-  if (id != 0x68624955)
+  if (id != AVL68XX)
   {
     dev_err(&priv->i2c->dev, "%s: attach failed, id mismatch",
             KBUILD_MODNAME);
-    goto err2;
+    goto err4;
   }
 
   dev_info(&priv->i2c->dev, "%s: found AVL68x2 id=0x%x",
            KBUILD_MODNAME, id);
 
-  fw_status = request_firmware(&fw, "avl68x2.patch", i2c->dev.parent);
-  if (fw_status < 0)
-  {
-    dev_err(&priv->i2c->dev, "%s: firmware file not found",
-            KBUILD_MODNAME);
-    goto err3;
-  } else {
-    priv->chip->fwData = (unsigned char *)(fw->data);
-    fw_maj = priv->chip->fwData[24]; //major rev
-    fw_min = priv->chip->fwData[25]; //SDK-FW API rev
-    fw_build = (priv->chip->fwData[26]<<8) | priv->chip->fwData[27]; //internal rev
-    if(fw_min != AVL_API_VER_MINOR) //SDK-FW API rev must match
-    {
-      dev_err(&priv->i2c->dev,
-              "%s: Firmware version %d.%d.%d incompatible with this driver version",
-              KBUILD_MODNAME, fw_maj, fw_min, fw_build);
-      dev_err(&priv->i2c->dev,
-              "%s: Firmware minor version must be %d",
-              KBUILD_MODNAME, AVL_API_VER_MINOR);
-      goto err3;
-    }
-    else
-    {
-      dev_info(&priv->i2c->dev,
-               "%s: Firmware version %d.%d.%d found",
-               KBUILD_MODNAME, fw_maj, fw_min, fw_build);
-    }
-  }
-  
 
-  if (!avl68x2_set_dvbmode(&priv->frontend, SYS_DVBS))
+  if (!set_dvb_mode(&priv->frontend, SYS_DVBS))
   {
-    release_firmware(fw);
+    dev_info(&priv->i2c->dev,
+             KBUILD_MODNAME ": Firmware booted");
     return &priv->frontend;
   }
 
-err3:  
-  release_firmware(fw);
+err4:
+  kfree(priv->chip->chip_pub);
+err3:
+  kfree(priv->chip->chip_priv);
 err2:
   kfree(priv->chip);
 err1:

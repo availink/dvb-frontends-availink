@@ -1,3 +1,10 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
+/*
+ * Availink AVL68x2 DVB-S/S2/T/T2/C, ISDB-T, J83.B demodulator driver
+ *
+ * Copyright (C) 2020 Availink, Inc. (gpl@availink.com)
+ *
+ */
 #include "AVL_Demod.h"
 #include "AVL_Demod_ISDBT.h"
 
@@ -9,18 +16,18 @@ static int BW_FFT_Table[2]=
     10835979    //bw=8.0MHz
   };
 
-avl_error_code_t AVL_Demod_ISDBTAutoLock(AVL_ChipInternal *chip)
+avl_error_code_t AVL_Demod_ISDBTAutoLock(avl68x2_chip *chip)
 {
   avl_error_code_t r = AVL_EC_OK;
   
-  if(1 == chip->ucSleepFlag)
+  if(1 == chip->chip_priv->sleep_flag)
     {
       r = AVL_EC_SLEEP;
       return r;
     } 
   r = IBase_SendRxOPWait_Demod(AVL_FW_CMD_HALT, chip);
   
-  ISDBT_SetIFFrequency_Demod((uint32_t)chip->stISDBTPara.uiISDBTIFFreqHz, chip); 
+  ISDBT_SetIFFrequency_Demod((uint32_t)chip->chip_pub->isdbt_para.uiISDBTIFFreqHz, chip); 
   
   r |= IBase_SendRxOPWait_Demod(AVL_FW_CMD_ACQUIRE, chip);
   
@@ -28,7 +35,7 @@ avl_error_code_t AVL_Demod_ISDBTAutoLock(AVL_ChipInternal *chip)
   
 }
 
-avl_error_code_t AVL_Demod_ISDBTGetModulationInfo(AVL_ISDBTModulationInfo *pstModulationInfo, AVL_ChipInternal *chip)
+avl_error_code_t AVL_Demod_ISDBTGetModulationInfo(AVL_ISDBTModulationInfo *pstModulationInfo, avl68x2_chip *chip)
 {
     avl_error_code_t r = AVL_EC_OK;
     uint8_t ucTemp = 0;
@@ -37,78 +44,78 @@ avl_error_code_t AVL_Demod_ISDBTGetModulationInfo(AVL_ISDBTModulationInfo *pstMo
 
     if(fsba == 0) 
     {
-        avl_bms_read32(chip->usI2CAddr, stBaseAddrSet.fw_ISDBT_status_reg_base + rs_ISDBT_ISDBT_sys_state_iaddr_offset, &fsba);
+        avl_bms_read32(chip->chip_pub->i2c_addr, stBaseAddrSet.fw_ISDBT_status_reg_base + rs_ISDBT_ISDBT_sys_state_iaddr_offset, &fsba);
     }
 
-    r = avl_bms_read8(chip->usI2CAddr, fsba + rs_ISDBT_system_type_caddr_offset, &ucTemp);
+    r = avl_bms_read8(chip->chip_pub->i2c_addr, fsba + rs_ISDBT_system_type_caddr_offset, &ucTemp);
     pstModulationInfo->eISDBTSystemType = (AVL_ISDBT_SystemType)ucTemp;
 
-    r |= avl_bms_read8(chip->usI2CAddr, fsba + rs_ISDBT_mode_caddr_offset, &ucTemp);
+    r |= avl_bms_read8(chip->chip_pub->i2c_addr, fsba + rs_ISDBT_mode_caddr_offset, &ucTemp);
     pstModulationInfo->eISDBTMode = (AVL_ISDBT_Mode)ucTemp;
 
-    r |= avl_bms_read16(chip->usI2CAddr, fsba + rs_ISDBT_GI_saddr_offset, &usTemp);
+    r |= avl_bms_read16(chip->chip_pub->i2c_addr, fsba + rs_ISDBT_GI_saddr_offset, &usTemp);
     pstModulationInfo->eISDBTGuardInterval = (AVL_ISDBT_GuardInterval)usTemp;
 
-    r |= avl_bms_read8(chip->usI2CAddr, fsba + rs_ISDBT_partial_reception_caddr_offset, &ucTemp);
+    r |= avl_bms_read8(chip->chip_pub->i2c_addr, fsba + rs_ISDBT_partial_reception_caddr_offset, &ucTemp);
     pstModulationInfo->eISDBTPartialReception = (AVL_ISDBT_PartialReception)ucTemp;
 
-    r |= avl_bms_read8(chip->usI2CAddr, fsba + rs_ISDBT_layA_constel_size_caddr_offset, &ucTemp);
+    r |= avl_bms_read8(chip->chip_pub->i2c_addr, fsba + rs_ISDBT_layA_constel_size_caddr_offset, &ucTemp);
     pstModulationInfo->eISDBTLayerA.eISDBTModulationMode = (AVL_ISDBT_ModulationMode)ucTemp;
-    r |= avl_bms_read8(chip->usI2CAddr, fsba + rs_ISDBT_layA_fec_rate_caddr_offset, &ucTemp);
+    r |= avl_bms_read8(chip->chip_pub->i2c_addr, fsba + rs_ISDBT_layA_fec_rate_caddr_offset, &ucTemp);
     pstModulationInfo->eISDBTLayerA.eISDBTCodeRate = (AVL_ISDBT_CodeRate)ucTemp;
-    r |= avl_bms_read8(chip->usI2CAddr, fsba + rs_ISDBT_layA_itlv_len_caddr_offset, &ucTemp);
+    r |= avl_bms_read8(chip->chip_pub->i2c_addr, fsba + rs_ISDBT_layA_itlv_len_caddr_offset, &ucTemp);
     pstModulationInfo->eISDBTLayerA.ucISDBTInterleaverLen = ucTemp;
-    r |= avl_bms_read8(chip->usI2CAddr, fsba + rs_ISDBT_layA_seg_no_caddr_offset, &ucTemp);
+    r |= avl_bms_read8(chip->chip_pub->i2c_addr, fsba + rs_ISDBT_layA_seg_no_caddr_offset, &ucTemp);
     pstModulationInfo->eISDBTLayerA.ucISDBTSegmentNum = ucTemp;
 
-    r |= avl_bms_read8(chip->usI2CAddr, fsba + rs_ISDBT_layB_constel_size_caddr_offset, &ucTemp);
+    r |= avl_bms_read8(chip->chip_pub->i2c_addr, fsba + rs_ISDBT_layB_constel_size_caddr_offset, &ucTemp);
     pstModulationInfo->eISDBTLayerB.eISDBTModulationMode = (AVL_ISDBT_ModulationMode)ucTemp;
-    r |= avl_bms_read8(chip->usI2CAddr, fsba + rs_ISDBT_layB_fec_rate_caddr_offset, &ucTemp);
+    r |= avl_bms_read8(chip->chip_pub->i2c_addr, fsba + rs_ISDBT_layB_fec_rate_caddr_offset, &ucTemp);
     pstModulationInfo->eISDBTLayerB.eISDBTCodeRate = (AVL_ISDBT_CodeRate)ucTemp;
-    r |= avl_bms_read8(chip->usI2CAddr, fsba + rs_ISDBT_layB_itlv_len_caddr_offset, &ucTemp);
+    r |= avl_bms_read8(chip->chip_pub->i2c_addr, fsba + rs_ISDBT_layB_itlv_len_caddr_offset, &ucTemp);
     pstModulationInfo->eISDBTLayerB.ucISDBTInterleaverLen = ucTemp;
-    r |= avl_bms_read8(chip->usI2CAddr, fsba + rs_ISDBT_layB_seg_no_caddr_offset, &ucTemp);
+    r |= avl_bms_read8(chip->chip_pub->i2c_addr, fsba + rs_ISDBT_layB_seg_no_caddr_offset, &ucTemp);
     pstModulationInfo->eISDBTLayerB.ucISDBTSegmentNum = ucTemp;
 
-    r |= avl_bms_read8(chip->usI2CAddr, fsba + rs_ISDBT_layC_constel_size_caddr_offset, &ucTemp);
+    r |= avl_bms_read8(chip->chip_pub->i2c_addr, fsba + rs_ISDBT_layC_constel_size_caddr_offset, &ucTemp);
     pstModulationInfo->eISDBTLayerC.eISDBTModulationMode = (AVL_ISDBT_ModulationMode)ucTemp;
-    r |= avl_bms_read8(chip->usI2CAddr, fsba + rs_ISDBT_layC_fec_rate_caddr_offset, &ucTemp);
+    r |= avl_bms_read8(chip->chip_pub->i2c_addr, fsba + rs_ISDBT_layC_fec_rate_caddr_offset, &ucTemp);
     pstModulationInfo->eISDBTLayerC.eISDBTCodeRate = (AVL_ISDBT_CodeRate)ucTemp;
-    r |= avl_bms_read8(chip->usI2CAddr, fsba + rs_ISDBT_layC_itlv_len_caddr_offset, &ucTemp);
+    r |= avl_bms_read8(chip->chip_pub->i2c_addr, fsba + rs_ISDBT_layC_itlv_len_caddr_offset, &ucTemp);
     pstModulationInfo->eISDBTLayerC.ucISDBTInterleaverLen = ucTemp;
-    r |= avl_bms_read8(chip->usI2CAddr, fsba + rs_ISDBT_layC_seg_no_caddr_offset, &ucTemp);
+    r |= avl_bms_read8(chip->chip_pub->i2c_addr, fsba + rs_ISDBT_layC_seg_no_caddr_offset, &ucTemp);
     pstModulationInfo->eISDBTLayerC.ucISDBTSegmentNum = ucTemp;
 
     return (r);
 }
 
-avl_error_code_t ISDBT_Initialize_Demod(AVL_ChipInternal *chip)
+avl_error_code_t ISDBT_Initialize_Demod(avl68x2_chip *chip)
 {
     avl_error_code_t r = AVL_EC_OK;
 
-    r = avl_bms_write32(chip->usI2CAddr, stBaseAddrSet.fw_ISDBT_config_reg_base + rc_ISDBT_sample_rate_Hz_iaddr_offset, chip->uiADCFrequencyHz);
-    r |= avl_bms_write32(chip->usI2CAddr, stBaseAddrSet.fw_ISDBT_config_reg_base + rc_ISDBT_TS_clk_rate_Hz_iaddr_offset, chip->uiTSFrequencyHz);
+    r = avl_bms_write32(chip->chip_pub->i2c_addr, stBaseAddrSet.fw_ISDBT_config_reg_base + rc_ISDBT_sample_rate_Hz_iaddr_offset, chip->uiADCFrequencyHz);
+    r |= avl_bms_write32(chip->chip_pub->i2c_addr, stBaseAddrSet.fw_ISDBT_config_reg_base + rc_ISDBT_TS_clk_rate_Hz_iaddr_offset, chip->uiTSFrequencyHz);
 
     //DDC configuration
-    r |= avl_bms_write8(chip->usI2CAddr, stBaseAddrSet.fw_ISDBT_config_reg_base + rc_ISDBT_input_format_caddr_offset, AVL_OFFBIN);//ADC in
-    r |= avl_bms_write8(chip->usI2CAddr, stBaseAddrSet.fw_ISDBT_config_reg_base + rc_ISDBT_input_select_caddr_offset, AVL_ADC_IN);//RX_OFFBIN
-    r |= avl_bms_write8(chip->usI2CAddr, stBaseAddrSet.fw_ISDBT_config_reg_base + rc_ISDBT_tuner_type_caddr_offset, 2);//RX_REAL_IF_FROM_Q
+    r |= avl_bms_write8(chip->chip_pub->i2c_addr, stBaseAddrSet.fw_ISDBT_config_reg_base + rc_ISDBT_input_format_caddr_offset, AVL_OFFBIN);//ADC in
+    r |= avl_bms_write8(chip->chip_pub->i2c_addr, stBaseAddrSet.fw_ISDBT_config_reg_base + rc_ISDBT_input_select_caddr_offset, AVL_ADC_IN);//RX_OFFBIN
+    r |= avl_bms_write8(chip->chip_pub->i2c_addr, stBaseAddrSet.fw_ISDBT_config_reg_base + rc_ISDBT_tuner_type_caddr_offset, 2);//RX_REAL_IF_FROM_Q
 
-    r |= avl_bms_write8(chip->usI2CAddr,
+    r |= avl_bms_write8(chip->chip_pub->i2c_addr,
         stBaseAddrSet.fw_ISDBT_config_reg_base + rc_ISDBT_rf_agc_pol_caddr_offset,
-        chip->stISDBTPara.eISDBTAGCPola);
+        chip->chip_pub->isdbt_para.eISDBTAGCPola);
 
-    r |= ISDBT_SetIFFrequency_Demod(chip->stISDBTPara.uiISDBTIFFreqHz,chip);
-    r |= ISDBT_SetIFInputPath_Demod((AVL_InputPath)(chip->stISDBTPara.eISDBTInputPath^1),chip);
-    r |= ISDBT_SetBandWidth_Demod(chip->stISDBTPara.eISDBTBandwidth, chip);
+    r |= ISDBT_SetIFFrequency_Demod(chip->chip_pub->isdbt_para.uiISDBTIFFreqHz,chip);
+    r |= ISDBT_SetIFInputPath_Demod((AVL_InputPath)(chip->chip_pub->isdbt_para.eISDBTInputPath^1),chip);
+    r |= ISDBT_SetBandWidth_Demod(chip->chip_pub->isdbt_para.eISDBTBandwidth, chip);
     
     //ADC configuration 
-    switch(chip->eDemodXtal)
+    switch(chip->chip_pub->xtal)
     {
      case Xtal_16M :
      case Xtal_24M :
         {
-          r |= avl_bms_write8(chip->usI2CAddr, 
+          r |= avl_bms_write8(chip->chip_pub->i2c_addr, 
             stBaseAddrSet.fw_ISDBT_config_reg_base + rc_ISDBT_adc_use_pll_clk_offset, 1);
           
         }
@@ -117,7 +124,7 @@ avl_error_code_t ISDBT_Initialize_Demod(AVL_ChipInternal *chip)
     case Xtal_30M :
     case Xtal_27M :
         {
-          r |= avl_bms_write8(chip->usI2CAddr, 
+          r |= avl_bms_write8(chip->chip_pub->i2c_addr, 
             stBaseAddrSet.fw_ISDBT_config_reg_base + rc_ISDBT_adc_use_pll_clk_offset, 0);
           
         }
@@ -125,7 +132,7 @@ avl_error_code_t ISDBT_Initialize_Demod(AVL_ChipInternal *chip)
     }
 
     //AGC configuration
-    r |= avl_bms_write32(chip->usI2CAddr,
+    r |= avl_bms_write32(chip->chip_pub->i2c_addr,
         stBaseAddrSet.hw_gpio_debug_base + agc1_sel_offset, 6);
     
     if(chip->ucDisableTCAGC == 0)
@@ -140,16 +147,16 @@ avl_error_code_t ISDBT_Initialize_Demod(AVL_ChipInternal *chip)
     return (r);
 }
 
-avl_error_code_t ISDBT_GetLockStatus_Demod( uint8_t * pucLocked, AVL_ChipInternal *chip )
+avl_error_code_t ISDBT_GetLockStatus_Demod( uint8_t * pucLocked, avl68x2_chip *chip )
 {
     avl_error_code_t r = AVL_EC_OK;
 
-    r = avl_bms_read8(chip->usI2CAddr, stBaseAddrSet.fw_ISDBT_status_reg_base + rs_ISDBT_fec_lock_caddr_offset, pucLocked);
+    r = avl_bms_read8(chip->chip_pub->i2c_addr, stBaseAddrSet.fw_ISDBT_status_reg_base + rs_ISDBT_fec_lock_caddr_offset, pucLocked);
 
     return (r);
 }
 
-avl_error_code_t ISDBT_GetSignalQuality_Demod(uint16_t * puiQuality , AVL_ChipInternal *chip )
+avl_error_code_t ISDBT_GetSignalQuality_Demod(uint16_t * puiQuality , avl68x2_chip *chip )
 {
     avl_error_code_t r = AVL_EC_OK;
     uint32_t uiTemp = 0;
@@ -162,46 +169,46 @@ avl_error_code_t ISDBT_GetSignalQuality_Demod(uint16_t * puiQuality , AVL_ChipIn
 
 }
 
-avl_error_code_t ISDBT_GetEWBS_Demod(uint8_t * pucEWBS, AVL_ChipInternal *chip)
+avl_error_code_t ISDBT_GetEWBS_Demod(uint8_t * pucEWBS, avl68x2_chip *chip)
 {
     avl_error_code_t  r = AVL_EC_OK;
     uint32_t   uiBaseAddr = 0; 
 
 
-    r = avl_bms_read32(chip->usI2CAddr, 0x8e0, &uiBaseAddr);
-    r |= avl_bms_read8(chip->usI2CAddr, uiBaseAddr + 0x36, pucEWBS); //1--Turn on Alert Broadcasting;  0-- Turn off Alert Broadcasting
+    r = avl_bms_read32(chip->chip_pub->i2c_addr, 0x8e0, &uiBaseAddr);
+    r |= avl_bms_read8(chip->chip_pub->i2c_addr, uiBaseAddr + 0x36, pucEWBS); //1--Turn on Alert Broadcasting;  0-- Turn off Alert Broadcasting
     return r;
 }
 
-avl_error_code_t ISDBT_GetEWBSChangeFlag_Demod(uint8_t * pucEWBSChangeFlag, AVL_ChipInternal *chip)
+avl_error_code_t ISDBT_GetEWBSChangeFlag_Demod(uint8_t * pucEWBSChangeFlag, avl68x2_chip *chip)
 {
     avl_error_code_t  r = AVL_EC_OK;
     uint32_t   uiBaseAddr = 0;
 
   
-    r = avl_bms_read32(chip->usI2CAddr, 0x8e0, &uiBaseAddr);
-    r |=  avl_bms_read8(chip->usI2CAddr, uiBaseAddr + 0x37, pucEWBSChangeFlag);//1--EWBS Flag changed; 0--EWBS Flag unchanged.
+    r = avl_bms_read32(chip->chip_pub->i2c_addr, 0x8e0, &uiBaseAddr);
+    r |=  avl_bms_read8(chip->chip_pub->i2c_addr, uiBaseAddr + 0x37, pucEWBSChangeFlag);//1--EWBS Flag changed; 0--EWBS Flag unchanged.
     return r;
 }
 
-avl_error_code_t ISDBT_Reset_EWBSChangeFlag_Demod(AVL_ChipInternal *chip)
+avl_error_code_t ISDBT_Reset_EWBSChangeFlag_Demod(avl68x2_chip *chip)
 {
     avl_error_code_t  r = AVL_EC_OK;
     uint32_t   uiBaseAddr = 0;
 
   
-    r = avl_bms_read32(chip->usI2CAddr, 0x8e0, &uiBaseAddr);
-    r |=  avl_bms_write8(chip->usI2CAddr, uiBaseAddr + 0x37, 0);
+    r = avl_bms_read32(chip->chip_pub->i2c_addr, 0x8e0, &uiBaseAddr);
+    r |=  avl_bms_write8(chip->chip_pub->i2c_addr, uiBaseAddr + 0x37, 0);
     return r;
 }
 
 
-avl_error_code_t ISDBT_GetSNR_Demod( uint32_t * puiSNR_db, AVL_ChipInternal *chip )
+avl_error_code_t ISDBT_GetSNR_Demod( uint32_t * puiSNR_db, avl68x2_chip *chip )
 {
     avl_error_code_t r = AVL_EC_OK;
     uint16_t uiTemp = 0;
 
-    r = avl_bms_read16(chip->usI2CAddr, stBaseAddrSet.fw_ISDBT_status_reg_base + rs_ISDBT_snr_dB_x100_saddr_offset,&uiTemp);
+    r = avl_bms_read16(chip->chip_pub->i2c_addr, stBaseAddrSet.fw_ISDBT_status_reg_base + rs_ISDBT_snr_dB_x100_saddr_offset,&uiTemp);
 
     *puiSNR_db = (uint32_t)uiTemp;
 
@@ -270,7 +277,7 @@ AVL_ISDBT_BERSQI_List ISDBT_BERSQI_Table[]=
     {10000000  ,    140 }
 };
 
-avl_error_code_t ISDBT_GetSQI(uint32_t * puiSQI, AVL_ChipInternal *chip)
+avl_error_code_t ISDBT_GetSQI(uint32_t * puiSQI, avl68x2_chip *chip)
 {
     avl_error_code_t r = AVL_EC_OK;
     uint32_t post_viterbi_ber_x1e9 = 0;
@@ -366,22 +373,22 @@ avl_error_code_t ISDBT_GetSQI(uint32_t * puiSQI, AVL_ChipInternal *chip)
 }
 
 
-avl_error_code_t ISDBT_SetIFInputPath_Demod(AVL_InputPath eInputPath, AVL_ChipInternal *chip)
+avl_error_code_t ISDBT_SetIFInputPath_Demod(AVL_InputPath eInputPath, avl68x2_chip *chip)
 {
     avl_error_code_t r = AVL_EC_OK;
 
-    r = avl_bms_write8(chip->usI2CAddr,
+    r = avl_bms_write8(chip->chip_pub->i2c_addr,
         stBaseAddrSet.fw_ISDBT_config_reg_base + rc_ISDBT_adc_sel_caddr_offset, (uint8_t)eInputPath);
 
     return r;
 }
 
-avl_error_code_t ISDBT_GetSignalDetection(uint8_t *pucNoSig, AVL_ChipInternal *chip)
+avl_error_code_t ISDBT_GetSignalDetection(uint8_t *pucNoSig, avl68x2_chip *chip)
 {
     avl_error_code_t r = AVL_EC_OK;
     uint32_t uiTemp = 0;
    
-    r = avl_bms_read32(chip->usI2CAddr,
+    r = avl_bms_read32(chip->chip_pub->i2c_addr,
                 stBaseAddrSet.fw_ISDBT_status_reg_base + rs_ISDBT_Signal_Presence_iaddr_offset,&uiTemp);
     if(uiTemp == 1)// detected
     {
@@ -399,7 +406,7 @@ avl_error_code_t ISDBT_GetSignalDetection(uint8_t *pucNoSig, AVL_ChipInternal *c
     return (r);
 }
 
-avl_error_code_t ISDBT_SetIFFrequency_Demod(uint32_t uiIFFrequencyHz, AVL_ChipInternal *chip)
+avl_error_code_t ISDBT_SetIFFrequency_Demod(uint32_t uiIFFrequencyHz, avl68x2_chip *chip)
 {
     avl_error_code_t r = AVL_EC_OK;
     uint32_t carrier_offset_hz = 0;
@@ -413,35 +420,30 @@ avl_error_code_t ISDBT_SetIFFrequency_Demod(uint32_t uiIFFrequencyHz, AVL_ChipIn
       carrier_offset_hz = uiIFFrequencyHz;
     }
 
-    r = avl_bms_write32(chip->usI2CAddr,
+    r = avl_bms_write32(chip->chip_pub->i2c_addr,
         stBaseAddrSet.fw_ISDBT_config_reg_base + rc_ISDBT_nom_carrier_freq_Hz_iaddr_offset, carrier_offset_hz);
 
     return r;
 }
 
-avl_error_code_t ISDBT_SetBandWidth_Demod(AVL_ISDBT_BandWidth eISDBTBandWidth, AVL_ChipInternal *chip)
+avl_error_code_t ISDBT_SetBandWidth_Demod(AVL_ISDBT_BandWidth eISDBTBandWidth, avl68x2_chip *chip)
 {
     avl_error_code_t r = AVL_EC_OK;
     
-    r = avl_bms_write32(chip->usI2CAddr,
+    r = avl_bms_write32(chip->chip_pub->i2c_addr,
         stBaseAddrSet.fw_ISDBT_config_reg_base + rc_ISDBT_fund_rate_Hz_iaddr_offset, BW_FFT_Table[eISDBTBandWidth]);
 
     return r;
 }
 
-void ISDBT_SetFwData_Demod(uint8_t * pInitialData, AVL_ChipInternal *chip)
-{
-     chip->fwData = pInitialData;
-}
-
-avl_error_code_t ISDBT_GetPrePostBER_Demod(uint32_t *puiBERxe9, AVL_BER_Type eBERType, AVL_ChipInternal *chip)
+avl_error_code_t ISDBT_GetPrePostBER_Demod(uint32_t *puiBERxe9, AVL_BER_Type eBERType, avl68x2_chip *chip)
 {
     avl_error_code_t r = AVL_EC_OK;
 
     return r;
 }
 
-avl_error_code_t ISDBT_ResetLayerPER_Demod(AVL_ChipInternal *chip)
+avl_error_code_t ISDBT_ResetLayerPER_Demod(avl68x2_chip *chip)
 {
     avl_error_code_t r = AVL_EC_OK;
     uint32_t uiTemp = 0;
@@ -476,28 +478,28 @@ avl_error_code_t ISDBT_ResetLayerPER_Demod(AVL_ChipInternal *chip)
     gstISDBTLayerC_ErrorStats.stSwCntPktErrors.low_word = 0;
     gstISDBTLayerC_ErrorStats.uiPER = 0;
 
-    r |= avl_bms_read32(chip->usI2CAddr,
+    r |= avl_bms_read32(chip->chip_pub->i2c_addr,
         stBaseAddrSet.hw_dvb_gen1_fec__base + rs_errstat_clear__offset, &uiTemp);
     uiTemp |= 0x00000001;
-    r |= avl_bms_write32(chip->usI2CAddr,
+    r |= avl_bms_write32(chip->chip_pub->i2c_addr,
         stBaseAddrSet.hw_dvb_gen1_fec__base + rs_errstat_clear__offset, uiTemp);
     uiTemp &= 0xFFFFFFFE;
-    r |= avl_bms_write32(chip->usI2CAddr,
+    r |= avl_bms_write32(chip->chip_pub->i2c_addr,
         stBaseAddrSet.hw_dvb_gen1_fec__base + rs_errstat_clear__offset, uiTemp);
 
-    r |= avl_bms_read32(chip->usI2CAddr,
+    r |= avl_bms_read32(chip->chip_pub->i2c_addr,
         stBaseAddrSet.hw_dvb_gen1_fec__base + rs_errstat_clear__offset, &uiTemp);
     uiTemp |= 0x00000004;
-    r |= avl_bms_write32(chip->usI2CAddr,
+    r |= avl_bms_write32(chip->chip_pub->i2c_addr,
         stBaseAddrSet.hw_dvb_gen1_fec__base + rs_errstat_clear__offset, uiTemp);
     uiTemp &= 0xFFFFFFFB;
-    r |= avl_bms_write32(chip->usI2CAddr,
+    r |= avl_bms_write32(chip->chip_pub->i2c_addr,
         stBaseAddrSet.hw_dvb_gen1_fec__base + rs_errstat_clear__offset, uiTemp);
 
     return r;
 }
 
-avl_error_code_t ISDBT_GetLayerPER_Demod(uint32_t *puiPERxe9, enum AVL_ISDBT_Layer eLayerNum, AVL_ChipInternal *chip)
+avl_error_code_t ISDBT_GetLayerPER_Demod(uint32_t *puiPERxe9, enum AVL_ISDBT_Layer eLayerNum, avl68x2_chip *chip)
 {
     avl_error_code_t r = AVL_EC_OK;
     uint32_t uiHwCntPktErrors = 0;
@@ -507,23 +509,23 @@ avl_error_code_t ISDBT_GetLayerPER_Demod(uint32_t *puiPERxe9, enum AVL_ISDBT_Lay
 
     if (eLayerNum == AVL_ISDBT_LAYER_A)
     {
-        r |= avl_bms_read32(chip->usI2CAddr, 
+        r |= avl_bms_read32(chip->chip_pub->i2c_addr, 
             stBaseAddrSet.fw_ISDBT_status_reg_base + rs_ISDBT_layA_tot_pkts_iaddr_offset, &uiHwCntNumPkts);
-        r |= avl_bms_read32(chip->usI2CAddr, 
+        r |= avl_bms_read32(chip->chip_pub->i2c_addr, 
             stBaseAddrSet.fw_ISDBT_status_reg_base + rs_ISDBT_layA_err_pkts_iaddr_offset, &uiHwCntPktErrors);
     }
     else if (eLayerNum == AVL_ISDBT_LAYER_B)
     {
-        r |= avl_bms_read32(chip->usI2CAddr, 
+        r |= avl_bms_read32(chip->chip_pub->i2c_addr, 
             stBaseAddrSet.fw_ISDBT_status_reg_base + rs_ISDBT_layB_tot_pkts_iaddr_offset, &uiHwCntNumPkts);
-        r |= avl_bms_read32(chip->usI2CAddr, 
+        r |= avl_bms_read32(chip->chip_pub->i2c_addr, 
             stBaseAddrSet.fw_ISDBT_status_reg_base + rs_ISDBT_layB_err_pkts_iaddr_offset, &uiHwCntPktErrors);
     }
     else if (eLayerNum == AVL_ISDBT_LAYER_C)
     {
-        r |= avl_bms_read32(chip->usI2CAddr, 
+        r |= avl_bms_read32(chip->chip_pub->i2c_addr, 
             stBaseAddrSet.fw_ISDBT_status_reg_base + rs_ISDBT_layC_tot_pkts_iaddr_offset, &uiHwCntNumPkts);
-        r |= avl_bms_read32(chip->usI2CAddr, 
+        r |= avl_bms_read32(chip->chip_pub->i2c_addr, 
             stBaseAddrSet.fw_ISDBT_status_reg_base + rs_ISDBT_layC_err_pkts_iaddr_offset, &uiHwCntPktErrors);
     }
     else
@@ -533,22 +535,22 @@ avl_error_code_t ISDBT_GetLayerPER_Demod(uint32_t *puiPERxe9, enum AVL_ISDBT_Lay
 
     if(uiHwCntNumPkts > (uint32_t)(1 << 31))
     {
-        r |= avl_bms_read32(chip->usI2CAddr,
+        r |= avl_bms_read32(chip->chip_pub->i2c_addr,
             stBaseAddrSet.hw_dvb_gen1_fec__base + rs_errstat_clear__offset, &uiTemp);
         uiTemp |= 0x00000001;
-        r |= avl_bms_write32(chip->usI2CAddr,
+        r |= avl_bms_write32(chip->chip_pub->i2c_addr,
             stBaseAddrSet.hw_dvb_gen1_fec__base + rs_errstat_clear__offset, uiTemp);
         uiTemp &= 0xFFFFFFFE;
-        r |= avl_bms_write32(chip->usI2CAddr,
+        r |= avl_bms_write32(chip->chip_pub->i2c_addr,
             stBaseAddrSet.hw_dvb_gen1_fec__base + rs_errstat_clear__offset, uiTemp);
 
-        r |= avl_bms_read32(chip->usI2CAddr,
+        r |= avl_bms_read32(chip->chip_pub->i2c_addr,
             stBaseAddrSet.hw_dvb_gen1_fec__base + rs_errstat_clear__offset, &uiTemp);
         uiTemp |= 0x00000004;
-        r |= avl_bms_write32(chip->usI2CAddr,
+        r |= avl_bms_write32(chip->chip_pub->i2c_addr,
             stBaseAddrSet.hw_dvb_gen1_fec__base + rs_errstat_clear__offset, uiTemp);
         uiTemp &= 0xFFFFFFFB;
-        r |= avl_bms_write32(chip->usI2CAddr,
+        r |= avl_bms_write32(chip->chip_pub->i2c_addr,
             stBaseAddrSet.hw_dvb_gen1_fec__base + rs_errstat_clear__offset, uiTemp);
 
         if (eLayerNum == AVL_ISDBT_LAYER_A)

@@ -1,4 +1,10 @@
-
+// SPDX-License-Identifier: GPL-2.0-or-later
+/*
+ * Availink AVL68x2 DVB-S/S2/T/T2/C, ISDB-T, J83.B demodulator driver
+ *
+ * Copyright (C) 2020 Availink, Inc. (gpl@availink.com)
+ *
+ */
 
 #ifndef AVL_DVBTX_API_H
 #define AVL_DVBTX_API_H
@@ -352,31 +358,30 @@ typedef struct AVL_DVBT_TpsInfo
 
 }AVL_DVBT_TpsInfo;
 
-avl_error_code_t AVL_Demod_DVBTxChannelScan(AVL_DVBTxBandWidth eBandWidth, AVL_DVBTx_LockMode eLockMode, AVL_ChipInternal *chip);
-avl_error_code_t AVL_Demod_DVBTxGetScanInfo(AVL_DVBTxScanInfo* stDVBTxScanInfo, AVL_ChipInternal *chip);
-avl_error_code_t AVL_Demod_DVBT2AutoLock(AVL_DVBTxBandWidth eBandWidth, AVL_DVBT2_PROFILE eDVTB2Profile, uint8_t ucDVBT2PLPID, AVL_ChipInternal *chip);
-avl_error_code_t AVL_Demod_DVBT2GetPLPList(uint8_t * pucPLPIndexArray, uint8_t * pucPLPNumber, AVL_ChipInternal *chip);
-avl_error_code_t AVL_Demod_DVBTxGetNorDigSSI(uint8_t *pucSSI, int32_t iRFPowerdBm, AVL_ChipInternal *chip);
-avl_error_code_t AVL_Demod_DVBTxSignalDetection(uint8_t *pucNoSig, AVL_ChipInternal *chip);
-avl_error_code_t AVL_Demod_DVBTAutoLock(AVL_DVBTxBandWidth eBandWidth, uint8_t ucDVBTLayer, AVL_ChipInternal *chip);
-avl_error_code_t AVL_Demod_DVBTxGetModulationInfo(AVL_DVBTxModulationInfo *pstModulationInfo, AVL_ChipInternal *chip);
-avl_error_code_t DVBTx_Initialize_Demod(AVL_ChipInternal *chip);
-avl_error_code_t DVBTx_GetLockStatus_Demod(uint8_t * pucLocked, AVL_ChipInternal *chip);
-avl_error_code_t DVBTx_GetSNR_Demod(uint32_t * puiSNR_db, AVL_ChipInternal *chip);
-avl_error_code_t DVBTx_GetSignalQuality_Demod(uint16_t * puiQuality , AVL_ChipInternal *chip);
-avl_error_code_t IRx_GetSQI(uint32_t * puiSQI, AVL_ChipInternal *chip);
-avl_error_code_t IRx_GetSSI(uint32_t * puiSSI, int32_t RF_Power, AVL_ChipInternal *chip);
-avl_error_code_t IRx_GetSQI_DVBT(uint32_t * puiSQI, AVL_ChipInternal *chip);
-avl_error_code_t IRx_GetSQI_DVBT2(uint32_t * puiSQI, AVL_ChipInternal *chip);
-avl_error_code_t IRx_GetSSI_DVBT(uint32_t * puiSSI, int32_t RF_Power, AVL_ChipInternal *chip);
-avl_error_code_t IRx_GetSSI_DVBT2(uint32_t * puiSSI, int32_t RF_Power, AVL_ChipInternal *chip);
-avl_error_code_t DVBTx_SetIFInputPath_Demod(AVL_InputPath eInputPath, AVL_ChipInternal *chip);
-avl_error_code_t DVBTx_SetIFFrequency_Demod(uint32_t uiIFFrequencyHz, AVL_ChipInternal *chip);
-avl_error_code_t DVBTx_SetBandWidth_Demod(AVL_DVBTxBandWidth eBandWidth, AVL_ChipInternal *chip);
-void DVBTx_SetFwData_Demod(uint8_t * pInitialData, AVL_ChipInternal *chip);
-avl_error_code_t DVBTx_GetPrePostBER_Demod(uint32_t *puiBERxe9, AVL_BER_Type eBERType, AVL_ChipInternal *chip);
-avl_error_code_t AVL_Demod_DVBT_GetTPSInfo(AVL_DVBT_TpsInfo *pstDVBTTpsInfo, AVL_ChipInternal *chip);
-avl_error_code_t DVBTx_GetCellID_Demod(uint16_t *puiCellID,  AVL_ChipInternal *chip);
+avl_error_code_t AVL_Demod_DVBTxChannelScan(AVL_DVBTxBandWidth eBandWidth, AVL_DVBTx_LockMode eLockMode, avl68x2_chip *chip);
+avl_error_code_t AVL_Demod_DVBTxGetScanInfo(AVL_DVBTxScanInfo* stDVBTxScanInfo, avl68x2_chip *chip);
+avl_error_code_t AVL_Demod_DVBT2AutoLock(AVL_DVBTxBandWidth eBandWidth, AVL_DVBT2_PROFILE eDVTB2Profile, uint8_t ucDVBT2PLPID, avl68x2_chip *chip);
+avl_error_code_t AVL_Demod_DVBT2GetPLPList(uint8_t * pucPLPIndexArray, uint8_t * pucPLPNumber, avl68x2_chip *chip);
+avl_error_code_t AVL_Demod_DVBTxGetNorDigSSI(uint8_t *pucSSI, int32_t iRFPowerdBm, avl68x2_chip *chip);
+avl_error_code_t AVL_Demod_DVBTxSignalDetection(uint8_t *pucNoSig, avl68x2_chip *chip);
+avl_error_code_t AVL_Demod_DVBTAutoLock(AVL_DVBTxBandWidth eBandWidth, uint8_t ucDVBTLayer, avl68x2_chip *chip);
+avl_error_code_t AVL_Demod_DVBTxGetModulationInfo(AVL_DVBTxModulationInfo *pstModulationInfo, avl68x2_chip *chip);
+avl_error_code_t DVBTx_Initialize_Demod(avl68x2_chip *chip);
+avl_error_code_t DVBTx_GetLockStatus_Demod(uint8_t * pucLocked, avl68x2_chip *chip);
+avl_error_code_t DVBTx_GetSNR_Demod(uint32_t * puiSNR_db, avl68x2_chip *chip);
+avl_error_code_t DVBTx_GetSignalQuality_Demod(uint16_t * puiQuality , avl68x2_chip *chip);
+avl_error_code_t IRx_GetSQI(uint32_t * puiSQI, avl68x2_chip *chip);
+avl_error_code_t IRx_GetSSI(uint32_t * puiSSI, int32_t RF_Power, avl68x2_chip *chip);
+avl_error_code_t IRx_GetSQI_DVBT(uint32_t * puiSQI, avl68x2_chip *chip);
+avl_error_code_t IRx_GetSQI_DVBT2(uint32_t * puiSQI, avl68x2_chip *chip);
+avl_error_code_t IRx_GetSSI_DVBT(uint32_t * puiSSI, int32_t RF_Power, avl68x2_chip *chip);
+avl_error_code_t IRx_GetSSI_DVBT2(uint32_t * puiSSI, int32_t RF_Power, avl68x2_chip *chip);
+avl_error_code_t DVBTx_SetIFInputPath_Demod(AVL_InputPath eInputPath, avl68x2_chip *chip);
+avl_error_code_t DVBTx_SetIFFrequency_Demod(uint32_t uiIFFrequencyHz, avl68x2_chip *chip);
+avl_error_code_t DVBTx_SetBandWidth_Demod(AVL_DVBTxBandWidth eBandWidth, avl68x2_chip *chip);
+avl_error_code_t DVBTx_GetPrePostBER_Demod(uint32_t *puiBERxe9, AVL_BER_Type eBERType, avl68x2_chip *chip);
+avl_error_code_t AVL_Demod_DVBT_GetTPSInfo(AVL_DVBT_TpsInfo *pstDVBTTpsInfo, avl68x2_chip *chip);
+avl_error_code_t DVBTx_GetCellID_Demod(uint16_t *puiCellID,  avl68x2_chip *chip);
 
 #ifdef AVL_CPLUSPLUS
     }

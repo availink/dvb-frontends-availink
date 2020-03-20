@@ -1268,7 +1268,7 @@ struct dvb_frontend *avl62x1_attach(struct avl62x1_config *config,
 
 	priv->frontend.demodulator_priv = priv;
 	priv->i2c = i2c;
-	priv->delivery_system = -1;
+	priv->delivery_system = SYS_UNDEFINED;
 
 	/* copy (ephemeral?) public part of chip config into alloc'd area */
 	memcpy(priv->chip->chip_pub,
@@ -1277,8 +1277,9 @@ struct dvb_frontend *avl62x1_attach(struct avl62x1_config *config,
 
 	priv->chip->chip_pub->tuner = &default_avl_tuner;
 
-	dbg_avl("Demod %d, I2C addr 0x%x",
-		(priv->chip->chip_pub->i2c_addr >> 8) & 0x7,
+	dbg_avl("Demod ID %d, I2C addr 0x%x",
+		(priv->chip->chip_pub->i2c_addr >> AVL_DEMOD_ID_SHIFT) &
+		    AVL_DEMOD_ID_MASK,
 		priv->chip->chip_pub->i2c_addr & 0xFF);
 
 	// associate demod ID with i2c_adapter

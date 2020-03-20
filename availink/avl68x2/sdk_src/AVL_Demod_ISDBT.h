@@ -1,4 +1,10 @@
-
+// SPDX-License-Identifier: GPL-2.0-or-later
+/*
+ * Availink AVL68x2 DVB-S/S2/T/T2/C, ISDB-T, J83.B demodulator driver
+ *
+ * Copyright (C) 2020 Availink, Inc. (gpl@availink.com)
+ *
+ */
 #ifndef AVL_ISDBT_H
 #define AVL_ISDBT_H
 
@@ -144,26 +150,25 @@ extern "C" {
 		struct avl_uint64 stPktErrors;        // The total number of packet errors which have been detected.
 		uint32_t uiPER;             // The packet error rate scaled by 1e9.
 	}AVL_ISDBTLayerErrorStats;
-    avl_error_code_t ISDBT_GetEWBSChangeFlag_Demod(uint8_t * pucEWBSChangeFlag,AVL_ChipInternal *chip);
-    avl_error_code_t ISDBT_GetEWBS_Demod(uint8_t * pucEWBS,AVL_ChipInternal *chip);
-    avl_error_code_t ISDBT_Reset_EWBSChangeFlag_Demod(AVL_ChipInternal *chip);
+    avl_error_code_t ISDBT_GetEWBSChangeFlag_Demod(uint8_t * pucEWBSChangeFlag,avl68x2_chip *chip);
+    avl_error_code_t ISDBT_GetEWBS_Demod(uint8_t * pucEWBS,avl68x2_chip *chip);
+    avl_error_code_t ISDBT_Reset_EWBSChangeFlag_Demod(avl68x2_chip *chip);
 
-	avl_error_code_t AVL_Demod_ISDBTAutoLock(AVL_ChipInternal *chip);
-	avl_error_code_t AVL_Demod_ISDBTGetModulationInfo(AVL_ISDBTModulationInfo *pstModulationInfo, AVL_ChipInternal *chip);
+	avl_error_code_t AVL_Demod_ISDBTAutoLock(avl68x2_chip *chip);
+	avl_error_code_t AVL_Demod_ISDBTGetModulationInfo(AVL_ISDBTModulationInfo *pstModulationInfo, avl68x2_chip *chip);
 
-	avl_error_code_t ISDBT_Initialize_Demod(AVL_ChipInternal *chip);
-	avl_error_code_t ISDBT_GetLockStatus_Demod( uint8_t * pucLocked, AVL_ChipInternal *chip );
-	avl_error_code_t ISDBT_GetSignalQuality_Demod(uint16_t * puiQuality , AVL_ChipInternal *chip );
-	avl_error_code_t ISDBT_GetSNR_Demod( uint32_t * puiSNR_db, AVL_ChipInternal *chip );
-	avl_error_code_t ISDBT_GetSQI(uint32_t * puiSQI, AVL_ChipInternal *chip);
-	avl_error_code_t ISDBT_SetIFInputPath_Demod(AVL_InputPath eInputPath, AVL_ChipInternal *chip);
-	avl_error_code_t ISDBT_SetIFFrequency_Demod(uint32_t uiIFFrequencyHz, AVL_ChipInternal *chip);
-	avl_error_code_t ISDBT_SetBandWidth_Demod(AVL_ISDBT_BandWidth eISDBTBandWidth, AVL_ChipInternal *chip);
-	void ISDBT_SetFwData_Demod(uint8_t * pInitialData, AVL_ChipInternal *chip);
-	avl_error_code_t ISDBT_GetPrePostBER_Demod(uint32_t *puiBERxe9, AVL_BER_Type eBERType, AVL_ChipInternal *chip);
-	avl_error_code_t ISDBT_GetSignalDetection(uint8_t *pucNoSig, AVL_ChipInternal *chip);
-	avl_error_code_t ISDBT_ResetLayerPER_Demod(AVL_ChipInternal *chip);
-	avl_error_code_t ISDBT_GetLayerPER_Demod(uint32_t *puiPERxe9, enum AVL_ISDBT_Layer eLayerNum, AVL_ChipInternal *chip);
+	avl_error_code_t ISDBT_Initialize_Demod(avl68x2_chip *chip);
+	avl_error_code_t ISDBT_GetLockStatus_Demod( uint8_t * pucLocked, avl68x2_chip *chip );
+	avl_error_code_t ISDBT_GetSignalQuality_Demod(uint16_t * puiQuality , avl68x2_chip *chip );
+	avl_error_code_t ISDBT_GetSNR_Demod( uint32_t * puiSNR_db, avl68x2_chip *chip );
+	avl_error_code_t ISDBT_GetSQI(uint32_t * puiSQI, avl68x2_chip *chip);
+	avl_error_code_t ISDBT_SetIFInputPath_Demod(AVL_InputPath eInputPath, avl68x2_chip *chip);
+	avl_error_code_t ISDBT_SetIFFrequency_Demod(uint32_t uiIFFrequencyHz, avl68x2_chip *chip);
+	avl_error_code_t ISDBT_SetBandWidth_Demod(AVL_ISDBT_BandWidth eISDBTBandWidth, avl68x2_chip *chip);
+	avl_error_code_t ISDBT_GetPrePostBER_Demod(uint32_t *puiBERxe9, AVL_BER_Type eBERType, avl68x2_chip *chip);
+	avl_error_code_t ISDBT_GetSignalDetection(uint8_t *pucNoSig, avl68x2_chip *chip);
+	avl_error_code_t ISDBT_ResetLayerPER_Demod(avl68x2_chip *chip);
+	avl_error_code_t ISDBT_GetLayerPER_Demod(uint32_t *puiPERxe9, enum AVL_ISDBT_Layer eLayerNum, avl68x2_chip *chip);
 
 #ifdef AVL_CPLUSPLUS
 }

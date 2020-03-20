@@ -1,3 +1,11 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
+/*
+ * Availink AVL68x2 DVB-S/S2/T/T2/C, ISDB-T, J83.B demodulator driver
+ *
+ * Copyright (C) 2020 Availink, Inc. (gpl@availink.com)
+ *
+ */
+
 #ifndef AVL_Demod_H
 #define AVL_Demod_H
 
@@ -52,23 +60,23 @@ typedef enum AVL_SpectrumInversion
 
 
 
-avl_error_code_t AVL_Demod_Initialize(AVL_DemodMode eStartupMode, AVL_ChipInternal *chip, uint8_t bI2CChipSelect);
-avl_error_code_t AVL_Demod_GetChipID(uint32_t * puiChipID,AVL_ChipInternal *chip);
-avl_error_code_t AVL_Demod_GetLockStatus(uint8_t * pucDemodLocked, AVL_ChipInternal *chip);
-avl_error_code_t AVL_Demod_GetSNR (uint32_t * puiSNRx100, AVL_ChipInternal *chip);
-avl_error_code_t AVL_Demod_GetSQI (uint16_t * pusSQI, AVL_ChipInternal *chip);
-avl_error_code_t AVL_Demod_GetSSI(uint16_t * pusSSI, AVL_ChipInternal *chip);
-avl_error_code_t AVL_Demod_GetPER(uint32_t *puiPERxe9, AVL_ChipInternal *chip);
-avl_error_code_t AVL_Demod_SetMode(AVL_DemodMode eDemodMode,AVL_ChipInternal *chip);
-avl_error_code_t AVL_Demod_Sleep(AVL_ChipInternal *chip);
-avl_error_code_t AVL_Demod_Wakeup(AVL_ChipInternal *chip);
-avl_error_code_t AVL_Demod_I2CBypassOn(AVL_ChipInternal *chip);
-avl_error_code_t AVL_Demod_I2CBypassOff(AVL_ChipInternal *chip);
-avl_error_code_t AVL_Demod_GetVersion(AVL_DemodVersion *pstDemodVersion, AVL_ChipInternal *chip);
-avl_error_code_t AVL_Demod_SetGPIO(AVL_GPIOPinNumber ePinNumber, AVL_GPIOPinValue ePinValue, AVL_ChipInternal *chip);
-avl_error_code_t AVL_Demod_GetGPIOValue(AVL_GPIOPinNumber ePinNumber, AVL_GPIOPinValue *pePinValue, AVL_ChipInternal *chip);
-avl_error_code_t AVL_Demod_TsOn(AVL_ChipInternal *chip);
-avl_error_code_t AVL_Demod_TsOff(AVL_ChipInternal *chip);
+avl_error_code_t AVL_Demod_Initialize(AVL_DemodMode eStartupMode, avl68x2_chip *chip);
+avl_error_code_t AVL_Demod_GetChipID(uint32_t * puiChipID,avl68x2_chip *chip);
+avl_error_code_t AVL_Demod_GetLockStatus(uint8_t * pucDemodLocked, avl68x2_chip *chip);
+avl_error_code_t AVL_Demod_GetSNR (uint32_t * puiSNRx100, avl68x2_chip *chip);
+avl_error_code_t AVL_Demod_GetSQI (uint16_t * pusSQI, avl68x2_chip *chip);
+avl_error_code_t AVL_Demod_GetSSI(uint16_t * pusSSI, avl68x2_chip *chip);
+avl_error_code_t AVL_Demod_GetPER(uint32_t *puiPERxe9, avl68x2_chip *chip);
+avl_error_code_t AVL_Demod_SetMode(AVL_DemodMode eDemodMode,avl68x2_chip *chip);
+avl_error_code_t AVL_Demod_Sleep(avl68x2_chip *chip);
+avl_error_code_t AVL_Demod_Wakeup(avl68x2_chip *chip);
+avl_error_code_t AVL_Demod_I2CBypassOn(avl68x2_chip *chip);
+avl_error_code_t AVL_Demod_I2CBypassOff(avl68x2_chip *chip);
+avl_error_code_t AVL_Demod_GetVersion(AVL_DemodVersion *pstDemodVersion, avl68x2_chip *chip);
+avl_error_code_t AVL_Demod_SetGPIO(AVL_GPIOPinNumber ePinNumber, AVL_GPIOPinValue ePinValue, avl68x2_chip *chip);
+avl_error_code_t AVL_Demod_GetGPIOValue(AVL_GPIOPinNumber ePinNumber, AVL_GPIOPinValue *pePinValue, avl68x2_chip *chip);
+avl_error_code_t AVL_Demod_TsOn(avl68x2_chip *chip);
+avl_error_code_t AVL_Demod_TsOff(avl68x2_chip *chip);
 
 #ifdef AVL_CPLUSPLUS
 }

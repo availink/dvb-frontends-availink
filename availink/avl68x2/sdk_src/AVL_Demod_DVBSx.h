@@ -1,4 +1,10 @@
-
+// SPDX-License-Identifier: GPL-2.0-or-later
+/*
+ * Availink AVL68x2 DVB-S/S2/T/T2/C, ISDB-T, J83.B demodulator driver
+ *
+ * Copyright (C) 2020 Availink, Inc. (gpl@availink.com)
+ *
+ */
 #ifndef AVL_DVBSX_H
 #define AVL_DVBSX_H
 
@@ -235,33 +241,32 @@ typedef struct AVL_Diseqc_RxStatus
     uint8_t   m_RxDone;                           // 1 if the receiver window is turned off, 0 if it is still in receiving state.
 }AVL_Diseqc_RxStatus;
 
-avl_error_code_t AVL_Demod_DVBSxAutoLock(uint32_t uiSymbolRateSps, AVL_ChipInternal *chip);
-avl_error_code_t AVL_Demod_DVBSxGetModulationInfo(AVL_DVBSxModulationInfo *pstModulationInfo, AVL_ChipInternal *chip);
-avl_error_code_t AVL_Demod_DVBSx_Diseqc_IsSafeToSwitchMode(AVL_ChipInternal *chip);
-avl_error_code_t AVL_Demod_DVBSx_BlindScan_Start(AVL_BlindScanPara * pBSPara, uint16_t uiTunerLPF_100kHz, AVL_ChipInternal *chip);
-avl_error_code_t AVL_Demod_DVBSx_BlindScan_GetStatus(AVL_BSInfo * pBSInfo, AVL_ChipInternal *chip);
-avl_error_code_t AVL_Demod_DVBSx_BlindScan_Cancel(AVL_ChipInternal *chip);
-avl_error_code_t AVL_Demod_DVBSx_BlindScan_ReadChannelInfo(uint16_t uiStartIndex, uint16_t * pChannelCount,  AVL_ChannelInfo * pChannel, AVL_ChipInternal *chip);
-avl_error_code_t AVL_Demod_DVBSx_BlindScan_Reset(AVL_ChipInternal *chip);
-avl_error_code_t AVL_Demod_DVBSx_SetFunctionalMode(AVL_FunctionalMode enumFunctionalMode,AVL_ChipInternal *chip);
-avl_error_code_t AVL_Demod_DVBSx_GetFunctionalMode(AVL_FunctionalMode * pFunctionalMode, AVL_ChipInternal *chip);
-avl_error_code_t AVL_Demod_DVBSx_SetDishPointingMode(AVL_Switch enumOn_Off, AVL_ChipInternal *chip);
-avl_error_code_t DVBSx_Diseqc_Initialize_Demod(AVL_Diseqc_Para *pDiseqcPara, AVL_ChipInternal *chip);
-avl_error_code_t AVL_Demod_DVBSx_Diseqc_ReadModulationData( uint8_t * pucBuff, uint8_t * pucSize, AVL_ChipInternal *chip);
-avl_error_code_t AVL_Demod_DVBSx_Diseqc_SendModulationData( uint8_t * pucBuff, uint8_t ucSize, AVL_ChipInternal *chip);
-avl_error_code_t AVL_Demod_DVBSx_Diseqc_GetTxStatus( AVL_Diseqc_TxStatus * pTxStatus, AVL_ChipInternal *chip);
-avl_error_code_t AVL_Demod_DVBSx_Diseqc_GetRxStatus( AVL_Diseqc_RxStatus * pRxStatus, AVL_ChipInternal *chip);
-avl_error_code_t AVL_Demod_DVBSx_Diseqc_SendTone( uint8_t ucTone, uint8_t ucCount, AVL_ChipInternal *chip);
-avl_error_code_t AVL_Demod_DVBSx_Diseqc_StartContinuous (AVL_ChipInternal *chip);
-avl_error_code_t AVL_Demod_DVBSx_Diseqc_StopContinuous (AVL_ChipInternal *chip);
-avl_error_code_t DVBSx_Initialize_Demod(AVL_ChipInternal *chip);
-avl_error_code_t DVBSx_GetLockStatus_Demod( uint8_t * pucLocked, AVL_ChipInternal *chip);
-avl_error_code_t DVBSx_GetSNR_Demod(uint32_t * puiSNR_db, AVL_ChipInternal *chip);
-avl_error_code_t DVBSx_GetSignalQuality_Demod(uint16_t * puiQuality , AVL_ChipInternal *chip);
-void DVBSx_SetFwData_Demod(uint8_t * pInitialData, AVL_ChipInternal *chip);
-avl_error_code_t DVBSx_SetAGCPola(AVL_AGCPola enumAGC_Pola, AVL_ChipInternal *chip);
-avl_error_code_t DVBSx_GetPrePostBER_Demod(uint32_t *puiBERxe9, AVL_BER_Type eBERType, AVL_ChipInternal *chip);
-avl_error_code_t AVL_Demod_DVBSx_GetFreqOffset( int32_t * piFreqOffsetHz, AVL_ChipInternal *chip);
+avl_error_code_t AVL_Demod_DVBSxAutoLock(uint32_t uiSymbolRateSps, avl68x2_chip *chip);
+avl_error_code_t AVL_Demod_DVBSxGetModulationInfo(AVL_DVBSxModulationInfo *pstModulationInfo, avl68x2_chip *chip);
+avl_error_code_t AVL_Demod_DVBSx_Diseqc_IsSafeToSwitchMode(avl68x2_chip *chip);
+avl_error_code_t AVL_Demod_DVBSx_BlindScan_Start(AVL_BlindScanPara * pBSPara, uint16_t uiTunerLPF_100kHz, avl68x2_chip *chip);
+avl_error_code_t AVL_Demod_DVBSx_BlindScan_GetStatus(AVL_BSInfo * pBSInfo, avl68x2_chip *chip);
+avl_error_code_t AVL_Demod_DVBSx_BlindScan_Cancel(avl68x2_chip *chip);
+avl_error_code_t AVL_Demod_DVBSx_BlindScan_ReadChannelInfo(uint16_t uiStartIndex, uint16_t * pChannelCount,  AVL_ChannelInfo * pChannel, avl68x2_chip *chip);
+avl_error_code_t AVL_Demod_DVBSx_BlindScan_Reset(avl68x2_chip *chip);
+avl_error_code_t AVL_Demod_DVBSx_SetFunctionalMode(AVL_FunctionalMode enumFunctionalMode,avl68x2_chip *chip);
+avl_error_code_t AVL_Demod_DVBSx_GetFunctionalMode(AVL_FunctionalMode * pFunctionalMode, avl68x2_chip *chip);
+avl_error_code_t AVL_Demod_DVBSx_SetDishPointingMode(AVL_Switch enumOn_Off, avl68x2_chip *chip);
+avl_error_code_t DVBSx_Diseqc_Initialize_Demod(AVL_Diseqc_Para *pDiseqcPara, avl68x2_chip *chip);
+avl_error_code_t AVL_Demod_DVBSx_Diseqc_ReadModulationData( uint8_t * pucBuff, uint8_t * pucSize, avl68x2_chip *chip);
+avl_error_code_t AVL_Demod_DVBSx_Diseqc_SendModulationData( uint8_t * pucBuff, uint8_t ucSize, avl68x2_chip *chip);
+avl_error_code_t AVL_Demod_DVBSx_Diseqc_GetTxStatus( AVL_Diseqc_TxStatus * pTxStatus, avl68x2_chip *chip);
+avl_error_code_t AVL_Demod_DVBSx_Diseqc_GetRxStatus( AVL_Diseqc_RxStatus * pRxStatus, avl68x2_chip *chip);
+avl_error_code_t AVL_Demod_DVBSx_Diseqc_SendTone( uint8_t ucTone, uint8_t ucCount, avl68x2_chip *chip);
+avl_error_code_t AVL_Demod_DVBSx_Diseqc_StartContinuous (avl68x2_chip *chip);
+avl_error_code_t AVL_Demod_DVBSx_Diseqc_StopContinuous (avl68x2_chip *chip);
+avl_error_code_t DVBSx_Initialize_Demod(avl68x2_chip *chip);
+avl_error_code_t DVBSx_GetLockStatus_Demod( uint8_t * pucLocked, avl68x2_chip *chip);
+avl_error_code_t DVBSx_GetSNR_Demod(uint32_t * puiSNR_db, avl68x2_chip *chip);
+avl_error_code_t DVBSx_GetSignalQuality_Demod(uint16_t * puiQuality , avl68x2_chip *chip);
+avl_error_code_t DVBSx_SetAGCPola(AVL_AGCPola enumAGC_Pola, avl68x2_chip *chip);
+avl_error_code_t DVBSx_GetPrePostBER_Demod(uint32_t *puiBERxe9, AVL_BER_Type eBERType, avl68x2_chip *chip);
+avl_error_code_t AVL_Demod_DVBSx_GetFreqOffset( int32_t * piFreqOffsetHz, avl68x2_chip *chip);
 
 
 #ifdef AVL_CPLUSPLUS

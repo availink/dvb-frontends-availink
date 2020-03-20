@@ -1,5 +1,11 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
+/*
+ * Availink AVL68x2 DVB-S/S2/T/T2/C, ISDB-T, J83.B demodulator driver
+ *
+ * Copyright (C) 2020 Availink, Inc. (gpl@availink.com)
+ *
+ */
 
-    
 #ifndef AVL_DVBC_H
 #define AVL_DVBC_H
     #include "AVL_Demod.h"
@@ -82,21 +88,20 @@ typedef struct AVL_DVBCModulationInfo
 	AVL_DVBCInterleaveMode  eInterleaveMode;
 }AVL_DVBCModulationInfo;
  
-avl_error_code_t AVL_Demod_DVBCAutoLock(AVL_ChipInternal *chip);
-avl_error_code_t AVL_Demod_DVBCManualLock (uint32_t uiSymbolRateSps, AVL_DVBCQAMMode eQAMMode, AVL_ChipInternal *chip);
-avl_error_code_t AVL_Demod_DVBCGetModulationInfo(AVL_DVBCModulationInfo *pstModulationInfo, AVL_ChipInternal *chip);
+avl_error_code_t AVL_Demod_DVBCAutoLock(avl68x2_chip *chip);
+avl_error_code_t AVL_Demod_DVBCManualLock (uint32_t uiSymbolRateSps, AVL_DVBCQAMMode eQAMMode, avl68x2_chip *chip);
+avl_error_code_t AVL_Demod_DVBCGetModulationInfo(AVL_DVBCModulationInfo *pstModulationInfo, avl68x2_chip *chip);
     
-avl_error_code_t DVBC_Initialize_Demod(AVL_ChipInternal *chip);
-avl_error_code_t DVBC_GetLockStatus_Demod( uint8_t * pucLocked, AVL_ChipInternal *chip);
-avl_error_code_t DVBC_GetSNR_Demod(uint32_t * puiSNR_db, AVL_ChipInternal *chip);
-avl_error_code_t DVBC_GetSignalQuality_Demod(uint16_t * puiQuality , AVL_ChipInternal *chip);
-avl_error_code_t DVBC_SetIFInputPath_Demod(AVL_InputPath eInputPath, AVL_ChipInternal *chip);
-avl_error_code_t DVBC_SetIFFrequency_Demod(uint32_t uiIFFrequencyHz, AVL_ChipInternal *chip);
-avl_error_code_t DVBC_SetStandard_Demod(AVL_DVBC_Standard eDVBCStandard, AVL_ChipInternal *chip);
-void DVBC_SetFwData_Demod(uint8_t * pInitialData, AVL_ChipInternal *chip);
-avl_error_code_t DVBC_SetSymbolRate_Demod(uint32_t uiDVBCSymbolRateSps, AVL_ChipInternal *chip);
-avl_error_code_t DVBC_GetPrePostBER_Demod(uint32_t *puiBERxe9, AVL_BER_Type eBERType, AVL_ChipInternal *chip);
-avl_error_code_t AVL_Demod_DVBCSignalDetection(uint8_t *pucNoSig, AVL_ChipInternal *chip);
+avl_error_code_t DVBC_Initialize_Demod(avl68x2_chip *chip);
+avl_error_code_t DVBC_GetLockStatus_Demod( uint8_t * pucLocked, avl68x2_chip *chip);
+avl_error_code_t DVBC_GetSNR_Demod(uint32_t * puiSNR_db, avl68x2_chip *chip);
+avl_error_code_t DVBC_GetSignalQuality_Demod(uint16_t * puiQuality , avl68x2_chip *chip);
+avl_error_code_t DVBC_SetIFInputPath_Demod(AVL_InputPath eInputPath, avl68x2_chip *chip);
+avl_error_code_t DVBC_SetIFFrequency_Demod(uint32_t uiIFFrequencyHz, avl68x2_chip *chip);
+avl_error_code_t DVBC_SetStandard_Demod(AVL_DVBC_Standard eDVBCStandard, avl68x2_chip *chip);
+avl_error_code_t DVBC_SetSymbolRate_Demod(uint32_t uiDVBCSymbolRateSps, avl68x2_chip *chip);
+avl_error_code_t DVBC_GetPrePostBER_Demod(uint32_t *puiBERxe9, AVL_BER_Type eBERType, avl68x2_chip *chip);
+avl_error_code_t AVL_Demod_DVBCSignalDetection(uint8_t *pucNoSig, avl68x2_chip *chip);
 
 #ifdef AVL_CPLUSPLUS
     }

@@ -1,7 +1,15 @@
-
+// SPDX-License-Identifier: GPL-2.0-or-later
+/*
+ * Availink AVL68x2 DVB-S/S2/T/T2/C, ISDB-T, J83.B demodulator driver
+ *
+ * Copyright (C) 2020 Availink, Inc. (gpl@availink.com)
+ *
+ */
 
 #ifndef AVL_COMMONINTERNAL_H
 #define AVL_COMMONINTERNAL_H
+
+#include "avl_lib.h"
 
 #define MAX_II2C_READ_SIZE 64
 #define MAX_II2C_WRITE_SIZE 64
@@ -502,7 +510,7 @@ extern "C" {
   
   typedef struct AVL_DVBSxPara
   {
-    avl_sem_t semDiseqc;
+    avl_sem_t diseqc_sem;
     AVL_DiseqcStatus eDiseqcStatus;
     AVL_AGCPola eDVBSxAGCPola;
     AVL_Diseqc_WaveFormMode e22KWaveForm;
@@ -548,13 +556,32 @@ extern "C" {
   } AVL_DVBCPara;
   
   /**************************************************/
-  typedef struct AVL_CommonConfig
+  
+  
+  typedef struct AVL_TSConfig
   {
-    uint16_t      usI2CAddr;
-    AVL_Demod_Xtal  eDemodXtal;
-    AVL_TSMode      eTSMode;
+    AVL_TSMode eMode;
     AVL_TSClockEdge eClockEdge;
     AVL_TSClockMode eClockMode;
+    AVL_TSSerialPin eSerialPin;
+    AVL_TSSerialOrder eSerialOrder;
+    AVL_TSSerialSyncPulse eSerialSyncPulse;
+    AVL_TSErrorBit eErrorBit;
+    AVL_TSErrorPolarity eErrorPolarity;
+    AVL_TSValidPolarity eValidPolarity;
+    AVL_TSPacketLen ePacketLen;
+    AVL_TSParallelPhase eParallelPhase;
+    AVL_TSParallelOrder eParallelOrder;
+    uint32_t guiDVBTxSerialTSContinuousHz;
+    uint32_t guiDVBSxSerialTSContinuousHz;
+    uint32_t guiISDBTSerialTSContinuousHz;
+    uint32_t guiDVBCSerialTSContinuousHz;
+  }AVL_TSConfig;
+
+  typedef struct AVL_CommonConfig
+  {
+    AVL_Demod_Xtal  xtal;
+    AVL_TSConfig ts_config;
   }AVL_CommonConfig;
   
   typedef struct AVL_DVBTxConfig
@@ -579,13 +606,6 @@ extern "C" {
     AVL_Diseqc_WaveFormMode e22KWaveForm;
   } AVL_DVBSxConfig;
   
-  typedef struct AVL_DTMBConfig
-  {
-    AVL_InputPath eDTMBInputPath;
-    uint32_t uiDTMBIFFreqHz;
-    uint32_t uiDTMBSymbolRateHz;
-    AVL_AGCPola eDTMBAGCPola;
-  } AVL_DTMBConfig;
   
   typedef struct AVL_ISDBTConfig
   { 
@@ -594,26 +614,7 @@ extern "C" {
     uint32_t uiISDBTIFFreqHz;
     AVL_AGCPola eISDBTAGCPola;
   } AVL_ISDBTConfig;
-  
-  typedef struct AVL_TSConfig
-  {
-    AVL_TSMode eMode;
-    AVL_TSClockEdge eClockEdge;
-    AVL_TSClockMode eClockMode;
-    AVL_TSSerialPin eSerialPin;
-    AVL_TSSerialOrder eSerialOrder;
-    AVL_TSSerialSyncPulse eSerialSyncPulse;
-    AVL_TSErrorBit eErrorBit;
-    AVL_TSErrorPolarity eErrorPolarity;
-    AVL_TSValidPolarity eValidPolarity;
-    AVL_TSPacketLen ePacketLen;
-    AVL_TSParallelOrder eParallelOrder;
-    uint32_t guiDVBTxSerialTSContinuousHz;
-    uint32_t guiDVBSxSerialTSContinuousHz;
-    uint32_t guiISDBTSerialTSContinuousHz;
-    uint32_t guiDTMBSerialTSContinuousHz;
-    uint32_t guiDVBCSerialTSContinuousHz;
-  }AVL_TSConfig;
+
   typedef struct AVL_BaseAddressSet
   {
     uint32_t hw_mcu_reset_base;
@@ -647,24 +648,54 @@ extern "C" {
     uint32_t fw_DVBSx_status_reg_base;
     uint32_t fw_ISDBT_config_reg_base;
     uint32_t fw_ISDBT_status_reg_base;
-    uint32_t fw_DTMB_config_reg_base;
-    uint32_t fw_DTMB_status_reg_base;
     uint32_t fw_DVBC_config_reg_base;
     uint32_t fw_DVBC_status_reg_base;
   }AVL_BaseAddressSet;
 
   struct AVL_StandardSpecificFunctions;
 
-  typedef struct AVL_ChipInternal
+typedef struct avl68x2_chip_priv
+{
+  uint8_t * patch_data;
+  uint32_t variable_array[PATCH_VAR_ARRAY_SIZE];
+
+  uint8_t sleep_flag;  //0 - Wakeup, 1 - Sleep 
+
+} avl68x2_chip_priv;
+
+typedef struct avl68x2_chip_pub
+{
+  /*
+	* demod ID and I2C slave address
+	* ((ID & AVL_DEMOD_ID_MASK)<<8) | (slv_addr & 0xFF)
+	*/
+	uint16_t i2c_addr;
+
+  AVL_Demod_Xtal xtal;
+
+  AVL_TSConfig ts_config;
+
+  AVL_DemodMode cur_demod_mode;
+  AVL_DVBTxPara dvbtx_para;
+  AVL_DVBSxPara dvbsx_para;
+  AVL_ISDBTPara isdbt_para;
+  AVL_DVBCPara dvbc_para;
+
+  struct avl_tuner *tuner;
+} avl68x2_chip_pub;
+
+  typedef struct avl68x2_chip
   {
-    uint16_t usI2CAddr;
-    uint8_t semI2CInitialized;  
-    uint8_t semRxInitialized;  
-    uint32_t uiFamilyID;
-    AVL_Demod_Xtal eDemodXtal;
-    AVL_DemodMode eCurrentDemodMode;
-    avl_sem_t semRx;
-    avl_sem_t semI2C;
+    struct avl68x2_chip_priv *chip_priv;
+    struct avl68x2_chip_pub *chip_pub;
+
+    uint8_t i2c_sem_initialized;  
+    uint8_t rx_sem_initialized;  
+    uint32_t family_id;
+    
+    
+    avl_sem_t rx_sem;
+    avl_sem_t i2c_sem;
     uint32_t uiCoreFrequencyHz;
     uint32_t uiFECFrequencyHz;
     uint32_t uiTSFrequencyHz;
@@ -672,27 +703,17 @@ extern "C" {
     uint32_t uiRefFrequencyHz;
     uint32_t uiDDCFrequencyHz;
     uint32_t uiSDRAMFrequencyHz;
-    AVL_TSConfig stTSConfig;
+    
     AVL_ErrorStatConfig stErrorStatConfig;
-    AVL_DVBTxPara stDVBTxPara;
-    AVL_DVBSxPara stDVBSxPara;
-    AVL_ISDBTPara stISDBTPara;
-    AVL_DTMBPara stDTMBPara;
-    AVL_DVBCPara stDVBCPara;
+    
     struct AVL_StandardSpecificFunctions  *stStdSpecFunc;
     AVL_ErrorStats stAVLErrorStat;
-    uint8_t * fwData;
-    uint32_t variable_array[PATCH_VAR_ARRAY_SIZE];
+
     
-    AVL_TSSerialPin eTSSerialPin;
-    AVL_TSSerialOrder eTSSerialOrder;
-    AVL_TSSerialSyncPulse eTSSerialSyncPulse;
-    AVL_TSErrorBit eTSErrorBit;
-    AVL_TSErrorPolarity eTSErrorPola;
-    AVL_TSValidPolarity eTSValidPola;
-    AVL_TSPacketLen eTSPacketLen;
-    AVL_TSParallelOrder eTSParallelOrder;
-    AVL_TSParallelPhase eTSParallelPhase;
+    
+    
+    
+    
     
     uint8_t ucDisableTCAGC;
     uint8_t ucDisableSAGC;
@@ -704,84 +725,92 @@ extern "C" {
     uint8_t ucPin38Voltage;   
     uint8_t ucPin15Voltage;
     
-    uint8_t ucSleepFlag;  //0 - Wakeup, 1 - Sleep 
+    
         
-  } AVL_ChipInternal;
+  } avl68x2_chip;
+
+
   
   // The Availink version structure.
   typedef struct AVL_Version
   {
-    uint8_t   ucMajor;                            // The major version number.
-    uint8_t   ucMinor;                            // The minor version number.
-    uint16_t  usBuild;                            // The build version number.
+    uint8_t   major;                            // The major version number.
+    uint8_t   minor;                            // The minor version number.
+    uint16_t  build;                            // The build version number.
   }AVL_Version;
   
   // Stores AVLEM61 device version information.
   typedef struct AVL_DemodVersion
   {
-    uint32_t  uiChip;                             // Hardware version information. 0xYYYYMMDD
-    AVL_Version stAPI;                              // SDK version information.
-    AVL_Version stPatch;                            // The version of the internal patch.
+    uint32_t  hardware;                             // Hardware version information. 0xYYYYMMDD
+    AVL_Version sdk;                              // SDK version information.
+    AVL_Version firmware;                            // The version of the internal patch.
   } AVL_DemodVersion;
   
+  extern const AVL_CommonConfig default_common_config;
+  extern const AVL_DVBTxConfig default_dvbtx_config;
+  extern const AVL_DVBSxConfig default_dvbsx_config;
+  extern const AVL_ISDBTConfig default_isdbt_config;
+  extern const AVL_DVBCConfig default_dvbc_config;
   extern const AVL_BaseAddressSet stBaseAddrSet;
-  avl_error_code_t InitSemaphore_Demod(AVL_ChipInternal *chip);
-  avl_error_code_t IBase_Initialize_Demod(AVL_ChipInternal *chip);
-  avl_error_code_t TunerI2C_Initialize_Demod(AVL_ChipInternal *chip);
-  avl_error_code_t EnableTSOutput_Demod(AVL_ChipInternal *chip);
-  avl_error_code_t DisableTSOutput_Demod(AVL_ChipInternal *chip);
-  avl_error_code_t InitErrorStat_Demod(AVL_ChipInternal *chip);
-  avl_error_code_t ErrorStatMode_Demod(AVL_ErrorStatConfig stErrorStatConfig,AVL_ChipInternal *chip);
-  avl_error_code_t ResetErrorStat_Demod(AVL_ChipInternal *chip);
-  avl_error_code_t ResetPER_Demod(AVL_ChipInternal *chip);
-  avl_error_code_t ResetBER_Demod(AVL_BERConfig *pstErrorStatConfig, AVL_ChipInternal *chip);
-  avl_error_code_t SetPLL_Demod(   AVL_ChipInternal *chip);
-  avl_error_code_t IBase_CheckChipReady_Demod(AVL_ChipInternal *chip);
-  avl_error_code_t IRx_Initialize_Demod(AVL_ChipInternal *chip);
-  avl_error_code_t IBase_SendRxOPWait_Demod(uint8_t ucOpCmd, AVL_ChipInternal *chip);
-  avl_error_code_t IBase_GetRxOPStatus_Demod(AVL_ChipInternal *chip);
-  avl_error_code_t SetTSMode_Demod(AVL_ChipInternal *chip);
-  avl_error_code_t SetInternalFunc_Demod(AVL_DemodMode eDemodMode, AVL_ChipInternal *chip);
-  avl_error_code_t SetAGCPola_Demod(AVL_AGCPola enumAGCPola, AVL_ChipInternal *chip);
-  avl_error_code_t EnableTCAGC_Demod(AVL_ChipInternal *chip);
-  avl_error_code_t DisableTCAGC_Demod(AVL_ChipInternal *chip);
-  avl_error_code_t EnableSAGC_Demod(AVL_ChipInternal *chip);
-  avl_error_code_t DisableSAGC_Demod(AVL_ChipInternal *chip);
-  avl_error_code_t SetTSSerialPin_Demod(AVL_TSSerialPin TSSerialPin, AVL_ChipInternal *chip);
-  avl_error_code_t SetTSSerialOrder_Demod(AVL_TSSerialOrder TSSerialOrder, AVL_ChipInternal *chip);
-  avl_error_code_t SetTSSerialSyncPulse_Demod(AVL_TSSerialSyncPulse TSSerialSyncPulse, AVL_ChipInternal *chip);
-  avl_error_code_t SetTSErrorBit_Demod(AVL_TSErrorBit TSErrorBit, AVL_ChipInternal *chip);
-  avl_error_code_t SetTSErrorPola_Demod(AVL_TSErrorPolarity TSErrorPola, AVL_ChipInternal *chip);
-  avl_error_code_t SetTSValidPola_Demod(AVL_TSValidPolarity TSValidPola, AVL_ChipInternal *chip);
-  avl_error_code_t SetTSPacketLen_Demod(AVL_TSPacketLen TSPacketLen, AVL_ChipInternal *chip);
-  avl_error_code_t SetTSParallelOrder_Demod(AVL_TSParallelOrder TSParallelOrder, AVL_ChipInternal *chip);
-  avl_error_code_t SetTSParallelPhase_Demod(AVL_TSParallelPhase eParallelPhase, AVL_ChipInternal *chip);
-  avl_error_code_t IBase_SetSleepClock_Demod(AVL_ChipInternal *chip);
-  avl_error_code_t GetMode_Demod(AVL_DemodMode* peCurrentMode, AVL_ChipInternal *chip);
-  avl_error_code_t GetBER_Demod(uint32_t *puiBERxe9, AVL_BER_Type  enumBERType, AVL_ChipInternal *chip);
+  extern AVL_PLL_Conf0 gstPLLConfigArray0[];
+  avl_error_code_t InitSemaphore_Demod(avl68x2_chip *chip);
+  avl_error_code_t IBase_Initialize_Demod(avl68x2_chip *chip);
+  avl_error_code_t TunerI2C_Initialize_Demod(avl68x2_chip *chip);
+  avl_error_code_t EnableTSOutput_Demod(avl68x2_chip *chip);
+  avl_error_code_t DisableTSOutput_Demod(avl68x2_chip *chip);
+  avl_error_code_t InitErrorStat_Demod(avl68x2_chip *chip);
+  avl_error_code_t ErrorStatMode_Demod(AVL_ErrorStatConfig stErrorStatConfig,avl68x2_chip *chip);
+  avl_error_code_t ResetErrorStat_Demod(avl68x2_chip *chip);
+  avl_error_code_t ResetPER_Demod(avl68x2_chip *chip);
+  avl_error_code_t ResetBER_Demod(AVL_BERConfig *pstErrorStatConfig, avl68x2_chip *chip);
+  avl_error_code_t SetPLL_Demod(   avl68x2_chip *chip);
+  avl_error_code_t IBase_CheckChipReady_Demod(avl68x2_chip *chip);
+  avl_error_code_t IRx_Initialize_Demod(avl68x2_chip *chip);
+  avl_error_code_t IBase_SendRxOPWait_Demod(uint8_t ucOpCmd, avl68x2_chip *chip);
+  avl_error_code_t IBase_GetRxOPStatus_Demod(avl68x2_chip *chip);
+  avl_error_code_t SetTSMode_Demod(avl68x2_chip *chip);
+  avl_error_code_t SetInternalFunc_Demod(AVL_DemodMode eDemodMode, avl68x2_chip *chip);
+  avl_error_code_t SetAGCPola_Demod(AVL_AGCPola enumAGCPola, avl68x2_chip *chip);
+  avl_error_code_t EnableTCAGC_Demod(avl68x2_chip *chip);
+  avl_error_code_t DisableTCAGC_Demod(avl68x2_chip *chip);
+  avl_error_code_t EnableSAGC_Demod(avl68x2_chip *chip);
+  avl_error_code_t DisableSAGC_Demod(avl68x2_chip *chip);
+  avl_error_code_t SetTSSerialPin_Demod(AVL_TSSerialPin TSSerialPin, avl68x2_chip *chip);
+  avl_error_code_t SetTSSerialOrder_Demod(AVL_TSSerialOrder TSSerialOrder, avl68x2_chip *chip);
+  avl_error_code_t SetTSSerialSyncPulse_Demod(AVL_TSSerialSyncPulse TSSerialSyncPulse, avl68x2_chip *chip);
+  avl_error_code_t SetTSErrorBit_Demod(AVL_TSErrorBit TSErrorBit, avl68x2_chip *chip);
+  avl_error_code_t SetTSErrorPola_Demod(AVL_TSErrorPolarity TSErrorPola, avl68x2_chip *chip);
+  avl_error_code_t SetTSValidPola_Demod(AVL_TSValidPolarity TSValidPola, avl68x2_chip *chip);
+  avl_error_code_t SetTSPacketLen_Demod(AVL_TSPacketLen TSPacketLen, avl68x2_chip *chip);
+  avl_error_code_t SetTSParallelOrder_Demod(AVL_TSParallelOrder TSParallelOrder, avl68x2_chip *chip);
+  avl_error_code_t SetTSParallelPhase_Demod(AVL_TSParallelPhase eParallelPhase, avl68x2_chip *chip);
+  avl_error_code_t IBase_SetSleepClock_Demod(avl68x2_chip *chip);
+  avl_error_code_t GetMode_Demod(AVL_DemodMode* peCurrentMode, avl68x2_chip *chip);
+  avl_error_code_t GetBER_Demod(uint32_t *puiBERxe9, AVL_BER_Type  enumBERType, avl68x2_chip *chip);
   
 
 
-  avl_error_code_t SetPLL0_Demod(AVL_ChipInternal *chip);
-  avl_error_code_t SetSleepPLL0_Demod(AVL_ChipInternal *chip);
-  avl_error_code_t TestSDRAM_Demod(uint32_t * puiTestResult, uint32_t * puiTestPattern, AVL_ChipInternal *chip);
-  avl_error_code_t GetValidModeList_Demod(uint8_t * pucValidModeList, AVL_ChipInternal *chip);
+  avl_error_code_t SetPLL0_Demod(avl68x2_chip *chip);
+  avl_error_code_t SetSleepPLL0_Demod(avl68x2_chip *chip);
+  avl_error_code_t TestSDRAM_Demod(uint32_t * puiTestResult, uint32_t * puiTestPattern, avl68x2_chip *chip);
+  avl_error_code_t GetValidModeList_Demod(uint8_t * pucValidModeList, avl68x2_chip *chip);
   void GetValidModeList0_Demod(uint8_t * pucValidModeList, uint32_t uiMemberID);
-  avl_error_code_t GetFamilyID_Demod(uint32_t * puiFamilyID,AVL_ChipInternal *chip);
-  avl_error_code_t Initilize_GPIOStatus_Demod(AVL_ChipInternal *chip);
-  avl_error_code_t SetGPIOStatus_Demod(AVL_ChipInternal *chip);
-  avl_error_code_t AVL_ParseFwPatch_v0(AVL_ChipInternal *chip, uint8_t download_only );
+  avl_error_code_t GetFamilyID_Demod(uint32_t * puiFamilyID,avl68x2_chip *chip);
+  avl_error_code_t Initilize_GPIOStatus_Demod(avl68x2_chip *chip);
+  avl_error_code_t SetGPIOStatus_Demod(avl68x2_chip *chip);
+  avl_error_code_t AVL_ParseFwPatch_v0(avl68x2_chip *chip, uint8_t download_only );
   uint8_t AVL_patch_read8(uint8_t * pPatchBuf, uint32_t *idx, uint8_t update_idx );
   uint16_t AVL_patch_read16(uint8_t * pPatchBuf, uint32_t *idx, uint8_t update_idx );
   uint32_t AVL_patch_read32(uint8_t * pPatchBuf, uint32_t *idx, uint8_t update_idx );
   
   
-  typedef avl_error_code_t (* AVL_Func_Initialize)(AVL_ChipInternal *chip);
-  typedef avl_error_code_t (* AVL_Func_GetLockStatus)(uint8_t * pucLocked, AVL_ChipInternal *chip );
-  typedef avl_error_code_t (* AVL_Func_GetSSI)(uint16_t * puiStrength , AVL_ChipInternal *chip);
-  typedef avl_error_code_t (* AVL_Func_GetSQI)(uint16_t * puiQuality , AVL_ChipInternal *chip);
-  typedef avl_error_code_t (* AVL_Func_GetSNR)(uint32_t * puiSNR_db, AVL_ChipInternal *chip); 
-  typedef avl_error_code_t (* AVL_Func_GetPrePostBER)(uint32_t *puiBERxe9, AVL_BER_Type eBERType, AVL_ChipInternal *chip);
+  typedef avl_error_code_t (* AVL_Func_Initialize)(avl68x2_chip *chip);
+  typedef avl_error_code_t (* AVL_Func_GetLockStatus)(uint8_t * pucLocked, avl68x2_chip *chip );
+  typedef avl_error_code_t (* AVL_Func_GetSSI)(uint16_t * puiStrength , avl68x2_chip *chip);
+  typedef avl_error_code_t (* AVL_Func_GetSQI)(uint16_t * puiQuality , avl68x2_chip *chip);
+  typedef avl_error_code_t (* AVL_Func_GetSNR)(uint32_t * puiSNR_db, avl68x2_chip *chip); 
+  typedef avl_error_code_t (* AVL_Func_GetPrePostBER)(uint32_t *puiBERxe9, AVL_BER_Type eBERType, avl68x2_chip *chip);
   
   typedef struct AVL_StandardSpecificFunctions
   {

@@ -1,9 +1,15 @@
- 
+// SPDX-License-Identifier: GPL-2.0-or-later
+/*
+ * Availink AVL68x2 DVB-S/S2/T/T2/C, ISDB-T, J83.B demodulator driver
+ *
+ * Copyright (C) 2020 Availink, Inc. (gpl@availink.com)
+ *
+ */
 
 #include "AVL_Demod.h"
 #include "AVL_Demod_DVBTx.h"
 
-extern AVL_ChipInternal gstChipInternalArray[2];
+extern avl68x2_chip gstChipInternalArray[2];
 
 static int BW_FFT_Table[5]=
 {
@@ -14,13 +20,13 @@ static int BW_FFT_Table[5]=
     9142857     //bw=8.0MHz
 };
 
-avl_error_code_t AVL_Demod_DVBTxChannelScan(AVL_DVBTxBandWidth eBandWidth, AVL_DVBTx_LockMode eLockMode, AVL_ChipInternal *chip)
+avl_error_code_t AVL_Demod_DVBTxChannelScan(AVL_DVBTxBandWidth eBandWidth, AVL_DVBTx_LockMode eLockMode, avl68x2_chip *chip)
 {
     avl_error_code_t r = AVL_EC_OK;
     
     r = DVBTx_SetBandWidth_Demod(eBandWidth, chip);
 
-    if(1 == chip->ucSleepFlag)
+    if(1 == chip->chip_priv->sleep_flag)
     {
         r = AVL_EC_SLEEP;
         return r;
@@ -28,11 +34,11 @@ avl_error_code_t AVL_Demod_DVBTxChannelScan(AVL_DVBTxBandWidth eBandWidth, AVL_D
 
     r = IBase_SendRxOPWait_Demod(AVL_FW_CMD_HALT, chip);
 
-    r |= avl_bms_write8(chip->usI2CAddr,
+    r |= avl_bms_write8(chip->chip_pub->i2c_addr,
         stBaseAddrSet.fw_DVBTx_config_reg_base + rc_DVBTx_acquire_mode_caddr_offset,
         eLockMode);
 
-    r |= avl_bms_write8(chip->usI2CAddr,
+    r |= avl_bms_write8(chip->chip_pub->i2c_addr,
          stBaseAddrSet.fw_DVBTx_config_reg_base + rc_DVBTx_l1_proc_only_caddr_offset,
          1);
 
@@ -41,7 +47,7 @@ avl_error_code_t AVL_Demod_DVBTxChannelScan(AVL_DVBTxBandWidth eBandWidth, AVL_D
     return r;
 }
 
-avl_error_code_t AVL_Demod_DVBTxGetScanInfo(AVL_DVBTxScanInfo* pstDVBTxScanInfo, AVL_ChipInternal *chip)
+avl_error_code_t AVL_Demod_DVBTxGetScanInfo(AVL_DVBTxScanInfo* pstDVBTxScanInfo, avl68x2_chip *chip)
 {
     avl_error_code_t r = AVL_EC_OK;
     uint8_t ucTemp0 = 0;
@@ -66,7 +72,7 @@ avl_error_code_t AVL_Demod_DVBTxGetScanInfo(AVL_DVBTxScanInfo* pstDVBTxScanInfo,
         return r;
     }
 
-    r |= avl_bms_read8(chip->usI2CAddr,
+    r |= avl_bms_read8(chip->chip_pub->i2c_addr,
                          stBaseAddrSet.fw_DVBTx_status_reg_base + rs_DVBTx_rx_mode_caddr_offset,
                          &ucTemp0);
 
@@ -74,16 +80,16 @@ avl_error_code_t AVL_Demod_DVBTxGetScanInfo(AVL_DVBTxScanInfo* pstDVBTxScanInfo,
 
     if(AVL_DVBTx_Standard_T == pstDVBTxScanInfo->eTxStandard)
     {
-        r |= avl_bms_read8(chip->usI2CAddr,
+        r |= avl_bms_read8(chip->chip_pub->i2c_addr,
                               stBaseAddrSet.fw_DVBT_TPS_reg_base + rs_DVBTx_hierarchy_caddr_offset,
                               &ucTemp0);
     }
     else if(AVL_DVBTx_Standard_T2 == pstDVBTxScanInfo->eTxStandard)
     {
-        r |= avl_bms_read8(chip->usI2CAddr,
+        r |= avl_bms_read8(chip->chip_pub->i2c_addr,
                               stBaseAddrSet.fw_DVBT2_P1_reg_base + rs_DVBTx_P1_S2_field_2_caddr_offset,
                               &ucTemp1);
-        r |= avl_bms_read8(chip->usI2CAddr,
+        r |= avl_bms_read8(chip->chip_pub->i2c_addr,
                               stBaseAddrSet.fw_DVBT2_P1_reg_base + rs_DVBTx_T2_profile_caddr_offset,
                               &ucTemp0);
     }
@@ -94,12 +100,12 @@ avl_error_code_t AVL_Demod_DVBTxGetScanInfo(AVL_DVBTxScanInfo* pstDVBTxScanInfo,
     return r;
 }
 
-avl_error_code_t AVL_Demod_DVBT2AutoLock(AVL_DVBTxBandWidth eBandWidth, AVL_DVBT2_PROFILE eDVTB2Profile, uint8_t ucDVBT2PLPID, AVL_ChipInternal *chip)
+avl_error_code_t AVL_Demod_DVBT2AutoLock(AVL_DVBTxBandWidth eBandWidth, AVL_DVBT2_PROFILE eDVTB2Profile, uint8_t ucDVBT2PLPID, avl68x2_chip *chip)
 {
     avl_error_code_t r = AVL_EC_OK;
     AVL_DVBTx_LockMode eDVBTxLockMode = AVL_DVBTx_LockMode_ALL;
 
-    if(1 == chip->ucSleepFlag)
+    if(1 == chip->chip_priv->sleep_flag)
     {
         r = AVL_EC_SLEEP;
         return r;
@@ -107,7 +113,7 @@ avl_error_code_t AVL_Demod_DVBT2AutoLock(AVL_DVBTxBandWidth eBandWidth, AVL_DVBT
 
     r = IBase_SendRxOPWait_Demod(AVL_FW_CMD_HALT, chip);
 
-    r = avl_bms_write8(chip->usI2CAddr,
+    r = avl_bms_write8(chip->chip_pub->i2c_addr,
               stBaseAddrSet.fw_DVBTx_config_reg_base + rc_DVBTx_l1_proc_only_caddr_offset,
               0);
 
@@ -125,25 +131,25 @@ avl_error_code_t AVL_Demod_DVBT2AutoLock(AVL_DVBTxBandWidth eBandWidth, AVL_DVBT
     }
     
     r |= DVBTx_SetBandWidth_Demod(eBandWidth, chip);
-    r |= avl_bms_write8(chip->usI2CAddr,
+    r |= avl_bms_write8(chip->chip_pub->i2c_addr,
         stBaseAddrSet.fw_DVBTx_config_reg_base + rc_DVBTx_acquire_mode_caddr_offset,
         (uint8_t)eDVBTxLockMode);
-    r |= avl_bms_write8(chip->usI2CAddr,
+    r |= avl_bms_write8(chip->chip_pub->i2c_addr,
         stBaseAddrSet.fw_DVBTx_config_reg_base + rc_DVBTx_spectrum_invert_caddr_offset,
         AVL_SPECTRUM_AUTO);
 
-    r |= avl_bms_write8(chip->usI2CAddr,
+    r |= avl_bms_write8(chip->chip_pub->i2c_addr,
         stBaseAddrSet.fw_DVBTx_config_reg_base + rc_DVBTx_data_PLP_ID_caddr_offset,ucDVBT2PLPID);
-    r |= avl_bms_write8(chip->usI2CAddr,
+    r |= avl_bms_write8(chip->chip_pub->i2c_addr,
         stBaseAddrSet.fw_DVBTx_config_reg_base + rc_DVBTx_common_PLP_ID_caddr_offset,0);
-    r |= avl_bms_write8(chip->usI2CAddr,
+    r |= avl_bms_write8(chip->chip_pub->i2c_addr,
         stBaseAddrSet.fw_DVBTx_config_reg_base + rc_DVBTx_common_PLP_present_caddr_offset,2);
     
     r |= IBase_SendRxOPWait_Demod(AVL_FW_CMD_ACQUIRE, chip);
     return (r);
 }
 
-avl_error_code_t AVL_Demod_DVBT2GetPLPList(uint8_t * pucPLPIndexArray, uint8_t * pucPLPNumber, AVL_ChipInternal *chip)
+avl_error_code_t AVL_Demod_DVBT2GetPLPList(uint8_t * pucPLPIndexArray, uint8_t * pucPLPNumber, avl68x2_chip *chip)
 {
     avl_error_code_t r = AVL_EC_OK;
     uint8_t ucTemp = 0;
@@ -180,7 +186,7 @@ avl_error_code_t AVL_Demod_DVBT2GetPLPList(uint8_t * pucPLPIndexArray, uint8_t *
     for(i = 0; i < uiTimes; i++)
     {
         avl_bsp_delay(uiDelayMS);
-        r |= avl_bms_read8(chip->usI2CAddr,
+        r |= avl_bms_read8(chip->chip_pub->i2c_addr,
             stBaseAddrSet.fw_DVBTx_status_reg_base + rs_DVBTx_plp_list_request_caddr_offset, &ucTemp);
         if(ucTemp == 0)
         {
@@ -194,14 +200,14 @@ avl_error_code_t AVL_Demod_DVBT2GetPLPList(uint8_t * pucPLPIndexArray, uint8_t *
         return (r);
     }
 
-    r |= avl_bms_read8(chip->usI2CAddr,
+    r |= avl_bms_read8(chip->chip_pub->i2c_addr,
         stBaseAddrSet.fw_DVBT2_L1_post_config_reg_base + rs_DVBTx_NUM_PLP_caddr_offset, &ucTemp);
 
     for(i = 0; i<ucTemp; i++)
     {
-        r |= avl_bms_read8(chip->usI2CAddr,uiPLPBuffer++, &ucPLPID);
-        r |= avl_bms_read8(chip->usI2CAddr,uiPLPBuffer++, &ucPLPType);
-        r |= avl_bms_read8(chip->usI2CAddr,uiPLPBuffer++, &ucPLPGroupID);
+        r |= avl_bms_read8(chip->chip_pub->i2c_addr,uiPLPBuffer++, &ucPLPID);
+        r |= avl_bms_read8(chip->chip_pub->i2c_addr,uiPLPBuffer++, &ucPLPType);
+        r |= avl_bms_read8(chip->chip_pub->i2c_addr,uiPLPBuffer++, &ucPLPGroupID);
 
         if(ucPLPType != 0)
         {
@@ -216,37 +222,37 @@ avl_error_code_t AVL_Demod_DVBT2GetPLPList(uint8_t * pucPLPIndexArray, uint8_t *
 
 }
 
-avl_error_code_t AVL_Demod_DVBTAutoLock(AVL_DVBTxBandWidth eBandWidth, uint8_t ucDVBTLayer, AVL_ChipInternal *chip)
+avl_error_code_t AVL_Demod_DVBTAutoLock(AVL_DVBTxBandWidth eBandWidth, uint8_t ucDVBTLayer, avl68x2_chip *chip)
 {    
 
     avl_error_code_t r = AVL_EC_OK;
 
-    if(1 == chip->ucSleepFlag)
+    if(1 == chip->chip_priv->sleep_flag)
     {
         r = AVL_EC_SLEEP;
         return r;
     }
     r = IBase_SendRxOPWait_Demod(AVL_FW_CMD_HALT, chip);
 
-    r = avl_bms_write8(chip->usI2CAddr,
+    r = avl_bms_write8(chip->chip_pub->i2c_addr,
               stBaseAddrSet.fw_DVBTx_config_reg_base + rc_DVBTx_l1_proc_only_caddr_offset,
               0);
 
     r = DVBTx_SetBandWidth_Demod(eBandWidth, chip);
-    r |= avl_bms_write8(chip->usI2CAddr,
+    r |= avl_bms_write8(chip->chip_pub->i2c_addr,
         stBaseAddrSet.fw_DVBTx_config_reg_base + rc_DVBTx_acquire_mode_caddr_offset,(uint8_t)AVL_DVBTx_LockMode_T_ONLY);
-    r |= avl_bms_write8(chip->usI2CAddr,
+    r |= avl_bms_write8(chip->chip_pub->i2c_addr,
         stBaseAddrSet.fw_DVBTx_config_reg_base + rc_DVBTx_spectrum_invert_caddr_offset,AVL_SPECTRUM_AUTO);
 
-    r |= avl_bms_write8(chip->usI2CAddr,
+    r |= avl_bms_write8(chip->chip_pub->i2c_addr,
         stBaseAddrSet.fw_DVBTx_config_reg_base + rc_DVBTx_dvbt_layer_select_caddr_offset,ucDVBTLayer);
 
 
-    r |= avl_bms_write8(chip->usI2CAddr,
+    r |= avl_bms_write8(chip->chip_pub->i2c_addr,
         stBaseAddrSet.fw_DVBTx_config_reg_base + rc_DVBTx_data_PLP_ID_caddr_offset,0);
-    r |= avl_bms_write8(chip->usI2CAddr,
+    r |= avl_bms_write8(chip->chip_pub->i2c_addr,
         stBaseAddrSet.fw_DVBTx_config_reg_base + rc_DVBTx_common_PLP_ID_caddr_offset,0);
-    r |= avl_bms_write8(chip->usI2CAddr,
+    r |= avl_bms_write8(chip->chip_pub->i2c_addr,
         stBaseAddrSet.fw_DVBTx_config_reg_base + rc_DVBTx_common_PLP_present_caddr_offset,0);
     
     r |= IBase_SendRxOPWait_Demod(AVL_FW_CMD_ACQUIRE, chip);
@@ -255,7 +261,7 @@ avl_error_code_t AVL_Demod_DVBTAutoLock(AVL_DVBTxBandWidth eBandWidth, uint8_t u
 
 }
 
-avl_error_code_t AVL_Demod_DVBTxGetNorDigSSI(uint8_t *pucSSI, int32_t iRFPowerdBm, AVL_ChipInternal *chip)
+avl_error_code_t AVL_Demod_DVBTxGetNorDigSSI(uint8_t *pucSSI, int32_t iRFPowerdBm, avl68x2_chip *chip)
 {
     avl_error_code_t r = AVL_EC_OK;
     uint32_t uiSSI = 0;
@@ -267,12 +273,12 @@ avl_error_code_t AVL_Demod_DVBTxGetNorDigSSI(uint8_t *pucSSI, int32_t iRFPowerdB
     return r;
 }
 
-avl_error_code_t AVL_Demod_DVBTxSignalDetection(uint8_t *pucNoSig, AVL_ChipInternal *chip)
+avl_error_code_t AVL_Demod_DVBTxSignalDetection(uint8_t *pucNoSig, avl68x2_chip *chip)
 {
     avl_error_code_t r = AVL_EC_OK;
     uint32_t uiTemp = 0;
 
-    r = avl_bms_read32(chip->usI2CAddr,
+    r = avl_bms_read32(chip->chip_pub->i2c_addr,
                 stBaseAddrSet.fw_DVBTx_status_reg_base + rs_DVBTx_Signal_Presence_iaddr_offset,&uiTemp);
     if(uiTemp == 1)// detected 1
     {
@@ -290,7 +296,7 @@ avl_error_code_t AVL_Demod_DVBTxSignalDetection(uint8_t *pucNoSig, AVL_ChipInter
     return (r);
 }
 
-avl_error_code_t AVL_Demod_DVBTxGetModulationInfo(AVL_DVBTxModulationInfo *pstModulationInfo, AVL_ChipInternal *chip)
+avl_error_code_t AVL_Demod_DVBTxGetModulationInfo(AVL_DVBTxModulationInfo *pstModulationInfo, avl68x2_chip *chip)
 {
     avl_error_code_t r = AVL_EC_OK;
     uint8_t ucTemp = 0;
@@ -302,7 +308,7 @@ avl_error_code_t AVL_Demod_DVBTxGetModulationInfo(AVL_DVBTxModulationInfo *pstMo
     uint8_t ucCommonPLPExist = 0;
     uint8_t ucNumberDPLP = 0;
 
-    r = avl_bms_read8(chip->usI2CAddr, 
+    r = avl_bms_read8(chip->chip_pub->i2c_addr, 
         stBaseAddrSet.fw_DVBTx_status_reg_base + rs_DVBTx_rx_mode_caddr_offset,&ucTemp);
 
     current_standard = (AVL_DVBTx_Standard)ucTemp;
@@ -310,24 +316,24 @@ avl_error_code_t AVL_Demod_DVBTxGetModulationInfo(AVL_DVBTxModulationInfo *pstMo
     if(AVL_DVBTx_Standard_T == current_standard)
     {
         pstModulationInfo->ucDVBxStandard = AVL_DVBTx_Standard_T;
-        r |= avl_bms_read8(chip->usI2CAddr, stBaseAddrSet.fw_DVBT_TPS_reg_base + rs_DVBTx_transmission_mode_caddr_offset,&ucTemp);
+        r |= avl_bms_read8(chip->chip_pub->i2c_addr, stBaseAddrSet.fw_DVBT_TPS_reg_base + rs_DVBTx_transmission_mode_caddr_offset,&ucTemp);
         pstModulationInfo->eDVBTSingalInfo.eDVBTFFTSize = (AVL_DVBT_FFTSize)ucTemp;
         
-        r |= avl_bms_read8(chip->usI2CAddr, stBaseAddrSet.fw_DVBT_TPS_reg_base + rs_DVBTx_guard_interval_caddr_offset,&ucTemp);
+        r |= avl_bms_read8(chip->chip_pub->i2c_addr, stBaseAddrSet.fw_DVBT_TPS_reg_base + rs_DVBTx_guard_interval_caddr_offset,&ucTemp);
         pstModulationInfo->eDVBTSingalInfo.eDVBTGuardInterval = (AVL_DVBT_GuardInterval)ucTemp;
         
-        r |= avl_bms_read8(chip->usI2CAddr, stBaseAddrSet.fw_DVBT_TPS_reg_base + rs_DVBTx_constellation_caddr_offset,&ucTemp);
+        r |= avl_bms_read8(chip->chip_pub->i2c_addr, stBaseAddrSet.fw_DVBT_TPS_reg_base + rs_DVBTx_constellation_caddr_offset,&ucTemp);
         pstModulationInfo->eDVBTSingalInfo.eDVBTModulationMode = (AVL_DVBT_ModulationMode)ucTemp;
         
-        r |= avl_bms_read8(chip->usI2CAddr, stBaseAddrSet.fw_DVBT_TPS_reg_base + rs_DVBTx_hierarchy_caddr_offset,&ucTemp);
+        r |= avl_bms_read8(chip->chip_pub->i2c_addr, stBaseAddrSet.fw_DVBT_TPS_reg_base + rs_DVBTx_hierarchy_caddr_offset,&ucTemp);
         pstModulationInfo->eDVBTSingalInfo.eDVBTHierarchy = (AVL_DVBT_Hierarchy)ucTemp;
 
-        r |= avl_bms_read8(chip->usI2CAddr, stBaseAddrSet.fw_DVBT_TPS_reg_base + rs_DVBTx_HP_code_rate_caddr_offset,&ucTemp);
+        r |= avl_bms_read8(chip->chip_pub->i2c_addr, stBaseAddrSet.fw_DVBT_TPS_reg_base + rs_DVBTx_HP_code_rate_caddr_offset,&ucTemp);
         pstModulationInfo->eDVBTSingalInfo.eDVBTHPCodeRate = (AVL_DVBT_CodeRate)ucTemp;
 
         if(pstModulationInfo->eDVBTSingalInfo.eDVBTHierarchy != AVL_DVBT_HIER_NONE)
         {
-            r |= avl_bms_read8(chip->usI2CAddr, stBaseAddrSet.fw_DVBT_TPS_reg_base + rs_DVBTx_LP_code_rate_caddr_offset,&ucTemp);
+            r |= avl_bms_read8(chip->chip_pub->i2c_addr, stBaseAddrSet.fw_DVBT_TPS_reg_base + rs_DVBTx_LP_code_rate_caddr_offset,&ucTemp);
             pstModulationInfo->eDVBTSingalInfo.eDVBTLPCodeRate = (AVL_DVBT_CodeRate)ucTemp;
         }
     }
@@ -335,43 +341,43 @@ avl_error_code_t AVL_Demod_DVBTxGetModulationInfo(AVL_DVBTxModulationInfo *pstMo
     {
         pstModulationInfo->ucDVBxStandard = AVL_DVBTx_Standard_T2;
         
-        r |= avl_bms_read8(chip->usI2CAddr, stBaseAddrSet.fw_DVBT2_P1_reg_base + rs_DVBTx_FFT_size_caddr_offset,&ucTemp);
+        r |= avl_bms_read8(chip->chip_pub->i2c_addr, stBaseAddrSet.fw_DVBT2_P1_reg_base + rs_DVBTx_FFT_size_caddr_offset,&ucTemp);
         pstModulationInfo->eDVBT2SingalInfo.eDVBT2FFTSize = (AVL_DVBT2_FFTSize)ucTemp;
         
-        r |= avl_bms_read8(chip->usI2CAddr, stBaseAddrSet.fw_DVBT2_P1_reg_base + rs_DVBTx_MISO_SISO_caddr_offset,&ucTemp);
+        r |= avl_bms_read8(chip->chip_pub->i2c_addr, stBaseAddrSet.fw_DVBT2_P1_reg_base + rs_DVBTx_MISO_SISO_caddr_offset,&ucTemp);
         pstModulationInfo->eDVBT2SingalInfo.eDVBT2MISOorSISO = (AVL_DVBT2_MISO_SISO)ucTemp;
 
-        r |= avl_bms_read8(chip->usI2CAddr, stBaseAddrSet.fw_DVBT2_P1_reg_base + rs_DVBTx_T2_profile_caddr_offset,&ucTemp);
+        r |= avl_bms_read8(chip->chip_pub->i2c_addr, stBaseAddrSet.fw_DVBT2_P1_reg_base + rs_DVBTx_T2_profile_caddr_offset,&ucTemp);
         pstModulationInfo->eDVBT2SingalInfo.eDVBT2Profile = (AVL_DVBT2_PROFILE)ucTemp;
 
-        r |= avl_bms_read8(chip->usI2CAddr, stBaseAddrSet.fw_DVBT2_L1_pre_reg_base + rs_DVBTx_PILOT_PATTERN_caddr_offset,&ucTemp);
+        r |= avl_bms_read8(chip->chip_pub->i2c_addr, stBaseAddrSet.fw_DVBT2_L1_pre_reg_base + rs_DVBTx_PILOT_PATTERN_caddr_offset,&ucTemp);
         pstModulationInfo->eDVBT2SingalInfo.eDVBT2PilotPatten = (AVL_DVBT2_PILOT_PATTERN)ucTemp;
 
-        r |= avl_bms_read8(chip->usI2CAddr, stBaseAddrSet.fw_DVBT2_data_PLP_config_reg_base + rs_DVBTx_data_PLP_TYPE_caddr_offset,&ucTemp);
+        r |= avl_bms_read8(chip->chip_pub->i2c_addr, stBaseAddrSet.fw_DVBT2_data_PLP_config_reg_base + rs_DVBTx_data_PLP_TYPE_caddr_offset,&ucTemp);
         pstModulationInfo->eDVBT2SingalInfo.eDVBT2DataPLPType = (AVL_DVBT2_DATA_PLP_TYPE)ucTemp;
         
-        r |= avl_bms_read8(chip->usI2CAddr, stBaseAddrSet.fw_DVBT2_data_PLP_config_reg_base + rs_DVBTx_data_PLP_ID_caddr_offset,&ucTemp);
+        r |= avl_bms_read8(chip->chip_pub->i2c_addr, stBaseAddrSet.fw_DVBT2_data_PLP_config_reg_base + rs_DVBTx_data_PLP_ID_caddr_offset,&ucTemp);
         pstModulationInfo->eDVBT2SingalInfo.ucDVBT2DataPLPID = ucTemp;
 
-        r |= avl_bms_read8(chip->usI2CAddr, stBaseAddrSet.fw_DVBT2_data_PLP_config_reg_base + rs_DVBTx_data_PLP_COD_caddr_offset,&ucTemp);
+        r |= avl_bms_read8(chip->chip_pub->i2c_addr, stBaseAddrSet.fw_DVBT2_data_PLP_config_reg_base + rs_DVBTx_data_PLP_COD_caddr_offset,&ucTemp);
         pstModulationInfo->eDVBT2SingalInfo.eDVBT2DataPLPCodeRate = (AVL_DVBT2_CodeRate)ucTemp;
 
-        r |= avl_bms_read8(chip->usI2CAddr, stBaseAddrSet.fw_DVBT2_data_PLP_config_reg_base + rs_DVBTx_data_PLP_MOD_caddr_offset,&ucTemp);
+        r |= avl_bms_read8(chip->chip_pub->i2c_addr, stBaseAddrSet.fw_DVBT2_data_PLP_config_reg_base + rs_DVBTx_data_PLP_MOD_caddr_offset,&ucTemp);
         pstModulationInfo->eDVBT2SingalInfo.eDVBT2DataPLPModulationMode= (AVL_DVBT2_PLP_ModulationMode)ucTemp;
 
-        r |= avl_bms_read8(chip->usI2CAddr, stBaseAddrSet.fw_DVBT2_data_PLP_config_reg_base + rs_DVBTx_data_PLP_ROTATION_caddr_offset,&ucTemp);
+        r |= avl_bms_read8(chip->chip_pub->i2c_addr, stBaseAddrSet.fw_DVBT2_data_PLP_config_reg_base + rs_DVBTx_data_PLP_ROTATION_caddr_offset,&ucTemp);
         pstModulationInfo->eDVBT2SingalInfo.eDVBT2DataPLPRotation= (AVL_DVBT2_PLP_Constellation_Rotation)ucTemp;
 
-        r |= avl_bms_read8(chip->usI2CAddr, stBaseAddrSet.fw_DVBT2_data_PLP_config_reg_base + rs_DVBTx_data_PLP_FEC_TYPE_caddr_offset,&ucTemp);
+        r |= avl_bms_read8(chip->chip_pub->i2c_addr, stBaseAddrSet.fw_DVBT2_data_PLP_config_reg_base + rs_DVBTx_data_PLP_FEC_TYPE_caddr_offset,&ucTemp);
         pstModulationInfo->eDVBT2SingalInfo.eDVBT2DataPLPFecType= (AVL_DVBT2_PLP_FEC_Type)ucTemp;
 
-        r |= avl_bms_read8(chip->usI2CAddr,
+        r |= avl_bms_read8(chip->chip_pub->i2c_addr,
             stBaseAddrSet.fw_DVBT2_L1_post_config_reg_base + rs_DVBTx_NUM_PLP_caddr_offset, &ucTemp);
         
         for(i = 0; i<ucTemp; i++)
         {
             uiPLPBuffer++;
-            r |= avl_bms_read8(chip->usI2CAddr,uiPLPBuffer++, &ucPLPType);
+            r |= avl_bms_read8(chip->chip_pub->i2c_addr,uiPLPBuffer++, &ucPLPType);
             uiPLPBuffer++;
 
             if(ucPLPType == 0)
@@ -389,64 +395,64 @@ avl_error_code_t AVL_Demod_DVBTxGetModulationInfo(AVL_DVBTxModulationInfo *pstMo
         
         if (ucCommonPLPExist == 1)
         {
-            r |= avl_bms_read8(chip->usI2CAddr, 
+            r |= avl_bms_read8(chip->chip_pub->i2c_addr, 
                 stBaseAddrSet.fw_DVBT2_common_PLP_config_reg_base + rs_DVBTx_common_PLP_ID_caddr_offset,&ucTemp);
             pstModulationInfo->eDVBT2SingalInfo.ucDVBT2CommonPLPID = ucTemp;
 
-            r |= avl_bms_read8(chip->usI2CAddr, 
+            r |= avl_bms_read8(chip->chip_pub->i2c_addr, 
                 stBaseAddrSet.fw_DVBT2_common_PLP_config_reg_base + rs_DVBTx_common_PLP_COD_caddr_offset,&ucTemp);
             pstModulationInfo->eDVBT2SingalInfo.eDVBT2CommonPLPCodeRate = (AVL_DVBT2_CodeRate)ucTemp;
 
-            r |= avl_bms_read8(chip->usI2CAddr, 
+            r |= avl_bms_read8(chip->chip_pub->i2c_addr, 
                 stBaseAddrSet.fw_DVBT2_common_PLP_config_reg_base + rs_DVBTx_common_PLP_MOD_caddr_offset,&ucTemp);
             pstModulationInfo->eDVBT2SingalInfo.eDVBT2CommonPLPModulationMode = (AVL_DVBT2_PLP_ModulationMode)ucTemp;
 
-            r |= avl_bms_read8(chip->usI2CAddr, 
+            r |= avl_bms_read8(chip->chip_pub->i2c_addr, 
                 stBaseAddrSet.fw_DVBT2_common_PLP_config_reg_base + rs_DVBTx_common_PLP_ROTATION_caddr_offset,&ucTemp);
             pstModulationInfo->eDVBT2SingalInfo.eDVBT2CommonPLPRotation = (AVL_DVBT2_PLP_Constellation_Rotation)ucTemp;
 
-            r |= avl_bms_read8(chip->usI2CAddr, 
+            r |= avl_bms_read8(chip->chip_pub->i2c_addr, 
                 stBaseAddrSet.fw_DVBT2_common_PLP_config_reg_base + rs_DVBTx_common_PLP_FEC_TYPE_caddr_offset,&ucTemp);
             pstModulationInfo->eDVBT2SingalInfo.eDVBT2CommonPLPFecType = (AVL_DVBT2_PLP_FEC_Type)ucTemp;
         }
 
-        r |= avl_bms_read8(chip->usI2CAddr, 
+        r |= avl_bms_read8(chip->chip_pub->i2c_addr, 
             stBaseAddrSet.fw_DVBT2_P1_reg_base + rs_DVBTx_P1_S2_field_2_caddr_offset,&ucTemp);
         pstModulationInfo->eDVBT2SingalInfo.ucDVBT2FEFExist= ucTemp;
 
-        r |= avl_bms_read16(chip->usI2CAddr, 
+        r |= avl_bms_read16(chip->chip_pub->i2c_addr, 
             stBaseAddrSet.fw_DVBT2_L1_pre_reg_base + rs_DVBTx_CELL_ID_saddr_offset,&usTemp);
         pstModulationInfo->eDVBT2SingalInfo.eDVBT2SignalID.usCellID = usTemp;
 
-        r |= avl_bms_read16(chip->usI2CAddr, 
+        r |= avl_bms_read16(chip->chip_pub->i2c_addr, 
             stBaseAddrSet.fw_DVBT2_L1_pre_reg_base + rs_DVBTx_NETWORK_ID_saddr_offset,&usTemp);
         pstModulationInfo->eDVBT2SingalInfo.eDVBT2SignalID.usNetworkID = usTemp;
 
-        r |= avl_bms_read16(chip->usI2CAddr, 
+        r |= avl_bms_read16(chip->chip_pub->i2c_addr, 
             stBaseAddrSet.fw_DVBT2_L1_pre_reg_base + rs_DVBTx_T2_SYSTEM_ID_saddr_offset,&usTemp);
         pstModulationInfo->eDVBT2SingalInfo.eDVBT2SignalID.usSystemID = usTemp;
 
-         r |= avl_bms_read8(chip->usI2CAddr, 
+         r |= avl_bms_read8(chip->chip_pub->i2c_addr, 
              stBaseAddrSet.fw_DVBT2_L1_pre_reg_base + rs_DVBTx_GUARD_INTERVAL_caddr_offset,&ucTemp);
          pstModulationInfo->eDVBT2SingalInfo.eDVBT2GuardInterval = (AVL_DVBT2_GUARD_INTERVAL)ucTemp;
 
-         r |= avl_bms_read8(chip->usI2CAddr, 
+         r |= avl_bms_read8(chip->chip_pub->i2c_addr, 
              stBaseAddrSet.fw_DVBT2_L1_pre_reg_base + rs_DVBTx_PAPR_caddr_offset,&ucTemp);
          pstModulationInfo->eDVBT2SingalInfo.eDVBT2PAPR = (AVL_DVBT2_PAPR)ucTemp;
          
-         r |= avl_bms_read8(chip->usI2CAddr, 
+         r |= avl_bms_read8(chip->chip_pub->i2c_addr, 
              stBaseAddrSet.fw_DVBT2_L1_pre_reg_base + rs_DVBTx_L1_MOD_caddr_offset,&ucTemp);
          pstModulationInfo->eDVBT2SingalInfo.eDVBT2L1ModulationMode = (AVL_DVBT2_L1_Modulation)ucTemp;
 
-        r |= avl_bms_read8(chip->usI2CAddr, 
+        r |= avl_bms_read8(chip->chip_pub->i2c_addr, 
             stBaseAddrSet.fw_DVBT2_L1_pre_reg_base + rs_DVBTx_BWT_EXT_caddr_offset,&ucTemp);
         pstModulationInfo->eDVBT2SingalInfo.ucDVBT2BWExtended = ucTemp;
  
-         r |= avl_bms_read8(chip->usI2CAddr, 
+         r |= avl_bms_read8(chip->chip_pub->i2c_addr, 
              stBaseAddrSet.fw_DVBT2_L1_pre_reg_base + rs_DVBTx_NUM_T2_FRAMES_caddr_offset,&ucTemp);
          pstModulationInfo->eDVBT2SingalInfo.ucNumberFrames = ucTemp;
 
-         r |= avl_bms_read16(chip->usI2CAddr, 
+         r |= avl_bms_read16(chip->chip_pub->i2c_addr, 
              stBaseAddrSet.fw_DVBT2_L1_pre_reg_base + rs_DVBTx_NUM_DATA_SYMBOLS_saddr_offset,&usTemp);
          pstModulationInfo->eDVBT2SingalInfo.usNumberDataSymbols = usTemp;
     }
@@ -455,7 +461,7 @@ avl_error_code_t AVL_Demod_DVBTxGetModulationInfo(AVL_DVBTxModulationInfo *pstMo
     return (r);
 }
 
-avl_error_code_t AVL_Demod_DVBT_GetTPSInfo(AVL_DVBT_TpsInfo *pstDVBTTpsInfo, AVL_ChipInternal *chip)
+avl_error_code_t AVL_Demod_DVBT_GetTPSInfo(AVL_DVBT_TpsInfo *pstDVBTTpsInfo, avl68x2_chip *chip)
 {
     avl_error_code_t r = AVL_EC_OK;
     uint8_t ucTemp = 0;
@@ -463,38 +469,38 @@ avl_error_code_t AVL_Demod_DVBT_GetTPSInfo(AVL_DVBT_TpsInfo *pstDVBTTpsInfo, AVL
     AVL_DVBTx_Standard current_standard = AVL_DVBTx_Standard_T;
 
 
-    r = avl_bms_read8(chip->usI2CAddr, 
+    r = avl_bms_read8(chip->chip_pub->i2c_addr, 
         stBaseAddrSet.fw_DVBTx_status_reg_base + rs_DVBTx_rx_mode_caddr_offset,&ucTemp);
 
     current_standard = (AVL_DVBTx_Standard)ucTemp;
 
     if(AVL_DVBTx_Standard_T == current_standard)
     {
-        r |= avl_bms_read8(chip->usI2CAddr, stBaseAddrSet.fw_DVBT_TPS_reg_base + rs_DVBTx_TPS_length_caddr_offset,&ucTemp);
+        r |= avl_bms_read8(chip->chip_pub->i2c_addr, stBaseAddrSet.fw_DVBT_TPS_reg_base + rs_DVBTx_TPS_length_caddr_offset,&ucTemp);
         pstDVBTTpsInfo->ucTpsLength = ucTemp;
 
-        r |= avl_bms_read8(chip->usI2CAddr, stBaseAddrSet.fw_DVBT_TPS_reg_base + rs_DVBTx_constellation_caddr_offset,&ucTemp);
+        r |= avl_bms_read8(chip->chip_pub->i2c_addr, stBaseAddrSet.fw_DVBT_TPS_reg_base + rs_DVBTx_constellation_caddr_offset,&ucTemp);
         pstDVBTTpsInfo->eTpsConstellation = (AVL_DVBT_ModulationMode)ucTemp;
 
-        r |= avl_bms_read8(chip->usI2CAddr, stBaseAddrSet.fw_DVBT_TPS_reg_base + rs_DVBTx_hierarchy_caddr_offset,&ucTemp);
+        r |= avl_bms_read8(chip->chip_pub->i2c_addr, stBaseAddrSet.fw_DVBT_TPS_reg_base + rs_DVBTx_hierarchy_caddr_offset,&ucTemp);
         pstDVBTTpsInfo->eTpsHierarchy = (AVL_DVBT_Hierarchy)ucTemp;
 
-        r |= avl_bms_read8(chip->usI2CAddr, stBaseAddrSet.fw_DVBT_TPS_reg_base + rs_DVBTx_HP_code_rate_caddr_offset,&ucTemp);
+        r |= avl_bms_read8(chip->chip_pub->i2c_addr, stBaseAddrSet.fw_DVBT_TPS_reg_base + rs_DVBTx_HP_code_rate_caddr_offset,&ucTemp);
         pstDVBTTpsInfo->eTpsHPCodeRate = (AVL_DVBT_CodeRate)ucTemp;
 
 		if(pstDVBTTpsInfo->eTpsHierarchy != AVL_DVBT_HIER_NONE)
 		{
-			r |= avl_bms_read8(chip->usI2CAddr, stBaseAddrSet.fw_DVBT_TPS_reg_base + rs_DVBTx_LP_code_rate_caddr_offset,&ucTemp);
+			r |= avl_bms_read8(chip->chip_pub->i2c_addr, stBaseAddrSet.fw_DVBT_TPS_reg_base + rs_DVBTx_LP_code_rate_caddr_offset,&ucTemp);
 			pstDVBTTpsInfo->eTpsLPCodeRate = (AVL_DVBT_CodeRate)ucTemp;
 		}
 
-		r |= avl_bms_read8(chip->usI2CAddr, stBaseAddrSet.fw_DVBT_TPS_reg_base + rs_DVBTx_guard_interval_caddr_offset,&ucTemp);
+		r |= avl_bms_read8(chip->chip_pub->i2c_addr, stBaseAddrSet.fw_DVBT_TPS_reg_base + rs_DVBTx_guard_interval_caddr_offset,&ucTemp);
 		pstDVBTTpsInfo->eTpsGuardInterval = (AVL_DVBT_GuardInterval)ucTemp;
 
-		r |= avl_bms_read8(chip->usI2CAddr,stBaseAddrSet.fw_DVBT_TPS_reg_base + rs_DVBTx_transmission_mode_caddr_offset,&ucTemp);
+		r |= avl_bms_read8(chip->chip_pub->i2c_addr,stBaseAddrSet.fw_DVBT_TPS_reg_base + rs_DVBTx_transmission_mode_caddr_offset,&ucTemp);
 		pstDVBTTpsInfo->eTpsTransmissionMode = (AVL_DVBT_FFTSize)ucTemp;
 
-		r |= avl_bms_read16(chip->usI2CAddr, stBaseAddrSet.fw_DVBT_TPS_reg_base +  rs_DVBTx_TPS_cell_id_saddr_offset,&usTemp);
+		r |= avl_bms_read16(chip->chip_pub->i2c_addr, stBaseAddrSet.fw_DVBT_TPS_reg_base +  rs_DVBTx_TPS_cell_id_saddr_offset,&usTemp);
 		pstDVBTTpsInfo->usTpsCellID = usTemp;
 
     }
@@ -503,43 +509,43 @@ avl_error_code_t AVL_Demod_DVBT_GetTPSInfo(AVL_DVBT_TpsInfo *pstDVBTTpsInfo, AVL
 }
 
 
-avl_error_code_t DVBTx_Initialize_Demod(AVL_ChipInternal *chip)
+avl_error_code_t DVBTx_Initialize_Demod(avl68x2_chip *chip)
 {
     avl_error_code_t r = AVL_EC_OK;
     
-    r = avl_bms_write32(chip->usI2CAddr,
+    r = avl_bms_write32(chip->chip_pub->i2c_addr,
         stBaseAddrSet.fw_DVBTx_config_reg_base + rc_DVBTx_sample_rate_Hz_iaddr_offset, chip->uiADCFrequencyHz);
-    r |= avl_bms_write32(chip->usI2CAddr,
+    r |= avl_bms_write32(chip->chip_pub->i2c_addr,
         stBaseAddrSet.fw_DVBTx_config_reg_base + rc_DVBTx_mpeg_clk_rate_Hz_iaddr_offset, chip->uiTSFrequencyHz);
     
     ////DDC configuration
-    r |= avl_bms_write8(chip->usI2CAddr,
+    r |= avl_bms_write8(chip->chip_pub->i2c_addr,
         stBaseAddrSet.fw_DVBTx_config_reg_base + rc_DVBTx_input_format_caddr_offset,AVL_OFFBIN);
-    r |= avl_bms_write8(chip->usI2CAddr,
+    r |= avl_bms_write8(chip->chip_pub->i2c_addr,
         stBaseAddrSet.fw_DVBTx_config_reg_base + rc_DVBTx_input_select_caddr_offset,AVL_ADC_IN);
-    r |= avl_bms_write8(chip->usI2CAddr,
+    r |= avl_bms_write8(chip->chip_pub->i2c_addr,
         stBaseAddrSet.fw_DVBTx_config_reg_base + rc_DVBTx_tuner_type_caddr_offset, AVL_DVBTX_REAL_IF);
 
-    r |= avl_bms_write8(chip->usI2CAddr,
+    r |= avl_bms_write8(chip->chip_pub->i2c_addr,
         stBaseAddrSet.fw_DVBTx_config_reg_base + rc_DVBTx_rf_agc_pol_caddr_offset,
-        chip->stDVBTxPara.eDVBTxAGCPola);
-    r |= DVBTx_SetIFFrequency_Demod(chip->stDVBTxPara.uiDVBTxIFFreqHz,chip);
-    r |= DVBTx_SetIFInputPath_Demod((AVL_InputPath)(chip->stDVBTxPara.eDVBTxInputPath^1),chip);
+        chip->chip_pub->dvbtx_para.eDVBTxAGCPola);
+    r |= DVBTx_SetIFFrequency_Demod(chip->chip_pub->dvbtx_para.uiDVBTxIFFreqHz,chip);
+    r |= DVBTx_SetIFInputPath_Demod((AVL_InputPath)(chip->chip_pub->dvbtx_para.eDVBTxInputPath^1),chip);
 
    //ADC configuration 
-    switch(chip->eDemodXtal)
+    switch(chip->chip_pub->xtal)
     {
      case Xtal_16M :
      case Xtal_24M :
         {
-          r |= avl_bms_write8(chip->usI2CAddr, 
+          r |= avl_bms_write8(chip->chip_pub->i2c_addr, 
             stBaseAddrSet.fw_DVBTx_config_reg_base+ rc_DVBTx_adc_use_pll_clk_caddr_offset, 1);
         }
         break;  
       case Xtal_30M :
       case Xtal_27M :
         {
-          r |= avl_bms_write8(chip->usI2CAddr, 
+          r |= avl_bms_write8(chip->chip_pub->i2c_addr, 
             stBaseAddrSet.fw_DVBTx_config_reg_base+ rc_DVBTx_adc_use_pll_clk_caddr_offset, 0);
         }
         break;
@@ -557,27 +563,27 @@ avl_error_code_t DVBTx_Initialize_Demod(AVL_ChipInternal *chip)
     return (r);
 }
 
-avl_error_code_t DVBTx_GetLockStatus_Demod( uint8_t * pucLocked, AVL_ChipInternal *chip)
+avl_error_code_t DVBTx_GetLockStatus_Demod( uint8_t * pucLocked, avl68x2_chip *chip)
 {
     avl_error_code_t r = AVL_EC_OK;
 
-    r = avl_bms_read8(chip->usI2CAddr,
+    r = avl_bms_read8(chip->chip_pub->i2c_addr,
         stBaseAddrSet.fw_DVBTx_status_reg_base + rs_DVBTx_fec_lock_caddr_offset, pucLocked);
 
     return r;
 }
 
-avl_error_code_t DVBTx_GetSNR_Demod(uint32_t * puiSNR_db, AVL_ChipInternal *chip)
+avl_error_code_t DVBTx_GetSNR_Demod(uint32_t * puiSNR_db, avl68x2_chip *chip)
 {
     avl_error_code_t r = AVL_EC_OK;
     uint16_t uiTemp = 0;
 
-    r = avl_bms_read16(chip->usI2CAddr, stBaseAddrSet.fw_DVBTx_status_reg_base + rs_DVBTx_snr_dB_x100_saddr_offset,&uiTemp);
+    r = avl_bms_read16(chip->chip_pub->i2c_addr, stBaseAddrSet.fw_DVBTx_status_reg_base + rs_DVBTx_snr_dB_x100_saddr_offset,&uiTemp);
     *puiSNR_db = (uint32_t)(uiTemp);
     return r;
 }
 
-avl_error_code_t DVBTx_GetSignalQuality_Demod(uint16_t * puiQuality , AVL_ChipInternal *chip)
+avl_error_code_t DVBTx_GetSignalQuality_Demod(uint16_t * puiQuality , avl68x2_chip *chip)
 {
     avl_error_code_t r = AVL_EC_OK;
     uint32_t uiTemp = 0;
@@ -590,7 +596,7 @@ avl_error_code_t DVBTx_GetSignalQuality_Demod(uint16_t * puiQuality , AVL_ChipIn
     return r;
 }
 
-avl_error_code_t IRx_GetSQI(uint32_t * puiSQI, AVL_ChipInternal *chip)
+avl_error_code_t IRx_GetSQI(uint32_t * puiSQI, avl68x2_chip *chip)
 {
     avl_error_code_t r = AVL_EC_OK;
     uint8_t ucTemp = 0;
@@ -604,14 +610,14 @@ avl_error_code_t IRx_GetSQI(uint32_t * puiSQI, AVL_ChipInternal *chip)
 
     if(lock_status == AVL_STATUS_LOCK) 
     {
-        r = avl_bms_read32(chip->usI2CAddr,
+        r = avl_bms_read32(chip->chip_pub->i2c_addr,
             stBaseAddrSet.fw_config_reg_base + rs_current_active_mode_iaddr_offset,&uiTemp);
         current_standard = (AVL_DemodMode)uiTemp;
 
         switch(current_standard)
         {
         case AVL_DVBTX:
-            r = avl_bms_read8(chip->usI2CAddr,
+            r = avl_bms_read8(chip->chip_pub->i2c_addr,
                 stBaseAddrSet.fw_DVBTx_status_reg_base + rs_DVBTx_rx_mode_caddr_offset,&ucTemp);
 
             current_dvbtx_std = (AVL_DVBTx_Standard)ucTemp;
@@ -647,7 +653,7 @@ avl_error_code_t IRx_GetSQI(uint32_t * puiSQI, AVL_ChipInternal *chip)
     return (r);
 }
 
-avl_error_code_t IRx_GetSSI(uint32_t * puiSSI, int32_t RF_Power, AVL_ChipInternal *chip)
+avl_error_code_t IRx_GetSSI(uint32_t * puiSSI, int32_t RF_Power, avl68x2_chip *chip)
 {
     avl_error_code_t r = AVL_EC_OK;    
     uint32_t uiTemp = 0;
@@ -656,7 +662,7 @@ avl_error_code_t IRx_GetSSI(uint32_t * puiSSI, int32_t RF_Power, AVL_ChipInterna
     uint8_t ucTemp = 0;
     AVL_LockStatus lock_status = AVL_STATUS_UNLOCK;
 
-    r = avl_bms_read32(chip->usI2CAddr,
+    r = avl_bms_read32(chip->chip_pub->i2c_addr,
             stBaseAddrSet.fw_config_reg_base + rs_current_active_mode_iaddr_offset,&uiTemp);
    current_standard = (AVL_DemodMode)uiTemp;
 
@@ -670,7 +676,7 @@ avl_error_code_t IRx_GetSSI(uint32_t * puiSSI, int32_t RF_Power, AVL_ChipInterna
 
         if(lock_status == AVL_STATUS_LOCK) 
         {
-            r |= avl_bms_read8(chip->usI2CAddr, stBaseAddrSet.fw_DVBTx_status_reg_base + rs_DVBTx_rx_mode_caddr_offset,&ucTemp);
+            r |= avl_bms_read8(chip->chip_pub->i2c_addr, stBaseAddrSet.fw_DVBTx_status_reg_base + rs_DVBTx_rx_mode_caddr_offset,&ucTemp);
             current_dvbtx_std = (AVL_DVBTx_Standard)ucTemp;
         }
 
@@ -990,7 +996,7 @@ AVL_DVBT_BERSQI_List DVBT_BERSQI_Table[]=
     {10000000  ,    140 }
 };
 
-avl_error_code_t IRx_GetSQI_DVBT(uint32_t * puiSQI, AVL_ChipInternal *chip)
+avl_error_code_t IRx_GetSQI_DVBT(uint32_t * puiSQI, avl68x2_chip *chip)
 {
     avl_error_code_t r = AVL_EC_OK;
     uint32_t post_viterbi_ber_x1e9 = 0;
@@ -1067,7 +1073,7 @@ avl_error_code_t IRx_GetSQI_DVBT(uint32_t * puiSQI, AVL_ChipInternal *chip)
     else
     {
         //get selected layer
-        r |= avl_bms_read8(chip->usI2CAddr,stBaseAddrSet.fw_DVBTx_config_reg_base + rc_DVBTx_dvbt_layer_select_caddr_offset,(uint8_t *)&selected_layer);
+        r |= avl_bms_read8(chip->chip_pub->i2c_addr,stBaseAddrSet.fw_DVBTx_config_reg_base + rc_DVBTx_dvbt_layer_select_caddr_offset,(uint8_t *)&selected_layer);
 
         for(index=0;index<sizeof(AVL_DVBT_Hierarchical_CN_Table)/sizeof(AVL_DVBT_Hierarchical_CN_Table_Element);index++)
         {
@@ -1122,7 +1128,7 @@ avl_error_code_t IRx_GetSQI_DVBT(uint32_t * puiSQI, AVL_ChipInternal *chip)
     return (r);
 }
 
-avl_error_code_t IRx_GetSQI_DVBT2(uint32_t * puiSQI, AVL_ChipInternal *chip)
+avl_error_code_t IRx_GetSQI_DVBT2(uint32_t * puiSQI, avl68x2_chip *chip)
 {
     avl_error_code_t r = AVL_EC_OK;
     uint32_t post_ldpc_ber_x1e9 = 0;
@@ -1323,7 +1329,7 @@ AVL_DVBT2_RF_Table_Element AVL_DVBT2_RF_TABLE[]=
 };
 
 
-avl_error_code_t IRx_GetSSI_DVBT(uint32_t * puiSSI, int32_t RF_Power, AVL_ChipInternal *chip)
+avl_error_code_t IRx_GetSSI_DVBT(uint32_t * puiSSI, int32_t RF_Power, avl68x2_chip *chip)
 {
     avl_error_code_t r = AVL_EC_OK;
     AVL_DVBTxModulationInfo DVBTSignalInfo;
@@ -1383,7 +1389,7 @@ avl_error_code_t IRx_GetSSI_DVBT(uint32_t * puiSSI, int32_t RF_Power, AVL_ChipIn
     return (r);
 }
 
-avl_error_code_t IRx_GetSSI_DVBT2(uint32_t * puiSSI, int32_t RF_Power, AVL_ChipInternal *chip)
+avl_error_code_t IRx_GetSSI_DVBT2(uint32_t * puiSSI, int32_t RF_Power, avl68x2_chip *chip)
 {
     avl_error_code_t r = AVL_EC_OK;
     AVL_DVBTxModulationInfo DVBTSignalInfo;
@@ -1444,17 +1450,17 @@ avl_error_code_t IRx_GetSSI_DVBT2(uint32_t * puiSSI, int32_t RF_Power, AVL_ChipI
     return (r);
 }
 
-avl_error_code_t DVBTx_SetIFInputPath_Demod(AVL_InputPath eInputPath, AVL_ChipInternal *chip)
+avl_error_code_t DVBTx_SetIFInputPath_Demod(AVL_InputPath eInputPath, avl68x2_chip *chip)
 {
     avl_error_code_t r = AVL_EC_OK;
 
-    r = avl_bms_write8(chip->usI2CAddr,
+    r = avl_bms_write8(chip->chip_pub->i2c_addr,
         stBaseAddrSet.fw_DVBTx_config_reg_base + rc_DVBTx_adc_sel_caddr_offset, (uint8_t)eInputPath);
 
     return r;
 }
 
-avl_error_code_t DVBTx_SetIFFrequency_Demod(uint32_t uiIFFrequencyHz, AVL_ChipInternal *chip)
+avl_error_code_t DVBTx_SetIFFrequency_Demod(uint32_t uiIFFrequencyHz, avl68x2_chip *chip)
 {
     avl_error_code_t r = AVL_EC_OK;
     uint32_t carrier_offset_hz = 0;
@@ -1468,29 +1474,24 @@ avl_error_code_t DVBTx_SetIFFrequency_Demod(uint32_t uiIFFrequencyHz, AVL_ChipIn
         carrier_offset_hz = uiIFFrequencyHz;
     }
 
-    r = avl_bms_write32(chip->usI2CAddr,
+    r = avl_bms_write32(chip->chip_pub->i2c_addr,
         stBaseAddrSet.fw_DVBTx_config_reg_base + rc_DVBTx_nom_carrier_freq_Hz_iaddr_offset, carrier_offset_hz);
 
     return r;
 }
 
-avl_error_code_t DVBTx_SetBandWidth_Demod(AVL_DVBTxBandWidth eBandWidth, AVL_ChipInternal *chip)
+avl_error_code_t DVBTx_SetBandWidth_Demod(AVL_DVBTxBandWidth eBandWidth, avl68x2_chip *chip)
 {
     avl_error_code_t r = AVL_EC_OK;
 
-    r = avl_bms_write32(chip->usI2CAddr,
+    r = avl_bms_write32(chip->chip_pub->i2c_addr,
         stBaseAddrSet.fw_DVBTx_config_reg_base + rc_DVBTx_fund_rate_Hz_iaddr_offset,BW_FFT_Table[eBandWidth]);
 
     return r;
 }
 
-void DVBTx_SetFwData_Demod(uint8_t * pInitialData, AVL_ChipInternal *chip)
-{
-    chip->fwData = pInitialData;
-}
 
-
-avl_error_code_t DVBTx_GetPrePostBER_Demod(uint32_t *puiBERxe9, AVL_BER_Type eBERType, AVL_ChipInternal *chip)
+avl_error_code_t DVBTx_GetPrePostBER_Demod(uint32_t *puiBERxe9, AVL_BER_Type eBERType, avl68x2_chip *chip)
 {
     avl_error_code_t r = AVL_EC_OK;
     uint32_t uiTemp = 0;
@@ -1501,17 +1502,17 @@ avl_error_code_t DVBTx_GetPrePostBER_Demod(uint32_t *puiBERxe9, AVL_BER_Type eBE
             *puiBERxe9 = 0;
             break;
         case AVL_POST_VITERBI_BER:
-             r = avl_bms_read32(chip->usI2CAddr,
+             r = avl_bms_read32(chip->chip_pub->i2c_addr,
                  stBaseAddrSet.fw_DVBTx_status_reg_base + rs_DVBTx_post_viterbi_BER_estimate_x10M_iaddr_offset,&uiTemp);
             *puiBERxe9 = uiTemp * 100;//match 1e9
             break;
         case AVL_PRE_LDPC_BER:
-             r = avl_bms_read32(chip->usI2CAddr,
+             r = avl_bms_read32(chip->chip_pub->i2c_addr,
                  stBaseAddrSet.fw_DVBTx_status_reg_base + rs_DVBTx_pre_LDPC_BER_estimate_x10M_iaddr_offset,&uiTemp);
             *puiBERxe9 = uiTemp * 100;//match 1e9
             break;
         case AVL_POST_LDPC_BER:
-            r = avl_bms_read32(chip->usI2CAddr,
+            r = avl_bms_read32(chip->chip_pub->i2c_addr,
                 stBaseAddrSet.fw_DVBTx_status_reg_base + rs_DVBTx_post_LDPC_BER_estimate_x1B_iaddr_offset,&uiTemp);
             *puiBERxe9 = uiTemp;
             break;
@@ -1522,27 +1523,27 @@ avl_error_code_t DVBTx_GetPrePostBER_Demod(uint32_t *puiBERxe9, AVL_BER_Type eBE
     return r;
 }
 
-avl_error_code_t DVBTx_GetCellID_Demod(uint16_t *puiCellID,  AVL_ChipInternal *chip)
+avl_error_code_t DVBTx_GetCellID_Demod(uint16_t *puiCellID,  avl68x2_chip *chip)
 {
 	avl_error_code_t r = AVL_EC_OK;
     uint8_t ucTemp = 0;
 	uint16_t usTemp = 0;
     AVL_DVBTx_Standard current_standard = AVL_DVBTx_Standard_T;
 	
-	r = avl_bms_read8(chip->usI2CAddr, 
+	r = avl_bms_read8(chip->chip_pub->i2c_addr, 
         stBaseAddrSet.fw_DVBTx_status_reg_base + rs_DVBTx_rx_mode_caddr_offset,&ucTemp);
 
     current_standard = (AVL_DVBTx_Standard)ucTemp;
 
     if(AVL_DVBTx_Standard_T2 == current_standard)
 	{
-	    r |= avl_bms_read16(chip->usI2CAddr, 
+	    r |= avl_bms_read16(chip->chip_pub->i2c_addr, 
 			stBaseAddrSet.fw_DVBT2_L1_pre_reg_base + rs_DVBTx_CELL_ID_saddr_offset,&usTemp);
 	    *puiCellID =usTemp ;
 	}
     else if(AVL_DVBTx_Standard_T == current_standard)
 	{
-		r |= avl_bms_read16(chip->usI2CAddr, 
+		r |= avl_bms_read16(chip->chip_pub->i2c_addr, 
 			stBaseAddrSet.fw_DVBT_TPS_reg_base +  rs_DVBTx_TPS_cell_id_saddr_offset,&usTemp);
 	    *puiCellID =usTemp ;
 
