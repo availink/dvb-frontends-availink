@@ -52,7 +52,7 @@ struct avl_tuner default_avl_tuner = {
 
 
 
-static int init_dvbs_s2(struct dvb_frontend *fe)
+static int avl68x2_init_diseqc(struct dvb_frontend *fe)
 {
   struct avl68x2_priv *priv = fe->demodulator_priv;
   struct AVL_Diseqc_Para Diseqc_para;
@@ -97,11 +97,12 @@ static int avl68x2_i2c_gate_ctrl(struct dvb_frontend *fe, int enable)
   return ret;
 }
 
-static int avl68x2_set_dvbs(struct dvb_frontend *fe)
+static int avl68x2_acquire_dvbsx(struct dvb_frontend *fe)
 {
   struct avl68x2_priv *priv = fe->demodulator_priv;
   struct dtv_frontend_properties *c = &fe->dtv_property_cache;
   avl_error_code_t r = AVL_EC_OK;
+  dbg_avl("ACQUIRE S/S2");
   dbg_avl("Freq:%d khz,sym:%d hz", c->frequency, c->symbol_rate);
 
   r =  AVL_Demod_DVBSxAutoLock(c->symbol_rate, priv->chip);
@@ -109,8 +110,57 @@ static int avl68x2_set_dvbs(struct dvb_frontend *fe)
   return r;
 }
 
-static int set_dvb_mode(struct dvb_frontend *fe,
-                               enum fe_delivery_system delsys)
+static int avl68x2_acquire_dvbtx(struct dvb_frontend *fe)
+{
+  struct avl68x2_priv *priv = fe->demodulator_priv;
+  struct dtv_frontend_properties *c = &fe->dtv_property_cache;
+  avl_error_code_t r = AVL_EC_OK;
+  AVL_DVBTxBandWidth bw;
+
+  dbg_avl("ACQUIRE T/T2");
+
+  if (c->bandwidth_hz <= 1700000)
+  {
+    bw = AVL_DVBTx_BW_1M7;
+  }
+  else if (c->bandwidth_hz <= 5000000)
+  {
+    bw = AVL_DVBTx_BW_5M;
+  }
+  else if (c->bandwidth_hz <= 6000000)
+  {
+    bw = AVL_DVBTx_BW_6M;
+  }
+  else if (c->bandwidth_hz <= 7000000)
+  {
+    bw = AVL_DVBTx_BW_7M;
+  }
+  else
+  {
+    bw = AVL_DVBTx_BW_8M;
+  }
+
+  r = AVL_Demod_DVBT2AutoLock(bw,
+                              AVL_DVBT2_PROFILE_UNKNOWN,
+                              c->stream_id,
+                              priv->chip);
+
+  return r;
+}
+
+static int avl68x2_acquire_dvbc(struct dvb_frontend *fe)
+{
+  avl_error_code_t r = AVL_EC_OK;
+  return r;
+}
+
+static int avl68x2_acquire_dvbc_b(struct dvb_frontend *fe)
+{
+  avl_error_code_t r = AVL_EC_OK;
+  return r;
+}
+
+static int set_dvb_mode(struct dvb_frontend *fe)
 {
   struct avl68x2_priv *priv = fe->demodulator_priv;
   avl_error_code_t r = AVL_EC_OK;
@@ -120,51 +170,34 @@ static int set_dvb_mode(struct dvb_frontend *fe,
   char fw_path[256];
   AVL_DemodMode dmd_mode;
 
-  /* already in desired mode */
-  if (priv->delivery_system == delsys)
-    return 0;
-
-  dbg_avl("initing demod for delsys=%d", delsys);
+  r = GetMode_Demod(&dmd_mode, priv->chip);
 
   //check for (FW) equivalent modes
   switch (priv->delivery_system)
   {
   case SYS_DVBS:
-    if (delsys == SYS_DVBS2)
-      return 0;
-    strncpy(fw_path,AVL68X2_DVBSX_FW,255);
-    dmd_mode = AVL_DVBSX;
-    break;
   case SYS_DVBS2:
-    if (delsys == SYS_DVBS)
+    if (dmd_mode == AVL_DVBSX)
       return 0;
     strncpy(fw_path,AVL68X2_DVBSX_FW,255);
     dmd_mode = AVL_DVBSX;
     break;
   case SYS_DVBT:
-    if(delsys == SYS_DVBT2)
-      return 0;
-    strncpy(fw_path,AVL68X2_DVBTX_FW,255);
-    dmd_mode = AVL_DVBTX;
-    break;
   case SYS_DVBT2:
-    if(delsys == SYS_DVBT)
+    if(dmd_mode == AVL_DVBTX)
       return 0;
     strncpy(fw_path,AVL68X2_DVBTX_FW,255);
     dmd_mode = AVL_DVBTX;
     break;
   case SYS_ISDBT:
+    if(dmd_mode == AVL_ISDBT)
+      return 0;
     strncpy(fw_path,AVL68X2_ISDBT_FW,255);
     dmd_mode = AVL_ISDBT;
     break;
   case SYS_DVBC_ANNEX_A: //"DVB-C"
-    if(delsys == SYS_DVBC_ANNEX_B) //J.83-B
-      return 0;
-    strncpy(fw_path,AVL68X2_DVBC_FW,255);
-    dmd_mode = AVL_DVBC;
-    break;
-  case SYS_DVBC_ANNEX_B:
-    if(delsys == SYS_DVBC_ANNEX_A)
+  case SYS_DVBC_ANNEX_B: //J.83-B
+    if(dmd_mode == AVL_DVBC) //J.83-B
       return 0;
     strncpy(fw_path,AVL68X2_DVBC_FW,255);
     dmd_mode = AVL_DVBC;
@@ -172,7 +205,8 @@ static int set_dvb_mode(struct dvb_frontend *fe,
   default:
     break;
   }
-  priv->delivery_system = delsys;
+
+  dbg_avl("initing demod for delsys=%d", priv->delivery_system);
 
   fw_status = request_firmware(&priv->fw, fw_path, priv->i2c->dev.parent);
   if (fw_status != 0)
@@ -238,7 +272,7 @@ static int set_dvb_mode(struct dvb_frontend *fe,
   case SYS_DVBS:
   case SYS_DVBS2:
   default:
-    r |= init_dvbs_s2(fe);
+    r |= avl68x2_init_diseqc(fe);
     break;
   }
 
@@ -485,10 +519,17 @@ static int avl68x2fe_algo(struct dvb_frontend *fe)
 
 //static  struct dtv_frontend_properties _last_dtv;
 
-static int avl68x2_set_frontend(struct dvb_frontend *fe)
+static int set_frontend(struct dvb_frontend *fe)
 {
   int ret;
-  //struct avl68x2_priv *priv = fe->demodulator_priv;
+  struct avl68x2_priv *priv = fe->demodulator_priv;
+  
+  ret = set_dvb_mode(fe);
+  if(ret)
+  {
+
+    return ret;
+  }
 
   /* setup tuner */
   if (fe->ops.tuner_ops.set_params)
@@ -502,8 +543,32 @@ static int avl68x2_set_frontend(struct dvb_frontend *fe)
       return ret;
   }
 
-  dbg_avl("ACQUIRE");
-  ret = avl68x2_set_dvbs(fe);
+  if (c->delivery_system == SYS_DVBC_ANNEX_A && c->symbol_rate < 6000000)
+  {
+    c->delivery_system = SYS_DVBC_ANNEX_B;
+    c->bandwidth_hz = 6000000;
+  }
+
+  switch (c->delivery_system)
+  {
+  case SYS_DVBT:
+  case SYS_DVBT2:
+    ret = avl68x2_acquire_dvbtx(fe);
+    break;
+  case SYS_DVBC_ANNEX_A:
+    ret = avl68x2_acquire_dvbc(fe);
+    break;
+  case SYS_DVBC_ANNEX_B:
+    ret = avl68x2_acquire_dvbc_b(fe);
+    break;
+  case SYS_DVBS:
+  case SYS_DVBS2:
+    ret = avl68x2_acquire_dvbsx(fe);
+    break;
+  default:
+    ret = -EINVAL;
+    break;
+  }
 
   return ret;
 }
@@ -514,7 +579,7 @@ static int avl68x2_tune(struct dvb_frontend *fe, bool re_tune,
   *delay = HZ / 5;
   if (re_tune)
   {
-    int ret = avl68x2_set_frontend(fe);
+    int ret = set_frontend(fe);
     if (ret)
       return ret;
   }
@@ -586,7 +651,7 @@ static struct dvb_frontend_ops avl68x2_ops = {
     .get_frontend_algo = avl68x2fe_algo,
     .tune = avl68x2_tune,
 
-    .set_frontend = avl68x2_set_frontend,
+    .set_frontend = set_frontend,
 };
 
 struct dvb_frontend *avl68x2_attach(struct avl68x2_config *config,
@@ -609,7 +674,7 @@ struct dvb_frontend *avl68x2_attach(struct avl68x2_config *config,
 
   priv->frontend.demodulator_priv = priv;
   priv->i2c = i2c;
-  priv->delivery_system = SYS_UNDEFINED;
+  priv->delivery_system = SYS_DVBS;
 
   priv->chip = kzalloc(sizeof(struct avl68x2_chip), GFP_KERNEL);
   if (priv->chip == NULL)
@@ -660,7 +725,7 @@ struct dvb_frontend *avl68x2_attach(struct avl68x2_config *config,
            KBUILD_MODNAME, id);
 
 
-  if (!set_dvb_mode(&priv->frontend, SYS_DVBS))
+  if (!set_dvb_mode(&priv->frontend))
   {
     dev_info(&priv->i2c->dev,
              KBUILD_MODNAME ": Firmware booted");

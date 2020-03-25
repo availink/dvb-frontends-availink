@@ -127,7 +127,7 @@ int init_error_stat(struct avl62x1_priv *priv)
 	return r;
 }
 
-static int init_dvbs_s2(struct dvb_frontend *fe)
+static int avl68x2_init_diseqc(struct dvb_frontend *fe)
 {
 	struct avl62x1_priv *priv = fe->demodulator_priv;
 	struct avl62x1_diseqc_params params;
@@ -295,7 +295,7 @@ static int set_dvb_mode(struct dvb_frontend *fe,
 	case SYS_DVBS:
 	case SYS_DVBS2:
 	default:
-		ret |= init_dvbs_s2(fe);
+		ret |= avl68x2_init_diseqc(fe);
 		break;
 	}
 
