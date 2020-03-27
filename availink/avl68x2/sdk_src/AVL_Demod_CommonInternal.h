@@ -15,9 +15,9 @@
 #define MAX_II2C_WRITE_SIZE 64
 
 //SDK Version
-#define AVL_API_VER_MAJOR                  2
-#define AVL_API_VER_MINOR                  19
-#define AVL_API_VER_BUILD                  24
+#define AVL68X2_SDK_VER_MAJOR                  2
+#define AVL68X2_SDK_VER_MINOR                  19
+#define AVL68X2_SDK_VER_BUILD                  24
 
 
 #define AVL68XX                            0x68624955
@@ -158,9 +158,6 @@
 #define hw_AVL_rx_rf_aagc_gain              0x160888
 
 
-#ifdef AVL_CPLUSPLUS
-extern "C" {
-#endif
 
     //Define ADC channel selection
     typedef enum AVL_ADC_Channel
@@ -821,8 +818,6 @@ typedef struct avl68x2_chip_pub
     AVL_Func_GetPrePostBER fpGetPrePostBER;
   }AVL_StandardSpecificFunctions;
  
-#ifdef AVL_CPLUSPLUS
-}
-#endif
+
 
 #endif

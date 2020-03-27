@@ -11,9 +11,6 @@
 
 #include "AVL_Demod.h"
 
-#ifdef AVL_CPLUSPLUS
-extern "C" {
-#endif
 
 #define rc_DVBTx_fund_rate_Hz_iaddr_offset                       0x00000004
 #define rc_DVBTx_sample_rate_Hz_iaddr_offset                     0x00000008
@@ -383,9 +380,7 @@ avl_error_code_t DVBTx_GetPrePostBER_Demod(uint32_t *puiBERxe9, AVL_BER_Type eBE
 avl_error_code_t AVL_Demod_DVBT_GetTPSInfo(AVL_DVBT_TpsInfo *pstDVBTTpsInfo, avl68x2_chip *chip);
 avl_error_code_t DVBTx_GetCellID_Demod(uint16_t *puiCellID,  avl68x2_chip *chip);
 
-#ifdef AVL_CPLUSPLUS
-    }
-#endif
+
 
 #endif
 

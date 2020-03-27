@@ -222,7 +222,7 @@ static int set_dvb_mode(struct dvb_frontend *fe)
     fw_min = priv->chip->chip_priv->patch_data[25]; //SDK-FW API rev
     fw_build = (priv->chip->chip_priv->patch_data[26] << 8) |
                priv->chip->chip_priv->patch_data[27]; //internal rev
-    if (fw_min != AVL62X1_SDK_VER_MINOR)
+    if (fw_min != AVL68X2_SDK_VER_MINOR)
     {
       //SDK-FW API rev must match
       dev_err(&priv->i2c->dev,
@@ -230,7 +230,7 @@ static int set_dvb_mode(struct dvb_frontend *fe)
               fw_maj, fw_min, fw_build);
       dev_err(&priv->i2c->dev,
               KBUILD_MODNAME ": Firmware minor version must be %d",
-              AVL62X1_SDK_VER_MINOR);
+              AVL68X2_SDK_VER_MINOR);
       r = 1;
       goto err;
     }

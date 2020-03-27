@@ -7,6 +7,10 @@
  */
 
 #include "AVL_Demod.h"
+#include "AVL_Demod_DVBC.h"
+#include "AVL_Demod_DVBSx.h"
+#include "AVL_Demod_DVBTx.h"
+#include "AVL_Demod_ISDBT.h"
 
 const AVL_CommonConfig default_common_config =
 {
@@ -758,7 +762,6 @@ avl_error_code_t SetInternalFunc_Demod(AVL_DemodMode eDemodMode, avl68x2_chip *c
     avl_error_code_t r = AVL_EC_OK;
     switch (eDemodMode)
     {
-#if defined(_AVL68XX_)
     case AVL_DVBC:
         chip->stStdSpecFunc->fpRxInitializeFunc = DVBC_Initialize_Demod;
         chip->stStdSpecFunc->fpGetLockStatus = DVBC_GetLockStatus_Demod;
@@ -766,9 +769,7 @@ avl_error_code_t SetInternalFunc_Demod(AVL_DemodMode eDemodMode, avl68x2_chip *c
         chip->stStdSpecFunc->fpGetSQI = DVBC_GetSignalQuality_Demod;
         chip->stStdSpecFunc->fpGetPrePostBER = DVBC_GetPrePostBER_Demod;
         break;
-#endif
 
-#if defined(_AVL68XX_)
     case AVL_DVBSX:
         chip->stStdSpecFunc->fpRxInitializeFunc = DVBSx_Initialize_Demod;
         chip->stStdSpecFunc->fpGetLockStatus = DVBSx_GetLockStatus_Demod;
@@ -776,9 +777,7 @@ avl_error_code_t SetInternalFunc_Demod(AVL_DemodMode eDemodMode, avl68x2_chip *c
         chip->stStdSpecFunc->fpGetSQI = DVBSx_GetSignalQuality_Demod;
         chip->stStdSpecFunc->fpGetPrePostBER = DVBSx_GetPrePostBER_Demod;
         break;
-#endif
 
-#if defined(_AVL68XX_)
     case AVL_DVBTX:
         chip->stStdSpecFunc->fpRxInitializeFunc = DVBTx_Initialize_Demod;
         chip->stStdSpecFunc->fpGetLockStatus = DVBTx_GetLockStatus_Demod;
@@ -786,9 +785,7 @@ avl_error_code_t SetInternalFunc_Demod(AVL_DemodMode eDemodMode, avl68x2_chip *c
         chip->stStdSpecFunc->fpGetSQI = DVBTx_GetSignalQuality_Demod;
         chip->stStdSpecFunc->fpGetPrePostBER = DVBTx_GetPrePostBER_Demod;
         break;
-#endif
 
-#if defined(_AVL68XX_)
     case AVL_ISDBT:
         chip->stStdSpecFunc->fpRxInitializeFunc = ISDBT_Initialize_Demod;
         chip->stStdSpecFunc->fpGetLockStatus = ISDBT_GetLockStatus_Demod;
@@ -796,17 +793,7 @@ avl_error_code_t SetInternalFunc_Demod(AVL_DemodMode eDemodMode, avl68x2_chip *c
         chip->stStdSpecFunc->fpGetSQI = ISDBT_GetSignalQuality_Demod;
         chip->stStdSpecFunc->fpGetPrePostBER = ISDBT_GetPrePostBER_Demod;
         break;
-#endif
 
-#if defined(_AVL63XX_)
-    case AVL_DTMB:
-        chip->stStdSpecFunc->fpRxInitializeFunc = DTMB_Initialize_Demod;
-        chip->stStdSpecFunc->fpGetLockStatus = DTMB_GetLockStatus_Demod;
-        chip->stStdSpecFunc->fpGetSNR = DTMB_GetSNR_Demod;
-        chip->stStdSpecFunc->fpGetSQI = DTMB_GetSignalQuality_Demod;
-        chip->stStdSpecFunc->fpGetPrePostBER = DTMB_GetPrePostBER_Demod;
-        break;
-#endif
     default:
         break;
     }

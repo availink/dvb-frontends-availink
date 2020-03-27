@@ -8,12 +8,10 @@
 
 #ifndef AVL_DVBC_H
 #define AVL_DVBC_H
-    #include "AVL_Demod.h"
+#include "AVL_Demod.h"
 
 
-#ifdef AVL_CPLUSPLUS
-    extern "C" {
-#endif
+
 
 //DVBC config registers offset address
 #define rc_DVBC_symbol_rate_Hz_iaddr_offset                     0x00000000
@@ -103,9 +101,7 @@ avl_error_code_t DVBC_SetSymbolRate_Demod(uint32_t uiDVBCSymbolRateSps, avl68x2_
 avl_error_code_t DVBC_GetPrePostBER_Demod(uint32_t *puiBERxe9, AVL_BER_Type eBERType, avl68x2_chip *chip);
 avl_error_code_t AVL_Demod_DVBCSignalDetection(uint8_t *pucNoSig, avl68x2_chip *chip);
 
-#ifdef AVL_CPLUSPLUS
-    }
-#endif
+
 
 #endif
 

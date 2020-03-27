@@ -553,9 +553,9 @@ avl_error_code_t AVL_Demod_GetVersion(AVL_DemodVersion *pstDemodVersion, avl68x2
         pstDemodVersion->firmware.build = ucBuff[2];
         pstDemodVersion->firmware.build = ((uint16_t)((pstDemodVersion->firmware.build)<<8)) + ucBuff[3];
 
-        pstDemodVersion->sdk.major = AVL_API_VER_MAJOR;
-        pstDemodVersion->sdk.minor = AVL_API_VER_MINOR;
-        pstDemodVersion->sdk.build = AVL_API_VER_BUILD;
+        pstDemodVersion->sdk.major = AVL68X2_SDK_VER_MAJOR;
+        pstDemodVersion->sdk.minor = AVL68X2_SDK_VER_MINOR;
+        pstDemodVersion->sdk.build = AVL68X2_SDK_VER_BUILD;
     }
 
     return r;

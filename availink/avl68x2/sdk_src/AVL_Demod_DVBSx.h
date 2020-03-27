@@ -10,9 +10,6 @@
 
 #include "AVL_Demod.h"
 
-#ifdef AVL_CPLUSPLUS
-    extern "C" {
-#endif
 
 #define rc_DVBSx_rfagc_pol_iaddr_offset                                  0x00000000
 #define rc_DVBSx_internal_decode_mode_iaddr_offset                        0x0000000c
@@ -268,10 +265,6 @@ avl_error_code_t DVBSx_SetAGCPola(AVL_AGCPola enumAGC_Pola, avl68x2_chip *chip);
 avl_error_code_t DVBSx_GetPrePostBER_Demod(uint32_t *puiBERxe9, AVL_BER_Type eBERType, avl68x2_chip *chip);
 avl_error_code_t AVL_Demod_DVBSx_GetFreqOffset( int32_t * piFreqOffsetHz, avl68x2_chip *chip);
 
-
-#ifdef AVL_CPLUSPLUS
-    }
-#endif
 
 #endif
 

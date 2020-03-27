@@ -10,9 +10,6 @@
 
 #include "AVL_Demod.h"
 
-#ifdef AVL_CPLUSPLUS
-extern "C" {
-#endif
 
 #define rc_ISDBT_fund_rate_Hz_iaddr_offset                                0x00000004
 #define rc_ISDBT_rf_agc_pol_caddr_offset                                  0x0000000f
@@ -170,9 +167,6 @@ extern "C" {
 	avl_error_code_t ISDBT_ResetLayerPER_Demod(avl68x2_chip *chip);
 	avl_error_code_t ISDBT_GetLayerPER_Demod(uint32_t *puiPERxe9, enum AVL_ISDBT_Layer eLayerNum, avl68x2_chip *chip);
 
-#ifdef AVL_CPLUSPLUS
-}
-#endif
 
 #endif
 

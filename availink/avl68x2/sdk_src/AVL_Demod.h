@@ -16,35 +16,7 @@
 #endif
 
 #include "avl_lib.h"
-
 #include "AVL_Demod_CommonInternal.h"
-
-#if defined(_AVL68XX_)
-#include "AVL_Demod_DVBSx.h"
-#endif
-
-#if defined(_AVL68XX_)
-#include "AVL_Demod_DVBTx.h"
-#endif
-
-#if defined(_AVL68XX_)
-#include "AVL_Demod_DVBC.h"
-#endif
-
-#if defined(_AVL68XX_)
-#include "AVL_Demod_ISDBT.h"
-#endif
-
-#if defined(_AVL63XX_)
-#include "AVL_Demod_DTMB.h"
-#endif
-
-#ifdef AVL_CPLUSPLUS
-extern "C" {
-#endif
-
-
-
 
 
 
@@ -55,9 +27,6 @@ typedef enum AVL_SpectrumInversion
     AVL_SPECTRUM_INVERTED   =   1,                      // Signal spectrum in inverted.
     AVL_SPECTRUM_AUTO       =   2                       // Signal spectrum isn't known.
 }AVL_SpectrumInversion;
-
-
-
 
 
 avl_error_code_t AVL_Demod_Initialize(AVL_DemodMode eStartupMode, avl68x2_chip *chip);
@@ -78,9 +47,6 @@ avl_error_code_t AVL_Demod_GetGPIOValue(AVL_GPIOPinNumber ePinNumber, AVL_GPIOPi
 avl_error_code_t AVL_Demod_TsOn(avl68x2_chip *chip);
 avl_error_code_t AVL_Demod_TsOff(avl68x2_chip *chip);
 
-#ifdef AVL_CPLUSPLUS
-}
-#endif
 
 #endif
 
