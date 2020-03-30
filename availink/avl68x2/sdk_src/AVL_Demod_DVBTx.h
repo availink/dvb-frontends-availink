@@ -319,8 +319,8 @@ typedef struct AVL_DVBT2_SignalInfo
 typedef struct AVL_DVBTxModulationInfo
 {
     AVL_DVBTx_Standard      ucDVBxStandard;
-    AVL_DVBT_SignalInfo     eDVBTSingalInfo;
-    AVL_DVBT2_SignalInfo    eDVBT2SingalInfo;
+    AVL_DVBT_SignalInfo     eDVBTSignalInfo;
+    AVL_DVBT2_SignalInfo    eDVBT2SignalInfo;
 }AVL_DVBTxModulationInfo;
     
  /// Holds the DVB-C channel information.The structure contains the parameters used for locking to a channel.

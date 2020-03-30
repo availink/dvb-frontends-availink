@@ -317,24 +317,24 @@ avl_error_code_t AVL_Demod_DVBTxGetModulationInfo(AVL_DVBTxModulationInfo *pstMo
     {
         pstModulationInfo->ucDVBxStandard = AVL_DVBTx_Standard_T;
         r |= avl_bms_read8(chip->chip_pub->i2c_addr, stBaseAddrSet.fw_DVBT_TPS_reg_base + rs_DVBTx_transmission_mode_caddr_offset,&ucTemp);
-        pstModulationInfo->eDVBTSingalInfo.eDVBTFFTSize = (AVL_DVBT_FFTSize)ucTemp;
+        pstModulationInfo->eDVBTSignalInfo.eDVBTFFTSize = (AVL_DVBT_FFTSize)ucTemp;
         
         r |= avl_bms_read8(chip->chip_pub->i2c_addr, stBaseAddrSet.fw_DVBT_TPS_reg_base + rs_DVBTx_guard_interval_caddr_offset,&ucTemp);
-        pstModulationInfo->eDVBTSingalInfo.eDVBTGuardInterval = (AVL_DVBT_GuardInterval)ucTemp;
+        pstModulationInfo->eDVBTSignalInfo.eDVBTGuardInterval = (AVL_DVBT_GuardInterval)ucTemp;
         
         r |= avl_bms_read8(chip->chip_pub->i2c_addr, stBaseAddrSet.fw_DVBT_TPS_reg_base + rs_DVBTx_constellation_caddr_offset,&ucTemp);
-        pstModulationInfo->eDVBTSingalInfo.eDVBTModulationMode = (AVL_DVBT_ModulationMode)ucTemp;
+        pstModulationInfo->eDVBTSignalInfo.eDVBTModulationMode = (AVL_DVBT_ModulationMode)ucTemp;
         
         r |= avl_bms_read8(chip->chip_pub->i2c_addr, stBaseAddrSet.fw_DVBT_TPS_reg_base + rs_DVBTx_hierarchy_caddr_offset,&ucTemp);
-        pstModulationInfo->eDVBTSingalInfo.eDVBTHierarchy = (AVL_DVBT_Hierarchy)ucTemp;
+        pstModulationInfo->eDVBTSignalInfo.eDVBTHierarchy = (AVL_DVBT_Hierarchy)ucTemp;
 
         r |= avl_bms_read8(chip->chip_pub->i2c_addr, stBaseAddrSet.fw_DVBT_TPS_reg_base + rs_DVBTx_HP_code_rate_caddr_offset,&ucTemp);
-        pstModulationInfo->eDVBTSingalInfo.eDVBTHPCodeRate = (AVL_DVBT_CodeRate)ucTemp;
+        pstModulationInfo->eDVBTSignalInfo.eDVBTHPCodeRate = (AVL_DVBT_CodeRate)ucTemp;
 
-        if(pstModulationInfo->eDVBTSingalInfo.eDVBTHierarchy != AVL_DVBT_HIER_NONE)
+        if(pstModulationInfo->eDVBTSignalInfo.eDVBTHierarchy != AVL_DVBT_HIER_NONE)
         {
             r |= avl_bms_read8(chip->chip_pub->i2c_addr, stBaseAddrSet.fw_DVBT_TPS_reg_base + rs_DVBTx_LP_code_rate_caddr_offset,&ucTemp);
-            pstModulationInfo->eDVBTSingalInfo.eDVBTLPCodeRate = (AVL_DVBT_CodeRate)ucTemp;
+            pstModulationInfo->eDVBTSignalInfo.eDVBTLPCodeRate = (AVL_DVBT_CodeRate)ucTemp;
         }
     }
     else if(AVL_DVBTx_Standard_T2 == current_standard)
@@ -342,34 +342,34 @@ avl_error_code_t AVL_Demod_DVBTxGetModulationInfo(AVL_DVBTxModulationInfo *pstMo
         pstModulationInfo->ucDVBxStandard = AVL_DVBTx_Standard_T2;
         
         r |= avl_bms_read8(chip->chip_pub->i2c_addr, stBaseAddrSet.fw_DVBT2_P1_reg_base + rs_DVBTx_FFT_size_caddr_offset,&ucTemp);
-        pstModulationInfo->eDVBT2SingalInfo.eDVBT2FFTSize = (AVL_DVBT2_FFTSize)ucTemp;
+        pstModulationInfo->eDVBT2SignalInfo.eDVBT2FFTSize = (AVL_DVBT2_FFTSize)ucTemp;
         
         r |= avl_bms_read8(chip->chip_pub->i2c_addr, stBaseAddrSet.fw_DVBT2_P1_reg_base + rs_DVBTx_MISO_SISO_caddr_offset,&ucTemp);
-        pstModulationInfo->eDVBT2SingalInfo.eDVBT2MISOorSISO = (AVL_DVBT2_MISO_SISO)ucTemp;
+        pstModulationInfo->eDVBT2SignalInfo.eDVBT2MISOorSISO = (AVL_DVBT2_MISO_SISO)ucTemp;
 
         r |= avl_bms_read8(chip->chip_pub->i2c_addr, stBaseAddrSet.fw_DVBT2_P1_reg_base + rs_DVBTx_T2_profile_caddr_offset,&ucTemp);
-        pstModulationInfo->eDVBT2SingalInfo.eDVBT2Profile = (AVL_DVBT2_PROFILE)ucTemp;
+        pstModulationInfo->eDVBT2SignalInfo.eDVBT2Profile = (AVL_DVBT2_PROFILE)ucTemp;
 
         r |= avl_bms_read8(chip->chip_pub->i2c_addr, stBaseAddrSet.fw_DVBT2_L1_pre_reg_base + rs_DVBTx_PILOT_PATTERN_caddr_offset,&ucTemp);
-        pstModulationInfo->eDVBT2SingalInfo.eDVBT2PilotPatten = (AVL_DVBT2_PILOT_PATTERN)ucTemp;
+        pstModulationInfo->eDVBT2SignalInfo.eDVBT2PilotPatten = (AVL_DVBT2_PILOT_PATTERN)ucTemp;
 
         r |= avl_bms_read8(chip->chip_pub->i2c_addr, stBaseAddrSet.fw_DVBT2_data_PLP_config_reg_base + rs_DVBTx_data_PLP_TYPE_caddr_offset,&ucTemp);
-        pstModulationInfo->eDVBT2SingalInfo.eDVBT2DataPLPType = (AVL_DVBT2_DATA_PLP_TYPE)ucTemp;
+        pstModulationInfo->eDVBT2SignalInfo.eDVBT2DataPLPType = (AVL_DVBT2_DATA_PLP_TYPE)ucTemp;
         
         r |= avl_bms_read8(chip->chip_pub->i2c_addr, stBaseAddrSet.fw_DVBT2_data_PLP_config_reg_base + rs_DVBTx_data_PLP_ID_caddr_offset,&ucTemp);
-        pstModulationInfo->eDVBT2SingalInfo.ucDVBT2DataPLPID = ucTemp;
+        pstModulationInfo->eDVBT2SignalInfo.ucDVBT2DataPLPID = ucTemp;
 
         r |= avl_bms_read8(chip->chip_pub->i2c_addr, stBaseAddrSet.fw_DVBT2_data_PLP_config_reg_base + rs_DVBTx_data_PLP_COD_caddr_offset,&ucTemp);
-        pstModulationInfo->eDVBT2SingalInfo.eDVBT2DataPLPCodeRate = (AVL_DVBT2_CodeRate)ucTemp;
+        pstModulationInfo->eDVBT2SignalInfo.eDVBT2DataPLPCodeRate = (AVL_DVBT2_CodeRate)ucTemp;
 
         r |= avl_bms_read8(chip->chip_pub->i2c_addr, stBaseAddrSet.fw_DVBT2_data_PLP_config_reg_base + rs_DVBTx_data_PLP_MOD_caddr_offset,&ucTemp);
-        pstModulationInfo->eDVBT2SingalInfo.eDVBT2DataPLPModulationMode= (AVL_DVBT2_PLP_ModulationMode)ucTemp;
+        pstModulationInfo->eDVBT2SignalInfo.eDVBT2DataPLPModulationMode= (AVL_DVBT2_PLP_ModulationMode)ucTemp;
 
         r |= avl_bms_read8(chip->chip_pub->i2c_addr, stBaseAddrSet.fw_DVBT2_data_PLP_config_reg_base + rs_DVBTx_data_PLP_ROTATION_caddr_offset,&ucTemp);
-        pstModulationInfo->eDVBT2SingalInfo.eDVBT2DataPLPRotation= (AVL_DVBT2_PLP_Constellation_Rotation)ucTemp;
+        pstModulationInfo->eDVBT2SignalInfo.eDVBT2DataPLPRotation= (AVL_DVBT2_PLP_Constellation_Rotation)ucTemp;
 
         r |= avl_bms_read8(chip->chip_pub->i2c_addr, stBaseAddrSet.fw_DVBT2_data_PLP_config_reg_base + rs_DVBTx_data_PLP_FEC_TYPE_caddr_offset,&ucTemp);
-        pstModulationInfo->eDVBT2SingalInfo.eDVBT2DataPLPFecType= (AVL_DVBT2_PLP_FEC_Type)ucTemp;
+        pstModulationInfo->eDVBT2SignalInfo.eDVBT2DataPLPFecType= (AVL_DVBT2_PLP_FEC_Type)ucTemp;
 
         r |= avl_bms_read8(chip->chip_pub->i2c_addr,
             stBaseAddrSet.fw_DVBT2_L1_post_config_reg_base + rs_DVBTx_NUM_PLP_caddr_offset, &ucTemp);
@@ -390,71 +390,71 @@ avl_error_code_t AVL_Demod_DVBTxGetModulationInfo(AVL_DVBTxModulationInfo *pstMo
             }
         }
 
-        pstModulationInfo->eDVBT2SingalInfo.ucNumberDPLP = ucNumberDPLP;
-        pstModulationInfo->eDVBT2SingalInfo.ucDVBT2CommonPLPExist = ucCommonPLPExist;
+        pstModulationInfo->eDVBT2SignalInfo.ucNumberDPLP = ucNumberDPLP;
+        pstModulationInfo->eDVBT2SignalInfo.ucDVBT2CommonPLPExist = ucCommonPLPExist;
         
         if (ucCommonPLPExist == 1)
         {
             r |= avl_bms_read8(chip->chip_pub->i2c_addr, 
                 stBaseAddrSet.fw_DVBT2_common_PLP_config_reg_base + rs_DVBTx_common_PLP_ID_caddr_offset,&ucTemp);
-            pstModulationInfo->eDVBT2SingalInfo.ucDVBT2CommonPLPID = ucTemp;
+            pstModulationInfo->eDVBT2SignalInfo.ucDVBT2CommonPLPID = ucTemp;
 
             r |= avl_bms_read8(chip->chip_pub->i2c_addr, 
                 stBaseAddrSet.fw_DVBT2_common_PLP_config_reg_base + rs_DVBTx_common_PLP_COD_caddr_offset,&ucTemp);
-            pstModulationInfo->eDVBT2SingalInfo.eDVBT2CommonPLPCodeRate = (AVL_DVBT2_CodeRate)ucTemp;
+            pstModulationInfo->eDVBT2SignalInfo.eDVBT2CommonPLPCodeRate = (AVL_DVBT2_CodeRate)ucTemp;
 
             r |= avl_bms_read8(chip->chip_pub->i2c_addr, 
                 stBaseAddrSet.fw_DVBT2_common_PLP_config_reg_base + rs_DVBTx_common_PLP_MOD_caddr_offset,&ucTemp);
-            pstModulationInfo->eDVBT2SingalInfo.eDVBT2CommonPLPModulationMode = (AVL_DVBT2_PLP_ModulationMode)ucTemp;
+            pstModulationInfo->eDVBT2SignalInfo.eDVBT2CommonPLPModulationMode = (AVL_DVBT2_PLP_ModulationMode)ucTemp;
 
             r |= avl_bms_read8(chip->chip_pub->i2c_addr, 
                 stBaseAddrSet.fw_DVBT2_common_PLP_config_reg_base + rs_DVBTx_common_PLP_ROTATION_caddr_offset,&ucTemp);
-            pstModulationInfo->eDVBT2SingalInfo.eDVBT2CommonPLPRotation = (AVL_DVBT2_PLP_Constellation_Rotation)ucTemp;
+            pstModulationInfo->eDVBT2SignalInfo.eDVBT2CommonPLPRotation = (AVL_DVBT2_PLP_Constellation_Rotation)ucTemp;
 
             r |= avl_bms_read8(chip->chip_pub->i2c_addr, 
                 stBaseAddrSet.fw_DVBT2_common_PLP_config_reg_base + rs_DVBTx_common_PLP_FEC_TYPE_caddr_offset,&ucTemp);
-            pstModulationInfo->eDVBT2SingalInfo.eDVBT2CommonPLPFecType = (AVL_DVBT2_PLP_FEC_Type)ucTemp;
+            pstModulationInfo->eDVBT2SignalInfo.eDVBT2CommonPLPFecType = (AVL_DVBT2_PLP_FEC_Type)ucTemp;
         }
 
         r |= avl_bms_read8(chip->chip_pub->i2c_addr, 
             stBaseAddrSet.fw_DVBT2_P1_reg_base + rs_DVBTx_P1_S2_field_2_caddr_offset,&ucTemp);
-        pstModulationInfo->eDVBT2SingalInfo.ucDVBT2FEFExist= ucTemp;
+        pstModulationInfo->eDVBT2SignalInfo.ucDVBT2FEFExist= ucTemp;
 
         r |= avl_bms_read16(chip->chip_pub->i2c_addr, 
             stBaseAddrSet.fw_DVBT2_L1_pre_reg_base + rs_DVBTx_CELL_ID_saddr_offset,&usTemp);
-        pstModulationInfo->eDVBT2SingalInfo.eDVBT2SignalID.usCellID = usTemp;
+        pstModulationInfo->eDVBT2SignalInfo.eDVBT2SignalID.usCellID = usTemp;
 
         r |= avl_bms_read16(chip->chip_pub->i2c_addr, 
             stBaseAddrSet.fw_DVBT2_L1_pre_reg_base + rs_DVBTx_NETWORK_ID_saddr_offset,&usTemp);
-        pstModulationInfo->eDVBT2SingalInfo.eDVBT2SignalID.usNetworkID = usTemp;
+        pstModulationInfo->eDVBT2SignalInfo.eDVBT2SignalID.usNetworkID = usTemp;
 
         r |= avl_bms_read16(chip->chip_pub->i2c_addr, 
             stBaseAddrSet.fw_DVBT2_L1_pre_reg_base + rs_DVBTx_T2_SYSTEM_ID_saddr_offset,&usTemp);
-        pstModulationInfo->eDVBT2SingalInfo.eDVBT2SignalID.usSystemID = usTemp;
+        pstModulationInfo->eDVBT2SignalInfo.eDVBT2SignalID.usSystemID = usTemp;
 
          r |= avl_bms_read8(chip->chip_pub->i2c_addr, 
              stBaseAddrSet.fw_DVBT2_L1_pre_reg_base + rs_DVBTx_GUARD_INTERVAL_caddr_offset,&ucTemp);
-         pstModulationInfo->eDVBT2SingalInfo.eDVBT2GuardInterval = (AVL_DVBT2_GUARD_INTERVAL)ucTemp;
+         pstModulationInfo->eDVBT2SignalInfo.eDVBT2GuardInterval = (AVL_DVBT2_GUARD_INTERVAL)ucTemp;
 
          r |= avl_bms_read8(chip->chip_pub->i2c_addr, 
              stBaseAddrSet.fw_DVBT2_L1_pre_reg_base + rs_DVBTx_PAPR_caddr_offset,&ucTemp);
-         pstModulationInfo->eDVBT2SingalInfo.eDVBT2PAPR = (AVL_DVBT2_PAPR)ucTemp;
+         pstModulationInfo->eDVBT2SignalInfo.eDVBT2PAPR = (AVL_DVBT2_PAPR)ucTemp;
          
          r |= avl_bms_read8(chip->chip_pub->i2c_addr, 
              stBaseAddrSet.fw_DVBT2_L1_pre_reg_base + rs_DVBTx_L1_MOD_caddr_offset,&ucTemp);
-         pstModulationInfo->eDVBT2SingalInfo.eDVBT2L1ModulationMode = (AVL_DVBT2_L1_Modulation)ucTemp;
+         pstModulationInfo->eDVBT2SignalInfo.eDVBT2L1ModulationMode = (AVL_DVBT2_L1_Modulation)ucTemp;
 
         r |= avl_bms_read8(chip->chip_pub->i2c_addr, 
             stBaseAddrSet.fw_DVBT2_L1_pre_reg_base + rs_DVBTx_BWT_EXT_caddr_offset,&ucTemp);
-        pstModulationInfo->eDVBT2SingalInfo.ucDVBT2BWExtended = ucTemp;
+        pstModulationInfo->eDVBT2SignalInfo.ucDVBT2BWExtended = ucTemp;
  
          r |= avl_bms_read8(chip->chip_pub->i2c_addr, 
              stBaseAddrSet.fw_DVBT2_L1_pre_reg_base + rs_DVBTx_NUM_T2_FRAMES_caddr_offset,&ucTemp);
-         pstModulationInfo->eDVBT2SingalInfo.ucNumberFrames = ucTemp;
+         pstModulationInfo->eDVBT2SignalInfo.ucNumberFrames = ucTemp;
 
          r |= avl_bms_read16(chip->chip_pub->i2c_addr, 
              stBaseAddrSet.fw_DVBT2_L1_pre_reg_base + rs_DVBTx_NUM_DATA_SYMBOLS_saddr_offset,&usTemp);
-         pstModulationInfo->eDVBT2SingalInfo.usNumberDataSymbols = usTemp;
+         pstModulationInfo->eDVBT2SignalInfo.usNumberDataSymbols = usTemp;
     }
     
         
@@ -1048,9 +1048,9 @@ avl_error_code_t IRx_GetSQI_DVBT(uint32_t * puiSQI, avl68x2_chip *chip)
     //get signal info for mapping
     r |= AVL_Demod_DVBTxGetModulationInfo(&DVBTSignalInfo, chip);
 
-    modulation = DVBTSignalInfo.eDVBTSingalInfo.eDVBTModulationMode;
-    hp_code_rate = DVBTSignalInfo.eDVBTSingalInfo.eDVBTHPCodeRate;
-    hierarchy = DVBTSignalInfo.eDVBTSingalInfo.eDVBTHierarchy;
+    modulation = DVBTSignalInfo.eDVBTSignalInfo.eDVBTModulationMode;
+    hp_code_rate = DVBTSignalInfo.eDVBTSignalInfo.eDVBTHPCodeRate;
+    hierarchy = DVBTSignalInfo.eDVBTSignalInfo.eDVBTHierarchy;
     
     //Get Nordig C/N
     if(AVL_DVBT_HIER_NONE == hierarchy)
@@ -1147,8 +1147,8 @@ avl_error_code_t IRx_GetSQI_DVBT2(uint32_t * puiSQI, avl68x2_chip *chip)
     //get signal info for mapping
     r |= AVL_Demod_DVBTxGetModulationInfo(&DVBTSignalInfo, chip);
 
-    modulation = DVBTSignalInfo.eDVBT2SingalInfo.eDVBT2DataPLPModulationMode;
-    code_rate = DVBTSignalInfo.eDVBT2SingalInfo.eDVBT2DataPLPCodeRate;
+    modulation = DVBTSignalInfo.eDVBT2SignalInfo.eDVBT2DataPLPModulationMode;
+    code_rate = DVBTSignalInfo.eDVBT2SignalInfo.eDVBT2DataPLPCodeRate;
 
     //Get Nordig C/N
     for(index=0;index<sizeof(DVBT2_RAW_CN_Table)/sizeof(DVBT2_CN_Table_Element);index++)
@@ -1160,26 +1160,26 @@ avl_error_code_t IRx_GetSQI_DVBT2(uint32_t * puiSQI, avl68x2_chip *chip)
 
             CN_NordigP1_x100_db += 10; //actual 0.1  A in (C/N + A + B + C + D)
 
-            PCB_CN_index = DVBTSignalInfo.eDVBT2SingalInfo.eDVBT2FFTSize*8 + DVBTSignalInfo.eDVBT2SingalInfo.eDVBT2PilotPatten;
+            PCB_CN_index = DVBTSignalInfo.eDVBT2SignalInfo.eDVBT2FFTSize*8 + DVBTSignalInfo.eDVBT2SignalInfo.eDVBT2PilotPatten;
             CN_NordigP1_x100_db += DVBT2_PCB_CN_Table[PCB_CN_index].PCB_CN;     //B (C/N + A + B + C + D)
 
             //Ignore different PPx, add 2db to compensate all of PPx
             CN_NordigP1_x100_db += 200; //actual 2.0  C in (C/N + A + B + C + D)
             
             //D in  (C/N + A + B + C + D)
-            if(DVBTSignalInfo.eDVBT2SingalInfo.eDVBT2DataPLPModulationMode == AVL_DVBT2_QPSK ||
-               DVBTSignalInfo.eDVBT2SingalInfo.eDVBT2DataPLPModulationMode == AVL_DVBT2_16QAM)
+            if(DVBTSignalInfo.eDVBT2SignalInfo.eDVBT2DataPLPModulationMode == AVL_DVBT2_QPSK ||
+               DVBTSignalInfo.eDVBT2SignalInfo.eDVBT2DataPLPModulationMode == AVL_DVBT2_16QAM)
             {
                 CN_NordigP1_x100_db += 5; //actual 0.05
             }
-            else if(DVBTSignalInfo.eDVBT2SingalInfo.eDVBT2DataPLPModulationMode == AVL_DVBT2_64QAM)
+            else if(DVBTSignalInfo.eDVBT2SignalInfo.eDVBT2DataPLPModulationMode == AVL_DVBT2_64QAM)
             {
-                if(DVBTSignalInfo.eDVBT2SingalInfo.eDVBT2DataPLPCodeRate == AVL_DVBT2_CR_1_2 ||
-                DVBTSignalInfo.eDVBT2SingalInfo.eDVBT2DataPLPCodeRate == AVL_DVBT2_CR_3_5)
+                if(DVBTSignalInfo.eDVBT2SignalInfo.eDVBT2DataPLPCodeRate == AVL_DVBT2_CR_1_2 ||
+                DVBTSignalInfo.eDVBT2SignalInfo.eDVBT2DataPLPCodeRate == AVL_DVBT2_CR_3_5)
                 {
                     CN_NordigP1_x100_db += 5; //actual 0.05
                 }                
-                else if(DVBTSignalInfo.eDVBT2SingalInfo.eDVBT2DataPLPCodeRate == AVL_DVBT2_CR_5_6)
+                else if(DVBTSignalInfo.eDVBT2SignalInfo.eDVBT2DataPLPCodeRate == AVL_DVBT2_CR_5_6)
                 {
                     CN_NordigP1_x100_db += 25; //actual 0.17
                 }
@@ -1190,19 +1190,19 @@ avl_error_code_t IRx_GetSQI_DVBT2(uint32_t * puiSQI, avl68x2_chip *chip)
             }
             else
             {
-                if(DVBTSignalInfo.eDVBT2SingalInfo.eDVBT2DataPLPCodeRate == AVL_DVBT2_CR_1_2)
+                if(DVBTSignalInfo.eDVBT2SignalInfo.eDVBT2DataPLPCodeRate == AVL_DVBT2_CR_1_2)
                 {
                     CN_NordigP1_x100_db += 15; //actual 0.15
                 } 
-                else if(DVBTSignalInfo.eDVBT2SingalInfo.eDVBT2DataPLPCodeRate == AVL_DVBT2_CR_3_4)
+                else if(DVBTSignalInfo.eDVBT2SignalInfo.eDVBT2DataPLPCodeRate == AVL_DVBT2_CR_3_4)
                 {
                     CN_NordigP1_x100_db += 45; //actual 0.45
                 } 
-                else if(DVBTSignalInfo.eDVBT2SingalInfo.eDVBT2DataPLPCodeRate == AVL_DVBT2_CR_4_5)
+                else if(DVBTSignalInfo.eDVBT2SignalInfo.eDVBT2DataPLPCodeRate == AVL_DVBT2_CR_4_5)
                 {
                     CN_NordigP1_x100_db += 55; //actual 0.55
                 }                
-                else if(DVBTSignalInfo.eDVBT2SingalInfo.eDVBT2DataPLPCodeRate == AVL_DVBT2_CR_5_6)
+                else if(DVBTSignalInfo.eDVBT2SignalInfo.eDVBT2DataPLPCodeRate == AVL_DVBT2_CR_5_6)
                 {
                     CN_NordigP1_x100_db += 65; //actual 0.65
                 }
@@ -1347,8 +1347,8 @@ avl_error_code_t IRx_GetSSI_DVBT(uint32_t * puiSSI, int32_t RF_Power, avl68x2_ch
     if(lock_status == AVL_STATUS_LOCK) 
     {
         r |= AVL_Demod_DVBTxGetModulationInfo(&DVBTSignalInfo, chip);
-        modulation = DVBTSignalInfo.eDVBTSingalInfo.eDVBTModulationMode;
-        hp_code_rate = DVBTSignalInfo.eDVBTSingalInfo.eDVBTHPCodeRate;
+        modulation = DVBTSignalInfo.eDVBTSignalInfo.eDVBTModulationMode;
+        hp_code_rate = DVBTSignalInfo.eDVBTSignalInfo.eDVBTHPCodeRate;
     }
 
     for(index=0;index<sizeof(AVL_DVBT_RF_TABLE)/sizeof(AVL_DVBT_RF_Table_Element);index++)
@@ -1407,8 +1407,8 @@ avl_error_code_t IRx_GetSSI_DVBT2(uint32_t * puiSSI, int32_t RF_Power, avl68x2_c
     if(lock_status == AVL_STATUS_LOCK) 
     {
         r |= AVL_Demod_DVBTxGetModulationInfo(&DVBTSignalInfo, chip);
-        modulation = DVBTSignalInfo.eDVBT2SingalInfo.eDVBT2DataPLPModulationMode;
-        code_rate = DVBTSignalInfo.eDVBT2SingalInfo.eDVBT2DataPLPCodeRate;
+        modulation = DVBTSignalInfo.eDVBT2SignalInfo.eDVBT2DataPLPModulationMode;
+        code_rate = DVBTSignalInfo.eDVBT2SignalInfo.eDVBT2DataPLPCodeRate;
     }
 
     for(index=0; index < sizeof(AVL_DVBT2_RF_TABLE)/sizeof(AVL_DVBT2_RF_Table_Element);index++)
