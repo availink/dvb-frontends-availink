@@ -216,9 +216,10 @@ static int avl68x2_set_standard(struct dvb_frontend *fe)
   int fw_status;
   unsigned int fw_maj, fw_min, fw_build;
   char fw_path[256];
-  AVL_DemodMode dmd_mode;
+  AVL_DemodMode dmd_mode = AVL_DVBSX;
 
   r = GetMode_Demod(&dmd_mode, priv->chip);
+  r = 100; //HACK FIXME
 
   //check for (FW) equivalent modes
   switch (priv->delivery_system)
@@ -229,13 +230,6 @@ static int avl68x2_set_standard(struct dvb_frontend *fe)
       return 0;
     strncpy(fw_path,AVL68X2_DVBSX_FW,255);
     dmd_mode = AVL_DVBSX;
-    break;
-  case SYS_DVBT:
-  case SYS_DVBT2:
-    if(dmd_mode == AVL_DVBTX)
-      return 0;
-    strncpy(fw_path,AVL68X2_DVBTX_FW,255);
-    dmd_mode = AVL_DVBTX;
     break;
   case SYS_ISDBT:
     if(dmd_mode == AVL_ISDBT)
@@ -250,7 +244,14 @@ static int avl68x2_set_standard(struct dvb_frontend *fe)
     strncpy(fw_path,AVL68X2_DVBC_FW,255);
     dmd_mode = AVL_DVBC;
     break;
+  case SYS_DVBT:
+  case SYS_DVBT2:
   default:
+    if(dmd_mode == AVL_DVBTX)
+      return 0;
+    strncpy(fw_path,AVL68X2_DVBTX_FW,255);
+    dmd_mode = AVL_DVBTX;
+    break;
     break;
   }
 
@@ -890,6 +891,9 @@ static int avl68x2_read_status(struct dvb_frontend *fe, enum fe_status *status)
 	{
 		*status = FE_NONE;
 	}
+	if(debug > 1) {
+		printk("AVL: %s: read status %d\n",__func__,*status);
+	}
 	return ret;
 }
 
@@ -945,11 +949,13 @@ static int set_frontend(struct dvb_frontend *fe)
 {
   int ret;
   struct dtv_frontend_properties *c = &fe->dtv_property_cache;
+  struct avl68x2_priv *priv = fe->demodulator_priv;
   
   ret = avl68x2_set_standard(fe);
   if(ret)
   {
-
+    dev_err(&priv->i2c->dev, "%s: avl68x2_set_standard() failed!!!",
+			KBUILD_MODNAME);
     return ret;
   }
 
@@ -1026,9 +1032,12 @@ static int avl68x2_sleep(struct dvb_frontend *fe)
 
 static void avl68x2_release(struct dvb_frontend *fe)
 {
-  struct avl68x2_priv *priv = fe->demodulator_priv;
-  kfree(priv->chip);
-  kfree(priv);
+	struct avl68x2_priv *priv = fe->demodulator_priv;
+	kfree(priv->chip->chip_pub);
+	kfree(priv->chip->chip_priv);
+	kfree(priv->chip->stStdSpecFunc);
+	kfree(priv->chip);
+	kfree(priv);
 }
 
 static struct dvb_frontend_ops avl68x2_ops = {
@@ -1087,40 +1096,44 @@ static struct dvb_frontend_ops avl68x2_ops = {
 };
 
 struct dvb_frontend *avl68x2_attach(struct avl68x2_config *config,
-                                    struct i2c_adapter *i2c)
+				    struct i2c_adapter *i2c)
 {
-  struct avl68x2_priv *priv;
-  avl_error_code_t ret;
-  uint32_t id;
+	struct avl68x2_priv *priv;
+	avl_error_code_t ret;
+	uint32_t id;
 
-  dbg_avl("start demod attach");
+	dbg_avl("start demod attach");
 
-  priv = kzalloc(sizeof(struct avl68x2_priv), GFP_KERNEL);
-  if (priv == NULL)
-    goto err;
+	priv = kzalloc(sizeof(struct avl68x2_priv), GFP_KERNEL);
+	if (priv == NULL)
+		goto err;
 
-  dbg_avl("priv alloc'ed = %llx", (unsigned long long int)priv);
+	dbg_avl("priv alloc'ed = %llx", (unsigned long long int)priv);
 
-  memcpy(&priv->frontend.ops, &avl68x2_ops,
-         sizeof(struct dvb_frontend_ops));
+	memcpy(&priv->frontend.ops, &avl68x2_ops,
+	       sizeof(struct dvb_frontend_ops));
 
-  priv->frontend.demodulator_priv = priv;
-  priv->i2c = i2c;
-  priv->delivery_system = SYS_DVBS;
+	priv->frontend.demodulator_priv = priv;
+	priv->i2c = i2c;
+	priv->delivery_system = SYS_DVBT;
 
-  priv->chip = kzalloc(sizeof(struct avl68x2_chip), GFP_KERNEL);
-  if (priv->chip == NULL)
-    goto err1;
-  
-  priv->chip->chip_priv = kzalloc(sizeof(struct avl68x2_chip_priv), GFP_KERNEL);
-  if(priv->chip->chip_priv == NULL)
-    goto err2;
-  
-  priv->chip->chip_pub = kzalloc(sizeof(struct avl68x2_chip_pub), GFP_KERNEL);
-  if(priv->chip->chip_pub == NULL)
-    goto err3;
+	priv->chip = kzalloc(sizeof(struct avl68x2_chip), GFP_KERNEL);
+	if (priv->chip == NULL)
+		goto err1;
 
-  /* copy (ephemeral?) public part of chip config into alloc'd area */
+	priv->chip->stStdSpecFunc = kzalloc(sizeof(struct AVL_StandardSpecificFunctions), GFP_KERNEL);
+	if (priv->chip->stStdSpecFunc == NULL)
+		goto err2;
+
+	priv->chip->chip_priv = kzalloc(sizeof(struct avl68x2_chip_priv), GFP_KERNEL);
+	if (priv->chip->chip_priv == NULL)
+		goto err3;
+
+	priv->chip->chip_pub = kzalloc(sizeof(struct avl68x2_chip_pub), GFP_KERNEL);
+	if (priv->chip->chip_pub == NULL)
+		goto err4;
+
+	/* copy (ephemeral?) public part of chip config into alloc'd area */
 	memcpy(priv->chip->chip_pub,
 	       config->chip_pub,
 	       sizeof(struct avl68x2_chip_pub));
@@ -1133,47 +1146,49 @@ struct dvb_frontend *avl68x2_attach(struct avl68x2_config *config,
 
 	// associate demod ID with i2c_adapter
 	avl_bsp_assoc_i2c_adapter(priv->chip->chip_pub->i2c_addr, i2c);
-  
 
-  /* get chip id */
-  ret = AVL_Demod_GetChipID(&id, priv->chip);
-  if (ret)
-  {
-    dev_err(&priv->i2c->dev, "%s: attach failed reading id",
-            KBUILD_MODNAME);
-    goto err4;
-  }
+	ret = avl68x2_init_chip_object(priv->chip);
 
-  dbg_avl("chip_id= %d\n", id);
+	/* get chip id */
+	ret |= GetFamilyID_Demod(&id, priv->chip);
+	if (ret)
+	{
+		dev_err(&priv->i2c->dev, "%s: attach failed reading id",
+			KBUILD_MODNAME);
+		goto err5;
+	}
 
-  if (id != AVL68XX)
-  {
-    dev_err(&priv->i2c->dev, "%s: attach failed, id mismatch",
-            KBUILD_MODNAME);
-    goto err4;
-  }
+	dbg_avl("chip_id= 0x%x\n", id);
 
-  dev_info(&priv->i2c->dev, "%s: found AVL68x2 id=0x%x",
-           KBUILD_MODNAME, id);
+	if (id != AVL68XX)
+	{
+		dev_err(&priv->i2c->dev, "%s: attach failed, id mismatch",
+			KBUILD_MODNAME);
+		goto err5;
+	}
 
+	dev_info(&priv->i2c->dev, "%s: found AVL68x2 id=0x%x",
+		 KBUILD_MODNAME, id);
 
-  if (!avl68x2_set_standard(&priv->frontend))
-  {
-    dev_info(&priv->i2c->dev,
-             KBUILD_MODNAME ": Firmware booted");
-    return &priv->frontend;
-  }
+	if (!avl68x2_set_standard(&priv->frontend))
+	{
+		dev_info(&priv->i2c->dev,
+			 KBUILD_MODNAME ": Firmware booted");
+		return &priv->frontend;
+	}
 
+err5:
+	kfree(priv->chip->chip_pub);
 err4:
-  kfree(priv->chip->chip_pub);
+	kfree(priv->chip->chip_priv);
 err3:
-  kfree(priv->chip->chip_priv);
+	kfree(priv->chip->stStdSpecFunc);
 err2:
-  kfree(priv->chip);
+	kfree(priv->chip);
 err1:
-  kfree(priv);
+	kfree(priv);
 err:
-  return NULL;
+	return NULL;
 }
 EXPORT_SYMBOL_GPL(avl68x2_attach);
 

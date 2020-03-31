@@ -86,23 +86,30 @@ const AVL_BaseAddressSet stBaseAddrSet = {
   0x400    //fw_DVBC_status_reg_base         
 };
 
-avl_error_code_t InitSemaphore_Demod(avl68x2_chip *chip)
+avl_error_code_t avl68x2_init_chip_object(avl68x2_chip *chip)
 {
     avl_error_code_t r = AVL_EC_OK;
 
     if(chip->rx_sem_initialized == 0) {
       r |= avl_bsp_init_semaphore(&(chip->rx_sem));
+      printk("INITED RX SEM\n");
       chip->rx_sem_initialized = 1;
     }
-    if(chip->chip_pub->dvbsx_para.semDiseqcInitialized == 0) {
-      r |= avl_bsp_init_semaphore(&(chip->chip_pub->dvbsx_para.diseqc_sem));
-      chip->chip_pub->dvbsx_para.semDiseqcInitialized = 1;
+    if(chip->diseqc_sem_initialized == 0) {
+      r |= avl_bsp_init_semaphore(&(chip->diseqc_sem));
+      printk("INITED DISEQC SEM\n");
+      chip->diseqc_sem_initialized = 1;
     }    
     if(chip->i2c_sem_initialized == 0)
     {
       r |= avl_bsp_init_semaphore(&(chip->i2c_sem));
+      printk("INITED I2C SEM\n");
       chip->i2c_sem_initialized = 1;
     }
+
+    r |= avl_bms_initialize(chip->chip_pub->i2c_addr);
+
+    chip->chip_priv->agc_driven = 0;
 
     chip->chip_pub->dvbsx_para.eDiseqcStatus = AVL_DOS_Uninitialized;
 

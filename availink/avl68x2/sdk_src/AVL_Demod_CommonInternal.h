@@ -507,11 +507,9 @@
   
   typedef struct AVL_DVBSxPara
   {
-    avl_sem_t diseqc_sem;
     AVL_DiseqcStatus eDiseqcStatus;
     AVL_AGCPola eDVBSxAGCPola;
     AVL_Diseqc_WaveFormMode e22KWaveForm;
-    uint8_t  semDiseqcInitialized;
   }AVL_DVBSxPara;
   
   typedef enum AVL_ISDBT_BandWidth
@@ -657,6 +655,7 @@ typedef struct avl68x2_chip_priv
   uint32_t variable_array[PATCH_VAR_ARRAY_SIZE];
 
   uint8_t sleep_flag;  //0 - Wakeup, 1 - Sleep 
+  uint8_t agc_driven;
 
 } avl68x2_chip_priv;
 
@@ -687,12 +686,14 @@ typedef struct avl68x2_chip_pub
     struct avl68x2_chip_pub *chip_pub;
 
     uint8_t i2c_sem_initialized;  
-    uint8_t rx_sem_initialized;  
+    uint8_t rx_sem_initialized;
+    uint8_t diseqc_sem_initialized;
     uint32_t family_id;
     
     
     avl_sem_t rx_sem;
     avl_sem_t i2c_sem;
+    avl_sem_t diseqc_sem;
     uint32_t uiCoreFrequencyHz;
     uint32_t uiFECFrequencyHz;
     uint32_t uiTSFrequencyHz;
@@ -751,7 +752,7 @@ typedef struct avl68x2_chip_pub
   extern const AVL_DVBCConfig default_dvbc_config;
   extern const AVL_BaseAddressSet stBaseAddrSet;
   extern AVL_PLL_Conf0 gstPLLConfigArray0[];
-  avl_error_code_t InitSemaphore_Demod(avl68x2_chip *chip);
+  avl_error_code_t avl68x2_init_chip_object(avl68x2_chip *chip);
   avl_error_code_t IBase_Initialize_Demod(avl68x2_chip *chip);
   avl_error_code_t TunerI2C_Initialize_Demod(avl68x2_chip *chip);
   avl_error_code_t EnableTSOutput_Demod(avl68x2_chip *chip);

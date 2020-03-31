@@ -46,7 +46,7 @@ avl_error_code_t AVL_Demod_Initialize(AVL_DemodMode eStartupMode, avl68x2_chip *
       }
     chip->chip_priv->sleep_flag = 0;
 
-    r = InitSemaphore_Demod(chip);
+    //r = avl68x2_init_chip_object(chip);
     
     r |= GetFamilyID_Demod(&(chip->family_id), chip);
 
@@ -264,6 +264,7 @@ avl_error_code_t AVL_Demod_SetMode(AVL_DemodMode eDemodMode,avl68x2_chip *chip)
         return r;
     }
 
+	printk("%s:%d r=%d\n",__FUNCTION__,__LINE__,r);
 
     if(chip->chip_pub->cur_demod_mode == eDemodMode)
     {
@@ -271,6 +272,8 @@ avl_error_code_t AVL_Demod_SetMode(AVL_DemodMode eDemodMode,avl68x2_chip *chip)
     }
 
     r |= IBase_SendRxOPWait_Demod(AVL_FW_CMD_HALT, chip);
+
+    printk("%s:%d r=%d\n",__FUNCTION__,__LINE__,r);
 
     pInitialData = chip->chip_priv->patch_data;
 
@@ -320,7 +323,9 @@ avl_error_code_t AVL_Demod_SetMode(AVL_DemodMode eDemodMode,avl68x2_chip *chip)
 
                 if((ui_patch_script_version & 0x00ff) == 0x1) 
                 { //read patch script version
+		printk("%s:%d r=%d\n",__FUNCTION__,__LINE__,r);
                     r |= AVL_ParseFwPatch_v0(chip, 0);
+		    printk("%s:%d r=%d\n",__FUNCTION__,__LINE__,r);
                 } 
                 else 
                 {
@@ -331,6 +336,7 @@ avl_error_code_t AVL_Demod_SetMode(AVL_DemodMode eDemodMode,avl68x2_chip *chip)
             } 
         }
     }
+    printk("%s:%d r=%d\n",__FUNCTION__,__LINE__,r);
     while (AVL_EC_OK != IBase_CheckChipReady_Demod(chip))
     {
         if (uiMaxRetries <= i++)
@@ -340,14 +346,18 @@ avl_error_code_t AVL_Demod_SetMode(AVL_DemodMode eDemodMode,avl68x2_chip *chip)
         }
         avl_bsp_delay(uiTimeDelay);
     }
+    printk("%s:%d r=%d\n",__FUNCTION__,__LINE__,r);
 
     chip->chip_pub->cur_demod_mode = eDemodMode;
 
     r |= SetInternalFunc_Demod(chip->chip_pub->cur_demod_mode,chip);
+    printk("%s:%d r=%d\n",__FUNCTION__,__LINE__,r);
 
     r |= IRx_Initialize_Demod(chip);
+    printk("%s:%d r=%d\n",__FUNCTION__,__LINE__,r);
 
     r |= SetTSMode_Demod(chip);
+    printk("%s:%d r=%d\n",__FUNCTION__,__LINE__,r);
     r |= SetTSSerialPin_Demod(chip->chip_pub->ts_config.eSerialPin, chip);
     r |= SetTSSerialOrder_Demod(chip->chip_pub->ts_config.eSerialOrder, chip);
 

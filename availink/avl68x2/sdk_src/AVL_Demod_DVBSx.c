@@ -351,7 +351,7 @@ avl_error_code_t AVL_Demod_DVBSx_Diseqc_ReadModulationData( uint8_t * pucBuff, u
     uint32_t i2 = 0;
     uint8_t pucBuffTemp[4] = {0};
     
-    r = avl_bsp_wait_semaphore(&(chip->chip_pub->dvbsx_para.diseqc_sem));
+    r = avl_bsp_wait_semaphore(&(chip->diseqc_sem));
     r |= avl_bms_read32(chip->chip_pub->i2c_addr,
         stBaseAddrSet.hw_diseqc_base + hw_diseqc_rx_st_offset, &i1);
     r |= avl_bms_read32(chip->chip_pub->i2c_addr,
@@ -385,7 +385,7 @@ avl_error_code_t AVL_Demod_DVBSx_Diseqc_ReadModulationData( uint8_t * pucBuff, u
         r = AVL_EC_GENERAL_FAIL;
     }
 
-    r |= avl_bsp_release_semaphore(&(chip->chip_pub->dvbsx_para.diseqc_sem));
+    r |= avl_bsp_release_semaphore(&(chip->diseqc_sem));
     
     return (r);
 }
@@ -405,7 +405,7 @@ avl_error_code_t AVL_Demod_DVBSx_Diseqc_SendModulationData( uint8_t * pucBuff, u
     }
     else
     {
-        r = avl_bsp_wait_semaphore(&(chip->chip_pub->dvbsx_para.diseqc_sem));   
+        r = avl_bsp_wait_semaphore(&(chip->diseqc_sem));   
         r |= AVL_Demod_DVBSx_Diseqc_IsSafeToSwitchMode(chip);
         if( AVL_EC_OK ==  r)
         {
@@ -460,7 +460,7 @@ avl_error_code_t AVL_Demod_DVBSx_Diseqc_SendModulationData( uint8_t * pucBuff, u
                 if (++uiTempOutTh > 500)
                 {
                     r |= AVL_EC_TIMEOUT;
-                    r |= avl_bsp_release_semaphore(&(chip->chip_pub->dvbsx_para.diseqc_sem));
+                    r |= avl_bsp_release_semaphore(&(chip->diseqc_sem));
                     return(r);
                 }
                 r = avl_bms_read32(chip->chip_pub->i2c_addr,
@@ -488,7 +488,7 @@ avl_error_code_t AVL_Demod_DVBSx_Diseqc_SendModulationData( uint8_t * pucBuff, u
                 }
             }
         }
-        r |= avl_bsp_release_semaphore(&(chip->chip_pub->dvbsx_para.diseqc_sem));
+        r |= avl_bsp_release_semaphore(&(chip->diseqc_sem));
     }
 
     return (r);
@@ -499,14 +499,14 @@ avl_error_code_t AVL_Demod_DVBSx_Diseqc_GetTxStatus( AVL_Diseqc_TxStatus * pTxSt
     avl_error_code_t r = 0;
     uint32_t i1 = 0;
 
-    r = avl_bsp_wait_semaphore(&(chip->chip_pub->dvbsx_para.diseqc_sem));
+    r = avl_bsp_wait_semaphore(&(chip->diseqc_sem));
 
     r |= avl_bms_read32(chip->chip_pub->i2c_addr,
             stBaseAddrSet.hw_diseqc_base + hw_diseqc_tx_st_offset, &i1);
     pTxStatus->m_TxDone = (uint8_t)((i1 & 0x00000040)>>6);
     pTxStatus->m_TxFifoCount = (uint8_t)((i1 & 0x0000003c)>>2);
 
-    r |= avl_bsp_release_semaphore(&(chip->chip_pub->dvbsx_para.diseqc_sem));
+    r |= avl_bsp_release_semaphore(&(chip->diseqc_sem));
     
     return (r);
 }
@@ -516,7 +516,7 @@ avl_error_code_t AVL_Demod_DVBSx_Diseqc_GetRxStatus( AVL_Diseqc_RxStatus * pRxSt
     avl_error_code_t r = 0;
     uint32_t i1 = 0;
     
-    r = avl_bsp_wait_semaphore(&(chip->chip_pub->dvbsx_para.diseqc_sem));
+    r = avl_bsp_wait_semaphore(&(chip->diseqc_sem));
     if( AVL_DOS_InModulation == chip->chip_pub->dvbsx_para.eDiseqcStatus )
     {
         r |= avl_bms_read32(chip->chip_pub->i2c_addr,
@@ -531,7 +531,7 @@ avl_error_code_t AVL_Demod_DVBSx_Diseqc_GetRxStatus( AVL_Diseqc_RxStatus * pRxSt
     {
         r |= AVL_EC_GENERAL_FAIL;
     }
-    r |= avl_bsp_release_semaphore(&(chip->chip_pub->dvbsx_para.diseqc_sem));
+    r |= avl_bsp_release_semaphore(&(chip->diseqc_sem));
     
     return (r);
 }
@@ -551,7 +551,7 @@ avl_error_code_t AVL_Demod_DVBSx_Diseqc_SendTone( uint8_t ucTone, uint8_t ucCoun
     }
     else
     {
-        r = avl_bsp_wait_semaphore(&(chip->chip_pub->dvbsx_para.diseqc_sem));
+        r = avl_bsp_wait_semaphore(&(chip->diseqc_sem));
         r |= AVL_Demod_DVBSx_Diseqc_IsSafeToSwitchMode(chip);
 
         if( AVL_EC_OK == r )
@@ -608,7 +608,7 @@ avl_error_code_t AVL_Demod_DVBSx_Diseqc_SendTone( uint8_t ucTone, uint8_t ucCoun
                 if (++uiTempOutTh > 500)
                 {
                     r |= AVL_EC_TIMEOUT;
-                    r |= avl_bsp_release_semaphore(&(chip->chip_pub->dvbsx_para.diseqc_sem));
+                    r |= avl_bsp_release_semaphore(&(chip->diseqc_sem));
                     return(r);
                 }
                 r = avl_bms_read32(chip->chip_pub->i2c_addr,
@@ -636,7 +636,7 @@ avl_error_code_t AVL_Demod_DVBSx_Diseqc_SendTone( uint8_t ucTone, uint8_t ucCoun
                 }
             }
         }
-        r |= avl_bsp_release_semaphore(&(chip->chip_pub->dvbsx_para.diseqc_sem));
+        r |= avl_bsp_release_semaphore(&(chip->diseqc_sem));
     }
     
     return (r);
@@ -648,7 +648,7 @@ avl_error_code_t AVL_Demod_DVBSx_Diseqc_StartContinuous (avl68x2_chip *chip)
     uint32_t i1 = 0;
 
     
-    r = avl_bsp_wait_semaphore(&(chip->chip_pub->dvbsx_para.diseqc_sem));
+    r = avl_bsp_wait_semaphore(&(chip->diseqc_sem));
     r |= AVL_Demod_DVBSx_Diseqc_IsSafeToSwitchMode(chip);
 
     if( AVL_EC_OK == r )
@@ -670,7 +670,7 @@ avl_error_code_t AVL_Demod_DVBSx_Diseqc_StartContinuous (avl68x2_chip *chip)
             chip->chip_pub->dvbsx_para.eDiseqcStatus = AVL_DOS_InContinuous;
         }
     }
-    r |= avl_bsp_release_semaphore(&(chip->chip_pub->dvbsx_para.diseqc_sem));
+    r |= avl_bsp_release_semaphore(&(chip->diseqc_sem));
     
     return (r);
 }
@@ -681,7 +681,7 @@ avl_error_code_t AVL_Demod_DVBSx_Diseqc_StopContinuous (avl68x2_chip *chip)
     uint32_t i1 = 0;
 
 
-    r = avl_bsp_wait_semaphore(&(chip->chip_pub->dvbsx_para.diseqc_sem));
+    r = avl_bsp_wait_semaphore(&(chip->diseqc_sem));
     if( AVL_DOS_InContinuous == chip->chip_pub->dvbsx_para.eDiseqcStatus )
     {
         r |= avl_bms_read32(chip->chip_pub->i2c_addr,
@@ -691,7 +691,7 @@ avl_error_code_t AVL_Demod_DVBSx_Diseqc_StopContinuous (avl68x2_chip *chip)
             stBaseAddrSet.hw_diseqc_base + hw_diseqc_tx_cntrl_offset, i1);
     }
 
-    r |= avl_bsp_release_semaphore(&(chip->chip_pub->dvbsx_para.diseqc_sem));
+    r |= avl_bsp_release_semaphore(&(chip->diseqc_sem));
     return (r);
 }
 
@@ -763,7 +763,7 @@ avl_error_code_t DVBSx_Diseqc_Initialize_Demod(AVL_Diseqc_Para *pDiseqcPara, avl
     avl_error_code_t r = AVL_EC_OK;
     uint32_t i1 = 0;
 
-    r = avl_bsp_wait_semaphore(&(chip->chip_pub->dvbsx_para.diseqc_sem));
+    r = avl_bsp_wait_semaphore(&(chip->diseqc_sem));
     if( AVL_EC_OK == r )
     {
         r |= avl_bms_write32(chip->chip_pub->i2c_addr,
@@ -811,7 +811,7 @@ avl_error_code_t DVBSx_Diseqc_Initialize_Demod(AVL_Diseqc_Para *pDiseqcPara, avl
             chip->chip_pub->dvbsx_para.eDiseqcStatus = AVL_DOS_Initialized;
         }
     }
-    r |= avl_bsp_release_semaphore(&(chip->chip_pub->dvbsx_para.diseqc_sem));
+    r |= avl_bsp_release_semaphore(&(chip->diseqc_sem));
     
     return (r);
 }
