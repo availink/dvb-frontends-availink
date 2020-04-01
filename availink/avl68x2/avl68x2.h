@@ -39,7 +39,7 @@
 struct avl68x2_priv
 {
   struct i2c_adapter *i2c;
-  struct avl68x2_config *config;
+  //struct avl68x2_config *config;
   struct dvb_frontend frontend;
   enum fe_delivery_system delivery_system;
   struct avl68x2_chip *chip;
@@ -51,6 +51,11 @@ struct avl68x2_config
   //structure of user-configurable parameters
   struct avl68x2_chip_pub *chip_pub;
 };
+
+extern const AVL_DVBTxConfig default_dvbtx_config;
+extern const AVL_DVBSxConfig default_dvbsx_config;
+extern const AVL_ISDBTConfig default_isdbt_config;
+extern const AVL_DVBCConfig default_dvbc_config;
 
 extern struct dvb_frontend *avl68x2_attach(struct avl68x2_config *config, struct i2c_adapter *i2c);
 

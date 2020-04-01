@@ -8,96 +8,97 @@
 
 #include "AVL_Demod.h"
 
-
-avl_error_code_t AVL_Demod_Initialize(AVL_DemodMode eStartupMode, avl68x2_chip *chip)
+avl_error_code_t AVL_Demod_Initialize(
+    AVL_DemodMode eStartupMode,
+    avl68x2_chip *chip)
 {
-    avl_error_code_t r = AVL_EC_OK;
-    uint32_t uiMaxRetries = 100;
-    uint32_t delay_unit_ms = 20;//the time out window is 10*20=200ms
-    uint32_t i = 0;
-    uint32_t j = 0;
+	avl_error_code_t r = AVL_EC_OK;
+	uint32_t uiMaxRetries = 100;
+	uint32_t delay_unit_ms = 20; //the time out window is 10*20=200ms
+	uint32_t i = 0;
+	uint32_t j = 0;
 
-    chip->chip_pub->cur_demod_mode = eStartupMode;
+	chip->chip_pub->cur_demod_mode = eStartupMode;
 
-    chip->chip_pub->xtal = default_common_config.xtal;
-    chip->chip_pub->ts_config = default_common_config.ts_config;
-    
-    chip->chip_pub->dvbtx_para.eDVBTxInputPath = default_dvbtx_config.eDVBTxInputPath;
-    chip->chip_pub->dvbtx_para.uiDVBTxIFFreqHz = default_dvbtx_config.uiDVBTxIFFreqHz;
-    chip->chip_pub->dvbtx_para.eDVBTxAGCPola = default_dvbtx_config.eDVBTxAGCPola;
-    
-    chip->chip_pub->dvbsx_para.eDVBSxAGCPola = default_dvbsx_config.eDVBSxAGCPola;
-    chip->chip_pub->dvbsx_para.e22KWaveForm = default_dvbsx_config.e22KWaveForm;
-    
-    chip->chip_pub->isdbt_para.eISDBTInputPath = default_isdbt_config.eISDBTInputPath;
-    chip->chip_pub->isdbt_para.eISDBTBandwidth = default_isdbt_config.eISDBTBandwidth;
-    chip->chip_pub->isdbt_para.uiISDBTIFFreqHz = default_isdbt_config.uiISDBTIFFreqHz;
-    chip->chip_pub->isdbt_para.eISDBTAGCPola = default_isdbt_config.eISDBTAGCPola;
-    
-    chip->chip_pub->dvbc_para.eDVBCInputPath = default_dvbc_config.eDVBCInputPath;
-    chip->chip_pub->dvbc_para.uiDVBCIFFreqHz = default_dvbc_config.uiDVBCIFFreqHz;
-    chip->chip_pub->dvbc_para.uiDVBCSymbolRateSps = default_dvbc_config.uiDVBCSymbolRateSps;
-    chip->chip_pub->dvbc_para.eDVBCAGCPola = default_dvbc_config.eDVBCAGCPola;
-    chip->chip_pub->dvbc_para.eDVBCStandard = default_dvbc_config.eDVBCStandard;
-    
-    for(i=0; i<PATCH_VAR_ARRAY_SIZE; i++) 
-      {
-        chip->chip_priv->variable_array[i] = 0;
-      }
-    chip->chip_priv->sleep_flag = 0;
+	for (i = 0; i < PATCH_VAR_ARRAY_SIZE; i++)
+	{
+		chip->chip_priv->variable_array[i] = 0;
+	}
+	chip->chip_priv->sleep_flag = 0;
 
-    //r = avl68x2_init_chip_object(chip);
-    
-    r |= GetFamilyID_Demod(&(chip->family_id), chip);
+	//r = avl68x2_init_chip_object(chip);
 
-    r |= IBase_Initialize_Demod(chip);
+	r |= GetFamilyID_Demod(&(chip->family_id), chip);
 
-    while (AVL_EC_OK != IBase_CheckChipReady_Demod(chip))
-    {
-        if (uiMaxRetries <= j++)
-        {
-            r |= AVL_EC_GENERAL_FAIL;
-            break;
-        }
-        avl_bsp_delay(delay_unit_ms);
-    }
+	r |= IBase_Initialize_Demod(chip); //config PLL, boot FW
 
-    r |= SetInternalFunc_Demod(chip->chip_pub->cur_demod_mode, chip);
+	while (AVL_EC_OK != IBase_CheckChipReady_Demod(chip))
+	{
+		if (uiMaxRetries <= j++)
+		{
+			r |= AVL_EC_GENERAL_FAIL;
+			break;
+		}
+		avl_bsp_delay(delay_unit_ms);
+	}
 
-    chip->ucDisableTCAGC = 0;
-    chip->ucDisableSAGC = 0;
+	r |= SetInternalFunc_Demod(chip->chip_pub->cur_demod_mode, chip);
 
-    r |= IRx_Initialize_Demod(chip);
+	chip->ucDisableTCAGC = 0;
+	chip->ucDisableSAGC = 0;
 
-    r |= SetTSMode_Demod(chip);
+	r |= IRx_Initialize_Demod(chip);
 
-    r |= SetTSSerialPin_Demod(AVL_MPSP_DATA0, chip);
-    r |= SetTSSerialOrder_Demod(AVL_MPBO_MSB, chip);
-    r |= SetTSSerialSyncPulse_Demod(AVL_TS_SERIAL_SYNC_1_PULSE, chip);
-    r |= SetTSErrorBit_Demod(AVL_TS_ERROR_BIT_DISABLE, chip);
-    r |= SetTSErrorPola_Demod(AVL_MPEP_Normal, chip);
-    r |= SetTSValidPola_Demod(AVL_MPVP_Normal, chip);
-    r |= SetTSPacketLen_Demod(AVL_TS_188, chip);
-    r |= SetTSParallelOrder_Demod(AVL_TS_PARALLEL_ORDER_NORMAL, chip);
-    r |= SetTSParallelPhase_Demod(AVL_TS_PARALLEL_PHASE_0, chip);  //it's available for parallel and serial mode.
+	r |= SetTSMode_Demod(chip);
 
-    r |= EnableTSOutput_Demod(chip);
+	r |= SetTSSerialPin_Demod(
+	    chip->chip_pub->ts_config.eSerialPin,
+	    chip);
+	r |= SetTSSerialOrder_Demod(
+	    chip->chip_pub->ts_config.eSerialOrder,
+	    chip);
+	r |= SetTSSerialSyncPulse_Demod(
+	    chip->chip_pub->ts_config.eSerialSyncPulse,
+	    chip);
+	r |= SetTSErrorBit_Demod(
+	    chip->chip_pub->ts_config.eErrorBit,
+	    chip);
+	r |= SetTSErrorPola_Demod(
+	    chip->chip_pub->ts_config.eErrorPolarity,
+	    chip);
+	r |= SetTSValidPola_Demod(
+	    chip->chip_pub->ts_config.eValidPolarity,
+	    chip);
+	r |= SetTSPacketLen_Demod(
+	    chip->chip_pub->ts_config.ePacketLen,
+	    chip);
+	r |= SetTSParallelOrder_Demod(
+	    chip->chip_pub->ts_config.eParallelOrder,
+	    chip);
+	r |= SetTSParallelPhase_Demod(
+	    chip->chip_pub->ts_config.eParallelPhase,
+	    chip); //applies to parallel and serial mode
 
-    r |= TunerI2C_Initialize_Demod(chip);
-    r |= InitErrorStat_Demod(chip);
+	r |= EnableTSOutput_Demod(chip);
 
-    // Enable CS_0 as GPIO for EWBS feature
-    if(eStartupMode == AVL_ISDBT )
-    {
-        r |= avl_bms_write32(chip->chip_pub->i2c_addr,
-            stBaseAddrSet.hw_emerald_io_base + emerald_io_pad_CS_0_sel_offset , 0x1);
-    }
-   
-    r |= avl_bms_write8(chip->chip_pub->i2c_addr, 0xA83, 0x01);  // for ISDBT Layer independence lock
+	r |= TunerI2C_Initialize_Demod(chip);
+	r |= InitErrorStat_Demod(chip);
 
-    r |= Initilize_GPIOStatus_Demod(chip);
-  
-    return r;    
+	// Enable CS_0 as GPIO for EWBS feature
+	if (chip->chip_pub->cur_demod_mode == AVL_ISDBT)
+	{
+		r |= avl_bms_write32(chip->chip_pub->i2c_addr,
+				     stBaseAddrSet.hw_emerald_io_base +
+					 emerald_io_pad_CS_0_sel_offset,
+				     0x1);
+	}
+
+	// for ISDBT Layer independence lock
+	r |= avl_bms_write8(chip->chip_pub->i2c_addr, 0xA83, 0x01);
+
+	r |= Initilize_GPIOStatus_Demod(chip);
+
+	return r;
 }
 
 avl_error_code_t AVL_Demod_GetChipID(uint32_t * puiChipID,avl68x2_chip *chip)

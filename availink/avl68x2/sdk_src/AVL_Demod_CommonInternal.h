@@ -677,6 +677,8 @@ typedef struct avl68x2_chip_pub
   AVL_ISDBTPara isdbt_para;
   AVL_DVBCPara dvbc_para;
 
+  int32_t gpio_lock_led;
+
   struct avl_tuner *tuner;
 } avl68x2_chip_pub;
 
@@ -745,11 +747,7 @@ typedef struct avl68x2_chip_pub
     AVL_Version firmware;                            // The version of the internal patch.
   } AVL_DemodVersion;
   
-  extern const AVL_CommonConfig default_common_config;
-  extern const AVL_DVBTxConfig default_dvbtx_config;
-  extern const AVL_DVBSxConfig default_dvbsx_config;
-  extern const AVL_ISDBTConfig default_isdbt_config;
-  extern const AVL_DVBCConfig default_dvbc_config;
+  
   extern const AVL_BaseAddressSet stBaseAddrSet;
   extern AVL_PLL_Conf0 gstPLLConfigArray0[];
   avl_error_code_t avl68x2_init_chip_object(avl68x2_chip *chip);

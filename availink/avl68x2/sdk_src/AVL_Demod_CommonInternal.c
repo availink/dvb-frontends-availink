@@ -12,44 +12,6 @@
 #include "AVL_Demod_DVBTx.h"
 #include "AVL_Demod_ISDBT.h"
 
-const AVL_CommonConfig default_common_config =
-{
-    .xtal = Xtal_30M,
-    .ts_config.eMode = AVL_TS_PARALLEL,
-    .ts_config.eClockEdge = AVL_MPCM_RISING,
-    .ts_config.eClockMode = AVL_TS_CONTINUOUS_DISABLE
-};
-
-const AVL_DVBTxConfig default_dvbtx_config =
-{
-    .eDVBTxInputPath = AVL_IF_I,
-    .uiDVBTxIFFreqHz = 5*1000*1000,
-    .eDVBTxAGCPola = AVL_AGC_NORMAL//AVL_AGC_INVERTED
-};
-
-const AVL_DVBSxConfig default_dvbsx_config =
-{
-    .eDVBSxAGCPola = AVL_AGC_INVERTED,
-    .e22KWaveForm = AVL_DWM_Normal
-};
-
-const AVL_ISDBTConfig default_isdbt_config =
-{
-    .eISDBTInputPath = AVL_IF_I,
-    .eISDBTBandwidth = AVL_ISDBT_BW_6M,
-    .uiISDBTIFFreqHz = 5*1000*1000,
-    .eISDBTAGCPola = AVL_AGC_NORMAL
-};
-
-const AVL_DVBCConfig default_dvbc_config =
-{
-    .eDVBCInputPath = AVL_IF_I,
-    .uiDVBCIFFreqHz = 5*1000*1000,
-    .uiDVBCSymbolRateSps = 6875*1000,
-    .eDVBCAGCPola = AVL_AGC_NORMAL,
-    .eDVBCStandard = AVL_DVBC_J83A
-};
-
 const AVL_BaseAddressSet stBaseAddrSet = {
   0x110840, //hw_mcu_reset_base           
   0x110010, //hw_mcu_system_reset_base    
@@ -168,28 +130,48 @@ avl_error_code_t IBase_Initialize_Demod(avl68x2_chip *chip)
 
 avl_error_code_t TunerI2C_Initialize_Demod(avl68x2_chip *chip)
 {
-    avl_error_code_t r = AVL_EC_OK;
-    uint32_t bit_rpt_divider = 0;
-    uint32_t uiTemp = 0;
-    r = avl_bms_write32(chip->chip_pub->i2c_addr, 
-        stBaseAddrSet.hw_tuner_i2c_base + tuner_i2c_srst_offset, 1);
-    r |= avl_bms_write32(chip->chip_pub->i2c_addr, 
-        stBaseAddrSet.hw_tuner_i2c_base + tuner_i2c_bit_rpt_cntrl_offset, 0x6);
-    r |= avl_bms_read32(chip->chip_pub->i2c_addr,
-        stBaseAddrSet.hw_tuner_i2c_base + tuner_i2c_cntrl_offset, &uiTemp);
-    uiTemp = (uiTemp&0xFFFFFFFE);
-    r |= avl_bms_write32(chip->chip_pub->i2c_addr, 
-        stBaseAddrSet.hw_tuner_i2c_base + tuner_i2c_cntrl_offset, uiTemp);
+	avl_error_code_t r = AVL_EC_OK;
+	uint32_t bit_rpt_divider = 0;
+	uint32_t uiTemp = 0;
+	r = avl_bms_write32(chip->chip_pub->i2c_addr,
+			    stBaseAddrSet.hw_tuner_i2c_base +
+				tuner_i2c_srst_offset,
+			    1);
+	r |= avl_bms_write32(chip->chip_pub->i2c_addr,
+			     stBaseAddrSet.hw_tuner_i2c_base +
+				 tuner_i2c_bit_rpt_cntrl_offset,
+			     0x6);
+	r |= avl_bms_write32(chip->chip_pub->i2c_addr,
+			     stBaseAddrSet.hw_tuner_i2c_base +
+				 tuner_i2c_bit_rpt_cntrl_offset,
+			     0x6);
+	r |= avl_bms_write32(chip->chip_pub->i2c_addr,
+			     stBaseAddrSet.hw_tuner_i2c_base +
+				 tuner_i2c_bit_rpt_cntrl_offset,
+			     0x6);
+	r |= avl_bms_read32(chip->chip_pub->i2c_addr,
+			    stBaseAddrSet.hw_tuner_i2c_base +
+				tuner_i2c_cntrl_offset,
+			    &uiTemp);
+	uiTemp = (uiTemp & 0xFFFFFFFE);
+	r |= avl_bms_write32(chip->chip_pub->i2c_addr,
+			     stBaseAddrSet.hw_tuner_i2c_base +
+				 tuner_i2c_cntrl_offset,
+			     uiTemp);
 
+	bit_rpt_divider = (0x2A) *
+			  (chip->uiCoreFrequencyHz / 1000) / (240 * 1000);
 
-    bit_rpt_divider = (0x2A)*(chip->uiCoreFrequencyHz/1000)/(240*1000);
+	r |= avl_bms_write32(chip->chip_pub->i2c_addr,
+			     stBaseAddrSet.hw_tuner_i2c_base +
+				 tuner_i2c_bit_rpt_clk_div_offset,
+			     bit_rpt_divider);
+	r |= avl_bms_write32(chip->chip_pub->i2c_addr,
+			     stBaseAddrSet.hw_tuner_i2c_base +
+				 tuner_i2c_srst_offset,
+			     0);
 
-    r |= avl_bms_write32(chip->chip_pub->i2c_addr, 
-        stBaseAddrSet.hw_tuner_i2c_base + tuner_i2c_bit_rpt_clk_div_offset, bit_rpt_divider);
-    r |= avl_bms_write32(chip->chip_pub->i2c_addr, 
-        stBaseAddrSet.hw_tuner_i2c_base + tuner_i2c_srst_offset, 0);
-
-    return r;
+	return r;
 }
 
 avl_error_code_t EnableTSOutput_Demod(avl68x2_chip *chip)
@@ -697,71 +679,64 @@ avl_error_code_t IBase_GetRxOPStatus_Demod(avl68x2_chip *chip)
 
 avl_error_code_t SetTSMode_Demod(avl68x2_chip *chip)
 {
-    avl_error_code_t r = AVL_EC_OK;
-    uint32_t uiTSFrequencyHz = 0;
+	avl_error_code_t r = AVL_EC_OK;
+	uint32_t uiTSFrequencyHz = 0;
 
-    r = avl_bms_write8(chip->chip_pub->i2c_addr, 
-        stBaseAddrSet.fw_config_reg_base + rc_ts_serial_caddr_offset,
-        chip->chip_pub->ts_config.eMode);
-    r |= avl_bms_write8(chip->chip_pub->i2c_addr,
-        stBaseAddrSet.fw_config_reg_base + rc_ts_clock_edge_caddr_offset,
-        chip->chip_pub->ts_config.eClockEdge);
+	r = avl_bms_write8(chip->chip_pub->i2c_addr,
+			   stBaseAddrSet.fw_config_reg_base +
+			       rc_ts_serial_caddr_offset,
+			   chip->chip_pub->ts_config.eMode);
+	r |= avl_bms_write8(chip->chip_pub->i2c_addr,
+			    stBaseAddrSet.fw_config_reg_base +
+				rc_ts_clock_edge_caddr_offset,
+			    chip->chip_pub->ts_config.eClockEdge);
 
-    if(chip->chip_pub->ts_config.eClockMode == AVL_TS_CONTINUOUS_ENABLE)
-    {
-        r |= avl_bms_write8(chip->chip_pub->i2c_addr,
-            stBaseAddrSet.fw_config_reg_base + rc_enable_ts_continuous_caddr_offset, 1);
-        r |= avl_bms_write32(chip->chip_pub->i2c_addr,
-            stBaseAddrSet.fw_config_reg_base + rc_ts_cntns_clk_frac_d_iaddr_offset, chip->uiTSFrequencyHz);
+	if (chip->chip_pub->ts_config.eClockMode == AVL_TS_CONTINUOUS_ENABLE)
+	{
+		r |= avl_bms_write8(chip->chip_pub->i2c_addr,
+				    stBaseAddrSet.fw_config_reg_base +
+					rc_enable_ts_continuous_caddr_offset,
+				    1);
+		r |= avl_bms_write32(chip->chip_pub->i2c_addr,
+				     stBaseAddrSet.fw_config_reg_base +
+					 rc_ts_cntns_clk_frac_d_iaddr_offset,
+				     chip->uiTSFrequencyHz);
 
-        if(chip->chip_pub->ts_config.eMode == AVL_TS_SERIAL)
-        {
-            if(AVL_DTMB == chip->chip_pub->cur_demod_mode)
-            {
-                r |= avl_bms_write32(chip->chip_pub->i2c_addr,
-                    stBaseAddrSet.fw_config_reg_base + rc_ts_cntns_clk_frac_n_iaddr_offset,
-                    chip->uiTSFrequencyHz/2);
-            }
-            else if(AVL_DVBTX == chip->chip_pub->cur_demod_mode)
-            {
-                uiTSFrequencyHz = chip->uiTSFrequencyHz/2;
-                r |= avl_bms_write32(chip->chip_pub->i2c_addr,
-                    stBaseAddrSet.fw_config_reg_base + rc_ts_cntns_clk_frac_n_iaddr_offset,uiTSFrequencyHz);
+		if (chip->chip_pub->ts_config.eMode == AVL_TS_SERIAL)
+		{
+			switch (chip->chip_pub->cur_demod_mode)
+			{
+			case AVL_DVBSX:
+				r |= avl_bms_write32(chip->chip_pub->i2c_addr,
+						     stBaseAddrSet.fw_config_reg_base +
+							 rc_ts_cntns_clk_frac_n_iaddr_offset,
+						     chip->uiTSFrequencyHz);
+				break;
+			default:
+				r |= avl_bms_write32(chip->chip_pub->i2c_addr,
+						     stBaseAddrSet.fw_config_reg_base +
+							 rc_ts_cntns_clk_frac_n_iaddr_offset,
+						     chip->uiTSFrequencyHz / 2);
+				break;
+			}
+		}
+		else
+		{
+			r |= avl_bms_write32(chip->chip_pub->i2c_addr,
+					     stBaseAddrSet.fw_config_reg_base +
+						 rc_ts_cntns_clk_frac_n_iaddr_offset,
+					     chip->uiTSFrequencyHz / 8);
+		}
+	}
+	else
+	{
+		r |= avl_bms_write8(chip->chip_pub->i2c_addr,
+				    stBaseAddrSet.fw_config_reg_base +
+					rc_enable_ts_continuous_caddr_offset,
+				    0);
+	}
 
-            }
-            else if(AVL_DVBSX == chip->chip_pub->cur_demod_mode)
-            {
-                r |= avl_bms_write32(chip->chip_pub->i2c_addr,
-                    stBaseAddrSet.fw_config_reg_base + rc_ts_cntns_clk_frac_n_iaddr_offset,
-                    chip->uiTSFrequencyHz);
-            }
-            else if(AVL_ISDBT == chip->chip_pub->cur_demod_mode)
-            {
-                r |= avl_bms_write32(chip->chip_pub->i2c_addr, 
-                    stBaseAddrSet.fw_config_reg_base + rc_ts_cntns_clk_frac_n_iaddr_offset,
-                    chip->uiTSFrequencyHz/2);
-            }
-            else if(AVL_DVBC == chip->chip_pub->cur_demod_mode)
-            {
-                r |= avl_bms_write32(chip->chip_pub->i2c_addr,
-                    stBaseAddrSet.fw_config_reg_base + rc_ts_cntns_clk_frac_n_iaddr_offset,
-                    chip->uiTSFrequencyHz/2);
-            }
-        }
-        else
-        {
-            r |= avl_bms_write32(chip->chip_pub->i2c_addr,
-                stBaseAddrSet.fw_config_reg_base + rc_ts_cntns_clk_frac_n_iaddr_offset,
-                chip->uiTSFrequencyHz/8);
-        }
-    }
-    else
-    {
-        r |= avl_bms_write8(chip->chip_pub->i2c_addr,
-            stBaseAddrSet.fw_config_reg_base + rc_enable_ts_continuous_caddr_offset, 0);
-    }
-
-    return r;
+	return r;
 }
 
 avl_error_code_t SetInternalFunc_Demod(AVL_DemodMode eDemodMode, avl68x2_chip *chip)

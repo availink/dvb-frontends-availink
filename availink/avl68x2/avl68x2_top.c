@@ -14,6 +14,7 @@
 #include <linux/init.h>
 #include <linux/string.h>
 #include <linux/bitrev.h>
+#include <linux/amlogic/aml_gpio_consumer.h>
 
 #include <media/dvb_frontend.h>
 
@@ -39,6 +40,36 @@ static int debug = 0;
 module_param(debug, int, 0644);
 MODULE_PARM_DESC(debug, "\n\t\t Enable debug information");
 
+
+const AVL_DVBTxConfig default_dvbtx_config =
+{
+    .eDVBTxInputPath = AVL_IF_I,
+    .uiDVBTxIFFreqHz = 5*1000*1000,
+    .eDVBTxAGCPola = AVL_AGC_NORMAL//AVL_AGC_INVERTED
+};
+
+const AVL_DVBSxConfig default_dvbsx_config =
+{
+    .eDVBSxAGCPola = AVL_AGC_INVERTED,
+    .e22KWaveForm = AVL_DWM_Normal
+};
+
+const AVL_ISDBTConfig default_isdbt_config =
+{
+    .eISDBTInputPath = AVL_IF_I,
+    .eISDBTBandwidth = AVL_ISDBT_BW_6M,
+    .uiISDBTIFFreqHz = 5*1000*1000,
+    .eISDBTAGCPola = AVL_AGC_NORMAL
+};
+
+const AVL_DVBCConfig default_dvbc_config =
+{
+    .eDVBCInputPath = AVL_IF_I,
+    .uiDVBCIFFreqHz = 5*1000*1000,
+    .uiDVBCSymbolRateSps = 6875*1000,
+    .eDVBCAGCPola = AVL_AGC_NORMAL,
+    .eDVBCStandard = AVL_DVBC_J83A
+};
 
 struct avl_tuner default_avl_tuner = {
     .blindscan_mode = 0,
@@ -880,17 +911,30 @@ static int avl68x2_read_status(struct dvb_frontend *fe, enum fe_status *status)
 	struct avl68x2_priv *priv = fe->demodulator_priv;
 	int ret = 0;
 	uint8_t lock = 0;
+	int lock_led = priv->chip->chip_pub->gpio_lock_led;
 
 	ret = AVL_Demod_GetLockStatus(&lock, priv->chip);
 	if (!ret && lock == AVL_STATUS_LOCK)
 	{
-		*status = FE_HAS_LOCK;
-		ret |= get_frontend(fe,&fe->dtv_property_cache);
+		*status = FE_HAS_SIGNAL | FE_HAS_CARRIER |
+			  FE_HAS_VITERBI | FE_HAS_SYNC | FE_HAS_LOCK;
+		ret |= get_frontend(fe, &fe->dtv_property_cache);
+		if (lock_led)
+		{
+			gpio_request(lock_led, KBUILD_MODNAME);
+			gpio_direction_output(lock_led, 1);
+		}
 	}
 	else
 	{
-		*status = FE_NONE;
+		*status = FE_HAS_SIGNAL;
+		if (lock_led)
+		{
+			gpio_request(lock_led, KBUILD_MODNAME);
+			gpio_direction_output(lock_led, 0);
+		}
 	}
+	
 	if(debug > 1) {
 		printk("AVL: %s: read status %d\n",__func__,*status);
 	}
@@ -950,7 +994,14 @@ static int set_frontend(struct dvb_frontend *fe)
   int ret;
   struct dtv_frontend_properties *c = &fe->dtv_property_cache;
   struct avl68x2_priv *priv = fe->demodulator_priv;
-  
+  int lock_led = priv->chip->chip_pub->gpio_lock_led;
+
+  if (lock_led)
+  {
+	  gpio_request(lock_led, KBUILD_MODNAME);
+	  gpio_direction_output(lock_led, 0);
+  }
+
   ret = avl68x2_set_standard(fe);
   if(ret)
   {
@@ -1047,12 +1098,12 @@ static struct dvb_frontend_ops avl68x2_ops = {
 	       SYS_ISDBT},
     .info = {
 	.name = "Availink avl68x2",
-	.frequency_min_hz = 474000000,
-	.frequency_max_hz = 2150000000,
+	.frequency_min_hz = 175 * MHz,
+	.frequency_max_hz = 2150 * MHz,
 	.frequency_stepsize_hz = 0,
 	.frequency_tolerance_hz = 0,
-	.symbol_rate_min = 1000000,
-	.symbol_rate_max = 55000000,
+	.symbol_rate_min = 1 * MHz,
+	.symbol_rate_max = 55 * MHz,
 	.caps =
 	    FE_CAN_FEC_1_2 |
 	    FE_CAN_FEC_2_3 |
@@ -1072,6 +1123,9 @@ static struct dvb_frontend_ops avl68x2_ops = {
 	    FE_CAN_2G_MODULATION |
 	    FE_CAN_MULTISTREAM |
 	    FE_CAN_INVERSION_AUTO |
+	    FE_CAN_GUARD_INTERVAL_AUTO |
+	    FE_CAN_HIERARCHY_AUTO |
+	    FE_CAN_BANDWIDTH_AUTO |
 	    FE_CAN_RECOVER},
 
     .release = avl68x2_release,
@@ -1191,6 +1245,10 @@ err:
 	return NULL;
 }
 EXPORT_SYMBOL_GPL(avl68x2_attach);
+EXPORT_SYMBOL_GPL(default_dvbtx_config);
+EXPORT_SYMBOL_GPL(default_dvbsx_config);
+EXPORT_SYMBOL_GPL(default_isdbt_config);
+EXPORT_SYMBOL_GPL(default_dvbc_config);
 
 MODULE_DESCRIPTION("Availink AVL68x2 DVB-S/S2/T/T2/C, ISDB-T, J.83B demodulator driver");
 MODULE_AUTHOR("Availink, Inc. (gpl@availink.com)");
