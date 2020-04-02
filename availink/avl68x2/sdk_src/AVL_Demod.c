@@ -47,7 +47,7 @@ avl_error_code_t AVL_Demod_Initialize(
 	chip->ucDisableTCAGC = 0;
 	chip->ucDisableSAGC = 0;
 
-	r |= IRx_Initialize_Demod(chip);
+	r |= IRx_Initialize_Demod(chip); //load defaults
 
 	r |= SetTSMode_Demod(chip);
 
@@ -68,9 +68,6 @@ avl_error_code_t AVL_Demod_Initialize(
 	    chip);
 	r |= SetTSValidPola_Demod(
 	    chip->chip_pub->ts_config.eValidPolarity,
-	    chip);
-	r |= SetTSPacketLen_Demod(
-	    chip->chip_pub->ts_config.ePacketLen,
 	    chip);
 	r |= SetTSParallelOrder_Demod(
 	    chip->chip_pub->ts_config.eParallelOrder,

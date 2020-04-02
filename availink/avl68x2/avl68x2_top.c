@@ -250,7 +250,6 @@ static int avl68x2_set_standard(struct dvb_frontend *fe)
   AVL_DemodMode dmd_mode = AVL_DVBSX;
 
   r = GetMode_Demod(&dmd_mode, priv->chip);
-  r = 100; //HACK FIXME
 
   //check for (FW) equivalent modes
   switch (priv->delivery_system)

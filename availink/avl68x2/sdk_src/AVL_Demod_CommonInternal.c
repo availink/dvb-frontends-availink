@@ -680,7 +680,6 @@ avl_error_code_t IBase_GetRxOPStatus_Demod(avl68x2_chip *chip)
 avl_error_code_t SetTSMode_Demod(avl68x2_chip *chip)
 {
 	avl_error_code_t r = AVL_EC_OK;
-	uint32_t uiTSFrequencyHz = 0;
 
 	r = avl_bms_write8(chip->chip_pub->i2c_addr,
 			   stBaseAddrSet.fw_config_reg_base +
@@ -915,9 +914,9 @@ avl_error_code_t SetTSPacketLen_Demod(AVL_TSPacketLen eTSPacketLen, avl68x2_chip
 
     chip->chip_pub->ts_config.ePacketLen = eTSPacketLen;
 
-    r = avl_bms_write8(chip->chip_pub->i2c_addr,
-        stBaseAddrSet.fw_config_reg_base + rc_ts_packet_len_caddr_offset,
-        (uint8_t)eTSPacketLen);
+//     r = avl_bms_write8(chip->chip_pub->i2c_addr,
+//         stBaseAddrSet.fw_config_reg_base + rc_ts_packet_len_caddr_offset,
+//         (uint8_t)eTSPacketLen);
 
     return r;
 }
