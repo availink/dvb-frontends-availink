@@ -250,7 +250,7 @@ static int avl68x2_set_standard(struct dvb_frontend *fe)
   AVL_DemodMode dmd_mode = AVL_DVBSX;
 
   r = GetMode_Demod(&dmd_mode, priv->chip);
-  r = 100; //HACK FIXME
+  //r = 100; //HACK FIXME
 
   //check for (FW) equivalent modes
   switch (priv->delivery_system)
@@ -911,6 +911,8 @@ static int avl68x2_read_status(struct dvb_frontend *fe, enum fe_status *status)
 	struct avl68x2_priv *priv = fe->demodulator_priv;
 	int ret = 0;
 	uint8_t lock = 0;
+	int32_t SNR_x100db = 0;
+	int32_t ber = 0;
 	int lock_led = priv->chip->chip_pub->gpio_lock_led;
 
 	ret = AVL_Demod_GetLockStatus(&lock, priv->chip);
@@ -936,7 +938,9 @@ static int avl68x2_read_status(struct dvb_frontend *fe, enum fe_status *status)
 	}
 	
 	if(debug > 1) {
-		printk("AVL: %s: read status %d\n",__func__,*status);
+	  ret |= AVL_Demod_GetSNR (&SNR_x100db, priv->chip);
+	  ret = (int)AVL_Demod_GetPER(&ber, priv->chip);
+	  printk("AVL: %s: read status %d, snr = %d, ber = %d\n",__func__,*status, SNR_x100db, ber);
 	}
 	return ret;
 }
