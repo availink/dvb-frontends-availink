@@ -40,8 +40,7 @@
 
 static int debug = 0;
 
-module_param(debug, int, 0644);
-MODULE_PARM_DESC(debug, "\n\t\t Enable debug information");
+
 
 
 const AVL_DVBTxConfig default_dvbtx_config =
@@ -194,40 +193,47 @@ static int avl68x2_acquire_dvbsx(struct dvb_frontend *fe)
 
 static int avl68x2_acquire_dvbtx(struct dvb_frontend *fe)
 {
-  struct avl68x2_priv *priv = fe->demodulator_priv;
-  struct dtv_frontend_properties *c = &fe->dtv_property_cache;
-  avl_error_code_t r = AVL_EC_OK;
-  AVL_DVBTxBandWidth bw;
+	struct avl68x2_priv *priv = fe->demodulator_priv;
+	struct dtv_frontend_properties *c = &fe->dtv_property_cache;
+	avl_error_code_t r = AVL_EC_OK;
+	AVL_DVBTxBandWidth bw;
 
-  dbg_avl("ACQUIRE T/T2");
+	dbg_avl("ACQUIRE T/T2");
 
-  if (c->bandwidth_hz <= 1700000)
-  {
-    bw = AVL_DVBTx_BW_1M7;
-  }
-  else if (c->bandwidth_hz <= 5000000)
-  {
-    bw = AVL_DVBTx_BW_5M;
-  }
-  else if (c->bandwidth_hz <= 6000000)
-  {
-    bw = AVL_DVBTx_BW_6M;
-  }
-  else if (c->bandwidth_hz <= 7000000)
-  {
-    bw = AVL_DVBTx_BW_7M;
-  }
-  else
-  {
-    bw = AVL_DVBTx_BW_8M;
-  }
+	if (c->bandwidth_hz <= 1700000)
+	{
+		bw = AVL_DVBTx_BW_1M7;
+	}
+	else if (c->bandwidth_hz <= 5000000)
+	{
+		bw = AVL_DVBTx_BW_5M;
+	}
+	else if (c->bandwidth_hz <= 6000000)
+	{
+		bw = AVL_DVBTx_BW_6M;
+	}
+	else if (c->bandwidth_hz <= 7000000)
+	{
+		bw = AVL_DVBTx_BW_7M;
+	}
+	else
+	{
+		bw = AVL_DVBTx_BW_8M;
+	}
 
-  r = AVL_Demod_DVBT2AutoLock(bw,
-                              AVL_DVBT2_PROFILE_UNKNOWN,
-                              c->stream_id,
-                              priv->chip);
+	if (c->delivery_system == SYS_DVBT)
+	{
+		r = AVL_Demod_DVBTAutoLock(bw, 0, priv->chip);
+	}
+	else
+	{
+		r = AVL_Demod_DVBT2AutoLock(bw,
+					    AVL_DVBT2_PROFILE_UNKNOWN,
+					    c->stream_id,
+					    priv->chip);
+	}
 
-  return r;
+	return r;
 }
 
 static int avl68x2_acquire_dvbc(struct dvb_frontend *fe)
@@ -987,6 +993,7 @@ static int avl68x2_read_status(struct dvb_frontend *fe, enum fe_status *status)
 	}
 	
 	if(debug > 1) {
+#if 1	  
 	  avl_bms_read32(priv->chip->chip_pub->i2c_addr, stBaseAddrSet.fw_config_reg_base +rc_ts_cntns_clk_frac_d_iaddr_offset, &tempi);
 	  printk("AVL: d:%x\n", tempi);
 	  avl_bms_read32(priv->chip->chip_pub->i2c_addr, stBaseAddrSet.fw_config_reg_base +rc_ts_cntns_clk_frac_n_iaddr_offset, &tempi);
@@ -1001,8 +1008,8 @@ static int avl68x2_read_status(struct dvb_frontend *fe, enum fe_status *status)
 	  printk("AVL: ser_pin:%x\n", tempc);
 	  avl_bms_read8(priv->chip->chip_pub->i2c_addr, stBaseAddrSet.fw_config_reg_base +rc_ts_serial_msb_caddr_offset, &tempc);
 	  printk("AVL: ser_msb:%x\n", tempc);
-	  avl_bms_read8(priv->chip->chip_pub->i2c_addr, stBaseAddrSet.fw_config_reg_base +rc_ts_packet_len_caddr_offset, &tempc);
-	  printk("AVL: pkt_len:%x\n", tempc);
+	  avl_bms_read8(priv->chip->chip_pub->i2c_addr, stBaseAddrSet.fw_config_reg_base +rc_ts_ts0_tsp1_caddr_offset, &tempc);
+	  printk("AVL: ts0_tsp1:%x\n", tempc);
 	  avl_bms_read8(priv->chip->chip_pub->i2c_addr, stBaseAddrSet.fw_config_reg_base +rc_ts_packet_order_caddr_offset, &tempc);
 	  printk("AVL: pkt_ord:%x\n", tempc);
 	  avl_bms_read8(priv->chip->chip_pub->i2c_addr, stBaseAddrSet.fw_config_reg_base +rc_ts_error_bit_en_caddr_offset, &tempc);
@@ -1015,7 +1022,7 @@ static int avl68x2_read_status(struct dvb_frontend *fe, enum fe_status *status)
 	  printk("AVL: sync_pul:%x\n", tempc);
 	  avl_bms_read8(priv->chip->chip_pub->i2c_addr, stBaseAddrSet.fw_config_reg_base +ts_clock_phase_caddr_offset, &tempc);
 	  printk("AVL: clk_phs:%x\n", tempc);
-	   
+#endif	   
 	  ret |= AVL_Demod_GetSNR (&SNR_x100db, priv->chip);
 	  ret = (int)AVL_Demod_GetPER(&ber, priv->chip);
 	  printk("AVL: %s: read status %d, snr = %d, ber = %d\n",__func__,*status, SNR_x100db, ber);
@@ -1342,6 +1349,10 @@ err1:
 err:
 	return NULL;
 }
+
+module_param(debug, int, 0644);
+MODULE_PARM_DESC(debug, "\n\t\t Enable debug information");
+
 EXPORT_SYMBOL_GPL(avl68x2_attach);
 EXPORT_SYMBOL_GPL(default_dvbtx_config);
 EXPORT_SYMBOL_GPL(default_dvbsx_config);

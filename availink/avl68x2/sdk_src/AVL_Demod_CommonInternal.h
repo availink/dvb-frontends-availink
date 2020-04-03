@@ -134,7 +134,7 @@
 #define rc_ts_serial_caddr_offset                           0x0000003c
 #define rc_ts_serial_outpin_caddr_offset                    0x0000003f
 #define rc_ts_serial_msb_caddr_offset                       0x0000003e
-#define rc_ts_packet_len_caddr_offset                       0x00000039 //!!!
+#define rc_ts_ts0_tsp1_caddr_offset                         0x00000039
 #define rc_ts_packet_order_caddr_offset                     rc_ts_serial_msb_caddr_offset
 #define rc_ts_error_bit_en_caddr_offset                     0x00000038
 #define rc_ts_error_polarity_caddr_offset                   0x00000041

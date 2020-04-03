@@ -51,31 +51,6 @@ avl_error_code_t AVL_Demod_Initialize(
 
 	r |= SetTSMode_Demod(chip);
 
-	r |= SetTSSerialPin_Demod(
-	    chip->chip_pub->ts_config.eSerialPin,
-	    chip);
-	r |= SetTSSerialOrder_Demod(
-	    chip->chip_pub->ts_config.eSerialOrder,
-	    chip);
-	r |= SetTSSerialSyncPulse_Demod(
-	    chip->chip_pub->ts_config.eSerialSyncPulse,
-	    chip);
-	r |= SetTSErrorBit_Demod(
-	    chip->chip_pub->ts_config.eErrorBit,
-	    chip);
-	r |= SetTSErrorPola_Demod(
-	    chip->chip_pub->ts_config.eErrorPolarity,
-	    chip);
-	r |= SetTSValidPola_Demod(
-	    chip->chip_pub->ts_config.eValidPolarity,
-	    chip);
-	r |= SetTSParallelOrder_Demod(
-	    chip->chip_pub->ts_config.eParallelOrder,
-	    chip);
-	r |= SetTSParallelPhase_Demod(
-	    chip->chip_pub->ts_config.eParallelPhase,
-	    chip); //applies to parallel and serial mode
-
 	r |= EnableTSOutput_Demod(chip);
 
 	r |= TunerI2C_Initialize_Demod(chip);
@@ -238,27 +213,21 @@ avl_error_code_t AVL_Demod_SetMode(AVL_DemodMode eDemodMode, avl68x2_chip *chip)
 
 	printk("%s:%d r=%d\n", __FUNCTION__, __LINE__, r);
 
-	if (chip->chip_pub->cur_demod_mode == eDemodMode)
-	{
-		avl_bsp_delay(100);
-		return AVL_EC_OK;
-	}
-
 	r |= IBase_SendRxOPWait_Demod(AVL_FW_CMD_HALT, chip);
 
 	printk("%s:%d r=%d\n", __FUNCTION__, __LINE__, r);
 
-	pInitialData = chip->chip_priv->patch_data;
-
-	if (AVL_EC_OK == r)
+	if (chip->chip_pub->cur_demod_mode != eDemodMode)
 	{
+		//switch modes
+		pInitialData = chip->chip_priv->patch_data;
 
 		r |= avl_bms_write32(chip->chip_pub->i2c_addr,
-				     stBaseAddrSet.hw_mcu_system_reset_base, 1);
+					stBaseAddrSet.hw_mcu_system_reset_base, 1);
 
 		// Configure the PLL
 		if ((chip->chip_pub->cur_demod_mode != AVL_DVBSX && eDemodMode == AVL_DVBSX) ||
-		    (chip->chip_pub->cur_demod_mode == AVL_DVBSX && eDemodMode != AVL_DVBSX))
+			(chip->chip_pub->cur_demod_mode == AVL_DVBSX && eDemodMode != AVL_DVBSX))
 		{
 			chip->chip_pub->cur_demod_mode = eDemodMode;
 			r |= SetPLL_Demod(chip);
@@ -268,58 +237,48 @@ avl_error_code_t AVL_Demod_SetMode(AVL_DemodMode eDemodMode, avl68x2_chip *chip)
 			chip->chip_pub->cur_demod_mode = eDemodMode;
 		}
 
-		if (AVL_EC_OK == r)
+		r |= avl_bms_write32(chip->chip_pub->i2c_addr,
+					stBaseAddrSet.fw_status_reg_base +
+						rs_core_ready_word_iaddr_offset,
+					0x00000000);
+
+		r |= avl_bms_write32(chip->chip_pub->i2c_addr,
+					stBaseAddrSet.hw_mcu_system_reset_base, 0);
+
+		printk("%s:%d r=%d\n", __FUNCTION__, __LINE__, r);
+		r |= AVL_ParseFwPatch_v0(chip, 0);
+		printk("%s:%d r=%d\n", __FUNCTION__, __LINE__, r);
+		
+		printk("%s:%d r=%d\n", __FUNCTION__, __LINE__, r);
+		while (AVL_EC_OK != IBase_CheckChipReady_Demod(chip))
 		{
-
-			r |= avl_bms_write32(chip->chip_pub->i2c_addr,
-					     stBaseAddrSet.fw_status_reg_base +
-						 rs_core_ready_word_iaddr_offset,
-					     0x00000000);
-
-			r |= avl_bms_write32(chip->chip_pub->i2c_addr,
-					     stBaseAddrSet.hw_mcu_system_reset_base, 0);
-
-			printk("%s:%d r=%d\n", __FUNCTION__, __LINE__, r);
-			r |= AVL_ParseFwPatch_v0(chip, 0);
-			printk("%s:%d r=%d\n", __FUNCTION__, __LINE__, r);
+			if (uiMaxRetries <= i++)
+			{
+				r |= AVL_EC_GENERAL_FAIL;
+				break;
+			}
+			avl_bsp_delay(uiTimeDelay);
 		}
+		printk("%s:%d r=%d\n", __FUNCTION__, __LINE__, r);
+		chip->chip_pub->cur_demod_mode = eDemodMode;
+
+		r |= SetInternalFunc_Demod(chip->chip_pub->cur_demod_mode, chip);
+		printk("%s:%d r=%d\n", __FUNCTION__, __LINE__, r);
+
+		printk("%s:%d r=%d\n", __FUNCTION__, __LINE__, r);
+		r |= IRx_Initialize_Demod(chip);
 	}
-	printk("%s:%d r=%d\n", __FUNCTION__, __LINE__, r);
-	while (AVL_EC_OK != IBase_CheckChipReady_Demod(chip))
-	{
-		if (uiMaxRetries <= i++)
-		{
-			r |= AVL_EC_GENERAL_FAIL;
-			break;
-		}
-		avl_bsp_delay(uiTimeDelay);
-	}
-	printk("%s:%d r=%d\n", __FUNCTION__, __LINE__, r);
 
-	chip->chip_pub->cur_demod_mode = eDemodMode;
-
-	r |= SetInternalFunc_Demod(chip->chip_pub->cur_demod_mode, chip);
-	printk("%s:%d r=%d\n", __FUNCTION__, __LINE__, r);
-
-	r |= IRx_Initialize_Demod(chip);
-	printk("%s:%d r=%d\n", __FUNCTION__, __LINE__, r);
+	
 
 	printk("%s:%d r=%d\n", __FUNCTION__, __LINE__, r);
-	r |= SetTSSerialPin_Demod(chip->chip_pub->ts_config.eSerialPin, chip);
-	r |= SetTSSerialOrder_Demod(chip->chip_pub->ts_config.eSerialOrder, chip);
-	r |= SetTSSerialSyncPulse_Demod(chip->chip_pub->ts_config.eSerialSyncPulse, chip);
-	r |= SetTSErrorBit_Demod(chip->chip_pub->ts_config.eErrorBit, chip);
-	r |= SetTSErrorPola_Demod(chip->chip_pub->ts_config.eErrorPolarity, chip);
-	r |= SetTSValidPola_Demod(chip->chip_pub->ts_config.eValidPolarity, chip);
-	r |= SetTSParallelOrder_Demod(chip->chip_pub->ts_config.eParallelOrder, chip);
-	r |= SetTSParallelPhase_Demod(chip->chip_pub->ts_config.eParallelPhase, chip);
 	r |= SetTSMode_Demod(chip);
 	r |= EnableTSOutput_Demod(chip);
 	printk("%s:%d r=%d\n", __FUNCTION__, __LINE__, r);
 
-	r |= SetGPIOStatus_Demod(chip);
+	//r |= SetGPIOStatus_Demod(chip);
 
-	r |= TunerI2C_Initialize_Demod(chip);
+	//r |= TunerI2C_Initialize_Demod(chip);
 
 	r |= InitErrorStat_Demod(chip);
 

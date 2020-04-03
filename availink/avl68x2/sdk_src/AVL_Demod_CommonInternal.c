@@ -666,15 +666,36 @@ avl_error_code_t IBase_GetRxOPStatus_Demod(avl68x2_chip *chip)
 avl_error_code_t SetTSMode_Demod(avl68x2_chip *chip)
 {
 	avl_error_code_t r = AVL_EC_OK;
+	r |= SetTSSerialPin_Demod(chip->chip_pub->ts_config.eSerialPin, chip);
+	r |= SetTSSerialSyncPulse_Demod(chip->chip_pub->ts_config.eSerialSyncPulse, chip);
+	r |= SetTSErrorBit_Demod(chip->chip_pub->ts_config.eErrorBit, chip);
+	r |= SetTSErrorPola_Demod(chip->chip_pub->ts_config.eErrorPolarity, chip);
+	r |= SetTSValidPola_Demod(chip->chip_pub->ts_config.eValidPolarity, chip);
+	r |= SetTSParallelPhase_Demod(chip->chip_pub->ts_config.eParallelPhase, chip);
 
-	r = avl_bms_write8(chip->chip_pub->i2c_addr,
-			   stBaseAddrSet.fw_config_reg_base +
-			       rc_ts_serial_caddr_offset,
-			   chip->chip_pub->ts_config.eMode);
+	r |= avl_bms_write8(chip->chip_pub->i2c_addr,
+			    stBaseAddrSet.fw_config_reg_base +
+				rc_ts_serial_caddr_offset,
+			    chip->chip_pub->ts_config.eMode);
 	r |= avl_bms_write8(chip->chip_pub->i2c_addr,
 			    stBaseAddrSet.fw_config_reg_base +
 				rc_ts_clock_edge_caddr_offset,
 			    chip->chip_pub->ts_config.eClockEdge);
+
+	r |= avl_bms_write8(chip->chip_pub->i2c_addr,
+			    stBaseAddrSet.fw_config_reg_base +
+				rc_ts_ts0_tsp1_caddr_offset,
+			    0);
+
+	if (chip->chip_pub->ts_config.eMode == AVL_TS_SERIAL)
+	{
+		r |= SetTSSerialOrder_Demod(chip->chip_pub->ts_config.eSerialOrder, chip);
+	}
+	else
+	{
+		r |= SetTSParallelOrder_Demod(chip->chip_pub->ts_config.eParallelOrder, chip);
+	}
+	
 
 	if (chip->chip_pub->ts_config.eClockMode == AVL_TS_CONTINUOUS_ENABLE)
 	{
@@ -823,6 +844,7 @@ avl_error_code_t SetTSSerialPin_Demod(AVL_TSSerialPin eTSSerialPin, avl68x2_chip
     avl_error_code_t r = AVL_EC_OK;
 
     chip->chip_pub->ts_config.eSerialPin = eTSSerialPin;
+    printk("TS serial pin %d\n",eTSSerialPin);
 
     r = avl_bms_write8(chip->chip_pub->i2c_addr,
                        stBaseAddrSet.fw_config_reg_base + rc_ts_serial_outpin_caddr_offset,
@@ -836,6 +858,7 @@ avl_error_code_t SetTSSerialOrder_Demod(AVL_TSSerialOrder eTSSerialOrder, avl68x
     avl_error_code_t r = AVL_EC_OK;
 
     chip->chip_pub->ts_config.eSerialOrder = eTSSerialOrder;
+    printk("TS serial order %d\n",eTSSerialOrder);
 
     r = avl_bms_write8(chip->chip_pub->i2c_addr,
                        stBaseAddrSet.fw_config_reg_base + rc_ts_serial_msb_caddr_offset,
@@ -849,6 +872,7 @@ avl_error_code_t SetTSSerialSyncPulse_Demod(AVL_TSSerialSyncPulse eTSSerialSyncP
     avl_error_code_t r = AVL_EC_OK;
 
     chip->chip_pub->ts_config.eSerialSyncPulse = eTSSerialSyncPulse;
+    printk("TS serial sync pulse %d\n",eTSSerialSyncPulse);
 
     r = avl_bms_write8(chip->chip_pub->i2c_addr,
                        stBaseAddrSet.fw_config_reg_base + rc_ts_sync_pulse_caddr_offset,
@@ -862,9 +886,11 @@ avl_error_code_t SetTSErrorBit_Demod(AVL_TSErrorBit eTSErrorBit, avl68x2_chip *c
     avl_error_code_t r = AVL_EC_OK;
 
     chip->chip_pub->ts_config.eErrorBit = eTSErrorBit;
+    printk("TS set err bit %d\n",eTSErrorBit);
 
     r = avl_bms_write8(chip->chip_pub->i2c_addr,
-		       stBaseAddrSet.fw_config_reg_base + rc_ts_error_bit_en_caddr_offset, eTSErrorBit);
+		       stBaseAddrSet.fw_config_reg_base + rc_ts_error_bit_en_caddr_offset,
+		       chip->chip_pub->ts_config.eErrorBit);
 
     return r;
 }
@@ -874,6 +900,7 @@ avl_error_code_t SetTSErrorPola_Demod(AVL_TSErrorPolarity eTSErrorPola, avl68x2_
     avl_error_code_t r = AVL_EC_OK;
 
     chip->chip_pub->ts_config.eErrorPolarity = eTSErrorPola;
+    printk("TS err polarity %d\n",eTSErrorPola);
 
     r = avl_bms_write8(chip->chip_pub->i2c_addr,
         stBaseAddrSet.fw_config_reg_base + rc_ts_error_polarity_caddr_offset,
@@ -887,6 +914,7 @@ avl_error_code_t SetTSValidPola_Demod(AVL_TSValidPolarity eTSValidPola, avl68x2_
     avl_error_code_t r = AVL_EC_OK;
 
     chip->chip_pub->ts_config.eValidPolarity = eTSValidPola;
+    printk("TS valid polarity %d\n",eTSValidPola);
 
     r = avl_bms_write8(chip->chip_pub->i2c_addr,
         stBaseAddrSet.fw_config_reg_base + rc_ts_valid_polarity_caddr_offset,
@@ -900,6 +928,7 @@ avl_error_code_t SetTSParallelOrder_Demod(AVL_TSParallelOrder eTSParallelOrder, 
     avl_error_code_t r = AVL_EC_OK;
 
     chip->chip_pub->ts_config.eParallelOrder = eTSParallelOrder;
+    printk("TS parallel order %d\n",eTSParallelOrder);
 
     r = avl_bms_write8(chip->chip_pub->i2c_addr,
         stBaseAddrSet.fw_config_reg_base + rc_ts_packet_order_caddr_offset,
@@ -910,14 +939,16 @@ avl_error_code_t SetTSParallelOrder_Demod(AVL_TSParallelOrder eTSParallelOrder, 
 
 avl_error_code_t SetTSParallelPhase_Demod(AVL_TSParallelPhase eTSParallelPhase, avl68x2_chip *chip)
 {
-    avl_error_code_t r = AVL_EC_OK;
+	avl_error_code_t r = AVL_EC_OK;
 
-    chip->chip_pub->ts_config.eParallelPhase = eTSParallelPhase;
+	chip->chip_pub->ts_config.eParallelPhase = eTSParallelPhase;
+	printk("TS clk phase %d\n", eTSParallelPhase);
 
-    r = avl_bms_write8(chip->chip_pub->i2c_addr,
-        stBaseAddrSet.fw_config_reg_base + ts_clock_phase_caddr_offset, (uint8_t)eTSParallelPhase);
+	r = avl_bms_write8(chip->chip_pub->i2c_addr,
+			   stBaseAddrSet.fw_config_reg_base + ts_clock_phase_caddr_offset,
+			   (uint8_t)eTSParallelPhase);
 
-    return r;
+	return r;
 }
 
 avl_error_code_t IBase_SetSleepClock_Demod(avl68x2_chip *chip)
