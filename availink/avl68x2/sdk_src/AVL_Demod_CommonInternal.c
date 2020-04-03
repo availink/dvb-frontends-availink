@@ -62,12 +62,6 @@ avl_error_code_t avl68x2_init_chip_object(avl68x2_chip *chip)
       printk("INITED DISEQC SEM\n");
       chip->diseqc_sem_initialized = 1;
     }    
-    if(chip->i2c_sem_initialized == 0)
-    {
-      r |= avl_bsp_init_semaphore(&(chip->i2c_sem));
-      printk("INITED I2C SEM\n");
-      chip->i2c_sem_initialized = 1;
-    }
 
     r |= avl_bms_initialize(chip->chip_pub->i2c_addr);
 
@@ -137,14 +131,6 @@ avl_error_code_t TunerI2C_Initialize_Demod(avl68x2_chip *chip)
 			    stBaseAddrSet.hw_tuner_i2c_base +
 				tuner_i2c_srst_offset,
 			    1);
-	r |= avl_bms_write32(chip->chip_pub->i2c_addr,
-			     stBaseAddrSet.hw_tuner_i2c_base +
-				 tuner_i2c_bit_rpt_cntrl_offset,
-			     0x6);
-	r |= avl_bms_write32(chip->chip_pub->i2c_addr,
-			     stBaseAddrSet.hw_tuner_i2c_base +
-				 tuner_i2c_bit_rpt_cntrl_offset,
-			     0x6);
 	r |= avl_bms_write32(chip->chip_pub->i2c_addr,
 			     stBaseAddrSet.hw_tuner_i2c_base +
 				 tuner_i2c_bit_rpt_cntrl_offset,
@@ -518,7 +504,7 @@ avl_error_code_t SetPLL0_Demod(avl68x2_chip *chip)
 
     r |= avl_bms_write32(chip->chip_pub->i2c_addr, hw_E2_AVLEM61_reset_register, 0);
     avl_bms_write32(chip->chip_pub->i2c_addr, hw_E2_AVLEM61_reset_register, 1);//no I2C ACK
-    avl_bsp_delay(1);
+    avl_bsp_delay(20);
 
 
 
@@ -716,6 +702,7 @@ avl_error_code_t SetTSMode_Demod(avl68x2_chip *chip)
 						     stBaseAddrSet.fw_config_reg_base +
 							 rc_ts_cntns_clk_frac_n_iaddr_offset,
 						     chip->uiTSFrequencyHz / 2);
+				printk("%s CONT SER, %d Hz\n",__func__,chip->uiTSFrequencyHz);
 				break;
 			}
 		}
@@ -904,19 +891,6 @@ avl_error_code_t SetTSValidPola_Demod(AVL_TSValidPolarity eTSValidPola, avl68x2_
     r = avl_bms_write8(chip->chip_pub->i2c_addr,
         stBaseAddrSet.fw_config_reg_base + rc_ts_valid_polarity_caddr_offset,
         (uint8_t)eTSValidPola);
-
-    return r;
-}
-
-avl_error_code_t SetTSPacketLen_Demod(AVL_TSPacketLen eTSPacketLen, avl68x2_chip *chip)
-{
-    avl_error_code_t r = AVL_EC_OK;
-
-    chip->chip_pub->ts_config.ePacketLen = eTSPacketLen;
-
-//     r = avl_bms_write8(chip->chip_pub->i2c_addr,
-//         stBaseAddrSet.fw_config_reg_base + rc_ts_packet_len_caddr_offset,
-//         (uint8_t)eTSPacketLen);
 
     return r;
 }
@@ -1197,40 +1171,28 @@ avl_error_code_t TestSDRAM_Demod(uint32_t * puiTestResult, uint32_t * puiTestPat
     return r;
 }
 
-avl_error_code_t GetValidModeList_Demod(uint8_t * pucValidModeList, avl68x2_chip *chip)
+avl_error_code_t GetValidModeList_Demod(uint8_t *pucValidModeList, avl68x2_chip *chip)
 {
-    avl_error_code_t r = AVL_EC_OK;
-    uint32_t uiMemberIDRegAddr = 0x0;
-    uint32_t uiMemberID = 0x0;
-    uint16_t usAddrSize = 3;
-    uint16_t usDataSize = 4;
-    uint8_t pucBuffAddr[3] = {0};
-    uint8_t pucBuffData[4]= {0};
+	avl_error_code_t r = AVL_EC_OK;
+	uint32_t uiMemberID = 0x0;
 
-    r = GetFamilyID_Demod(&(chip->family_id), chip);
+	r = GetFamilyID_Demod(&(chip->family_id), chip);
 
-    uiMemberIDRegAddr = stBaseAddrSet.hw_member_ID_base;
+	r |= avl_bms_read32(chip->chip_pub->i2c_addr,
+			    stBaseAddrSet.hw_member_ID_base,
+			    &uiMemberID);
 
-    avl_int_to_3bytes(uiMemberIDRegAddr, pucBuffAddr);
+	switch (chip->family_id)
+	{
+	case AVL68XX:
+		GetValidModeList0_Demod(pucValidModeList, uiMemberID);
+		break;
+	default:
+		r = AVL_EC_GENERAL_FAIL;
+		break;
+	}
 
-    r = avl_bsp_wait_semaphore(&(chip->i2c_sem));
-    r = avl_bsp_i2c_write(chip->chip_pub->i2c_addr, pucBuffAddr, &usAddrSize);
-    r |= avl_bsp_i2c_read(chip->chip_pub->i2c_addr, pucBuffData, &usDataSize);
-    r = avl_bsp_release_semaphore(&(chip->i2c_sem));
-
-    uiMemberID = avl_bytes_to_int(pucBuffData);
-
-    switch(chip->family_id)
-    {
-    case AVL68XX:
-        GetValidModeList0_Demod(pucValidModeList, uiMemberID);
-        break;
-    default:
-        r = AVL_EC_GENERAL_FAIL;
-        break;
-    }
-
-    return r;
+	return r;
 }
 
 void GetValidModeList0_Demod(uint8_t * pucValidModeList, uint32_t uiMemberID)
@@ -1265,25 +1227,16 @@ void GetValidModeList0_Demod(uint8_t * pucValidModeList, uint32_t uiMemberID)
     }
 }
 
-avl_error_code_t GetFamilyID_Demod(uint32_t * puiFamilyID,avl68x2_chip *chip)
+avl_error_code_t GetFamilyID_Demod(uint32_t *puiFamilyID, avl68x2_chip *chip)
 {
-    avl_error_code_t r = AVL_EC_OK;
-    uint32_t ChipIDRegAddr = 0x40000;
-    uint16_t usAddrSize = 3;
-    uint16_t usDataSize = 4;
-    uint8_t pucBuffAddr[3] = {0};
-    uint8_t pucBuffData[4]= {0};
+	avl_error_code_t r = AVL_EC_OK;
+	const uint32_t ChipIDRegAddr = 0x40000;
 
-    avl_int_to_3bytes(ChipIDRegAddr, pucBuffAddr);
+	r = avl_bms_read32(chip->chip_pub->i2c_addr,
+			   ChipIDRegAddr,
+			   puiFamilyID);
 
-    r = avl_bsp_wait_semaphore(&(chip->i2c_sem));
-    r |= avl_bsp_i2c_write(chip->chip_pub->i2c_addr, pucBuffAddr, &usAddrSize);
-    r |= avl_bsp_i2c_read(chip->chip_pub->i2c_addr, pucBuffData, &usDataSize);
-    r |= avl_bsp_release_semaphore(&(chip->i2c_sem));
-
-    *puiFamilyID = avl_bytes_to_int(pucBuffData);
-
-    return r;    
+	return r;
 }
 
 avl_error_code_t SetGPIOStatus_Demod(avl68x2_chip *chip)
