@@ -456,7 +456,7 @@ avl_error_code_t AVL_Demod_DVBSx_Diseqc_SendModulationData( uint8_t * pucBuff, u
             }
             do 
             {
-                r |= avl_bsp_delay(1);
+                r |= avl_bsp_delay(3);
                 if (++uiTempOutTh > 500)
                 {
                     r |= AVL_EC_TIMEOUT;

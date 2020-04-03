@@ -677,11 +677,12 @@ static int read_status(struct dvb_frontend *fe, enum fe_status *status)
 				    priv->chip);
 	if(r == AVL_EC_OK) {
 		if(lock == avl62x1_status_locked) {
-			*status = FE_HAS_LOCK;
+			*status = FE_HAS_SIGNAL | FE_HAS_CARRIER |
+				  FE_HAS_VITERBI | FE_HAS_SYNC | FE_HAS_LOCK;
 			r = get_frontend(fe,
 					 &fe->dtv_property_cache);
 		} else {
-			*status = FE_NONE;
+			*status = FE_HAS_SIGNAL;
 		}
 	} else {
 		r = -EIO;

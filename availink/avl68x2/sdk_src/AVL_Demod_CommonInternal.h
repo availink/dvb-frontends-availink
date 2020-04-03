@@ -134,9 +134,9 @@
 #define rc_ts_serial_caddr_offset                           0x0000003c
 #define rc_ts_serial_outpin_caddr_offset                    0x0000003f
 #define rc_ts_serial_msb_caddr_offset                       0x0000003e
-#define rc_ts_packet_len_caddr_offset                       0x00000039
+#define rc_ts_packet_len_caddr_offset                       0x00000039 //!!!
 #define rc_ts_packet_order_caddr_offset                     rc_ts_serial_msb_caddr_offset
-#define rc_ts_error_bit_en_caddr_offset                     0x000000000
+#define rc_ts_error_bit_en_caddr_offset                     0x000000000 //!!!
 #define rc_ts_error_polarity_caddr_offset                   0x00000041
 #define rc_ts_valid_polarity_caddr_offset                   0x00000040
 #define rc_ts_sync_pulse_caddr_offset                       0x00000097
@@ -274,12 +274,6 @@
         AVL_MPVP_Normal     =   0, 
         AVL_MPVP_Invert     =   1   
     } AVL_TSValidPolarity; 
-
-    typedef enum AVL_TSPacketLen
-    {
-        AVL_TS_188 = 0,
-        AVL_TS_204 = 1
-    } AVL_TSPacketLen; 
 
     typedef enum AVL_AGCPola
     {
@@ -564,7 +558,6 @@
     AVL_TSErrorBit eErrorBit;
     AVL_TSErrorPolarity eErrorPolarity;
     AVL_TSValidPolarity eValidPolarity;
-    AVL_TSPacketLen ePacketLen;
     AVL_TSParallelPhase eParallelPhase;
     AVL_TSParallelOrder eParallelOrder;
     uint32_t guiDVBTxSerialTSContinuousHz;
@@ -678,6 +671,7 @@ typedef struct avl68x2_chip_pub
   AVL_DVBCPara dvbc_para;
 
   int32_t gpio_lock_led;
+  int32_t gpio_fec_reset;
 
   struct avl_tuner *tuner;
 } avl68x2_chip_pub;
@@ -687,14 +681,12 @@ typedef struct avl68x2_chip_pub
     struct avl68x2_chip_priv *chip_priv;
     struct avl68x2_chip_pub *chip_pub;
 
-    uint8_t i2c_sem_initialized;  
     uint8_t rx_sem_initialized;
     uint8_t diseqc_sem_initialized;
     uint32_t family_id;
     
     
     avl_sem_t rx_sem;
-    avl_sem_t i2c_sem;
     avl_sem_t diseqc_sem;
     uint32_t uiCoreFrequencyHz;
     uint32_t uiFECFrequencyHz;
@@ -778,7 +770,6 @@ typedef struct avl68x2_chip_pub
   avl_error_code_t SetTSErrorBit_Demod(AVL_TSErrorBit TSErrorBit, avl68x2_chip *chip);
   avl_error_code_t SetTSErrorPola_Demod(AVL_TSErrorPolarity TSErrorPola, avl68x2_chip *chip);
   avl_error_code_t SetTSValidPola_Demod(AVL_TSValidPolarity TSValidPola, avl68x2_chip *chip);
-  avl_error_code_t SetTSPacketLen_Demod(AVL_TSPacketLen TSPacketLen, avl68x2_chip *chip);
   avl_error_code_t SetTSParallelOrder_Demod(AVL_TSParallelOrder TSParallelOrder, avl68x2_chip *chip);
   avl_error_code_t SetTSParallelPhase_Demod(AVL_TSParallelPhase eParallelPhase, avl68x2_chip *chip);
   avl_error_code_t IBase_SetSleepClock_Demod(avl68x2_chip *chip);
