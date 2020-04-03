@@ -40,8 +40,7 @@
 
 static int debug = 0;
 
-module_param(debug, int, 0644);
-MODULE_PARM_DESC(debug, "\n\t\t Enable debug information");
+
 
 
 const AVL_DVBTxConfig default_dvbtx_config =
@@ -194,40 +193,47 @@ static int avl68x2_acquire_dvbsx(struct dvb_frontend *fe)
 
 static int avl68x2_acquire_dvbtx(struct dvb_frontend *fe)
 {
-  struct avl68x2_priv *priv = fe->demodulator_priv;
-  struct dtv_frontend_properties *c = &fe->dtv_property_cache;
-  avl_error_code_t r = AVL_EC_OK;
-  AVL_DVBTxBandWidth bw;
+	struct avl68x2_priv *priv = fe->demodulator_priv;
+	struct dtv_frontend_properties *c = &fe->dtv_property_cache;
+	avl_error_code_t r = AVL_EC_OK;
+	AVL_DVBTxBandWidth bw;
 
-  dbg_avl("ACQUIRE T/T2");
+	dbg_avl("ACQUIRE T/T2");
 
-  if (c->bandwidth_hz <= 1700000)
-  {
-    bw = AVL_DVBTx_BW_1M7;
-  }
-  else if (c->bandwidth_hz <= 5000000)
-  {
-    bw = AVL_DVBTx_BW_5M;
-  }
-  else if (c->bandwidth_hz <= 6000000)
-  {
-    bw = AVL_DVBTx_BW_6M;
-  }
-  else if (c->bandwidth_hz <= 7000000)
-  {
-    bw = AVL_DVBTx_BW_7M;
-  }
-  else
-  {
-    bw = AVL_DVBTx_BW_8M;
-  }
+	if (c->bandwidth_hz <= 1700000)
+	{
+		bw = AVL_DVBTx_BW_1M7;
+	}
+	else if (c->bandwidth_hz <= 5000000)
+	{
+		bw = AVL_DVBTx_BW_5M;
+	}
+	else if (c->bandwidth_hz <= 6000000)
+	{
+		bw = AVL_DVBTx_BW_6M;
+	}
+	else if (c->bandwidth_hz <= 7000000)
+	{
+		bw = AVL_DVBTx_BW_7M;
+	}
+	else
+	{
+		bw = AVL_DVBTx_BW_8M;
+	}
 
-  r = AVL_Demod_DVBT2AutoLock(bw,
-                              AVL_DVBT2_PROFILE_UNKNOWN,
-                              c->stream_id,
-                              priv->chip);
+	if (c->delivery_system == SYS_DVBT)
+	{
+		r = AVL_Demod_DVBTAutoLock(bw, 0, priv->chip);
+	}
+	else
+	{
+		r = AVL_Demod_DVBT2AutoLock(bw,
+					    AVL_DVBT2_PROFILE_UNKNOWN,
+					    c->stream_id,
+					    priv->chip);
+	}
 
-  return r;
+	return r;
 }
 
 static int avl68x2_acquire_dvbc(struct dvb_frontend *fe)
@@ -1311,6 +1317,10 @@ err1:
 err:
 	return NULL;
 }
+
+module_param(debug, int, 0644);
+MODULE_PARM_DESC(debug, "\n\t\t Enable debug information");
+
 EXPORT_SYMBOL_GPL(avl68x2_attach);
 EXPORT_SYMBOL_GPL(default_dvbtx_config);
 EXPORT_SYMBOL_GPL(default_dvbsx_config);
