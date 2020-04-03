@@ -863,8 +863,8 @@ avl_error_code_t SetTSErrorBit_Demod(AVL_TSErrorBit eTSErrorBit, avl68x2_chip *c
 
     chip->chip_pub->ts_config.eErrorBit = eTSErrorBit;
 
-    //r = avl_bms_write8(chip->chip_pub->i2c_addr,
-    //     stBaseAddrSet.fw_config_reg_base + rc_ts_error_bit_en_caddr_offset, ucData);
+    r = avl_bms_write8(chip->chip_pub->i2c_addr,
+		       stBaseAddrSet.fw_config_reg_base + rc_ts_error_bit_en_caddr_offset, eTSErrorBit);
 
     return r;
 }

@@ -958,6 +958,8 @@ static int avl68x2_read_status(struct dvb_frontend *fe, enum fe_status *status)
 	struct avl68x2_priv *priv = fe->demodulator_priv;
 	int ret = 0;
 	uint8_t lock = 0;
+	uint8_t tempc = 0;
+	uint32_t tempi = 0;
 	int32_t SNR_x100db = 0;
 	int32_t ber = 0;
 	int lock_led = priv->chip->chip_pub->gpio_lock_led;
@@ -985,6 +987,35 @@ static int avl68x2_read_status(struct dvb_frontend *fe, enum fe_status *status)
 	}
 	
 	if(debug > 1) {
+	  avl_bms_read32(priv->chip->chip_pub->i2c_addr, stBaseAddrSet.fw_config_reg_base +rc_ts_cntns_clk_frac_d_iaddr_offset, &tempi);
+	  printk("AVL: d:%x\n", tempi);
+	  avl_bms_read32(priv->chip->chip_pub->i2c_addr, stBaseAddrSet.fw_config_reg_base +rc_ts_cntns_clk_frac_n_iaddr_offset, &tempi);
+	  printk("AVL: n:%x\n", tempi);
+	  avl_bms_read8(priv->chip->chip_pub->i2c_addr, stBaseAddrSet.fw_config_reg_base +rc_enable_ts_continuous_caddr_offset, &tempc);
+	  printk("AVL: cont:%x\n", tempc);
+	  avl_bms_read8(priv->chip->chip_pub->i2c_addr, stBaseAddrSet.fw_config_reg_base +rc_ts_clock_edge_caddr_offset, &tempc);
+	  printk("AVL: clk_edge:%x\n", tempc);	  
+	  avl_bms_read8(priv->chip->chip_pub->i2c_addr, stBaseAddrSet.fw_config_reg_base +rc_ts_serial_caddr_offset,&tempc);
+	  printk("AVL: ser:%x\n", tempc);
+	  avl_bms_read8(priv->chip->chip_pub->i2c_addr, stBaseAddrSet.fw_config_reg_base +rc_ts_serial_outpin_caddr_offset, &tempc);
+	  printk("AVL: ser_pin:%x\n", tempc);
+	  avl_bms_read8(priv->chip->chip_pub->i2c_addr, stBaseAddrSet.fw_config_reg_base +rc_ts_serial_msb_caddr_offset, &tempc);
+	  printk("AVL: ser_msb:%x\n", tempc);
+	  avl_bms_read8(priv->chip->chip_pub->i2c_addr, stBaseAddrSet.fw_config_reg_base +rc_ts_packet_len_caddr_offset, &tempc);
+	  printk("AVL: pkt_len:%x\n", tempc);
+	  avl_bms_read8(priv->chip->chip_pub->i2c_addr, stBaseAddrSet.fw_config_reg_base +rc_ts_packet_order_caddr_offset, &tempc);
+	  printk("AVL: pkt_ord:%x\n", tempc);
+	  avl_bms_read8(priv->chip->chip_pub->i2c_addr, stBaseAddrSet.fw_config_reg_base +rc_ts_error_bit_en_caddr_offset, &tempc);
+	  printk("AVL: ts_err:%x\n", tempc);
+	  avl_bms_read8(priv->chip->chip_pub->i2c_addr, stBaseAddrSet.fw_config_reg_base +rc_ts_error_polarity_caddr_offset, &tempc);
+	  printk("AVL: err_pol:%x\n", tempc);
+	  avl_bms_read8(priv->chip->chip_pub->i2c_addr, stBaseAddrSet.fw_config_reg_base +rc_ts_valid_polarity_caddr_offset, &tempc);
+	  printk("AVL: val_pol:%x\n", tempc);
+	  avl_bms_read8(priv->chip->chip_pub->i2c_addr, stBaseAddrSet.fw_config_reg_base +rc_ts_sync_pulse_caddr_offset, &tempc);
+	  printk("AVL: sync_pul:%x\n", tempc);
+	  avl_bms_read8(priv->chip->chip_pub->i2c_addr, stBaseAddrSet.fw_config_reg_base +ts_clock_phase_caddr_offset, &tempc);
+	  printk("AVL: clk_phs:%x\n", tempc);
+	   
 	  ret |= AVL_Demod_GetSNR (&SNR_x100db, priv->chip);
 	  ret = (int)AVL_Demod_GetPER(&ber, priv->chip);
 	  printk("AVL: %s: read status %d, snr = %d, ber = %d\n",__func__,*status, SNR_x100db, ber);
