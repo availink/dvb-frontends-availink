@@ -18,21 +18,29 @@ static int BW_FFT_Table[2]=
 
 avl_error_code_t AVL_Demod_ISDBTAutoLock(avl68x2_chip *chip)
 {
-  avl_error_code_t r = AVL_EC_OK;
-  
-  if(1 == chip->chip_priv->sleep_flag)
-    {
-      r = AVL_EC_SLEEP;
-      return r;
-    } 
-  r = IBase_SendRxOPWait_Demod(AVL_FW_CMD_HALT, chip);
-  
-  ISDBT_SetIFFrequency_Demod((uint32_t)chip->chip_pub->isdbt_para.uiISDBTIFFreqHz, chip); 
-  
-  r |= IBase_SendRxOPWait_Demod(AVL_FW_CMD_ACQUIRE, chip);
-  
-  return (r);
-  
+	avl_error_code_t r = AVL_EC_OK;
+
+	if (1 == chip->chip_priv->sleep_flag)
+	{
+		r = AVL_EC_SLEEP;
+		return r;
+	}
+	r = IBase_SendRxOPWait_Demod(AVL_FW_CMD_HALT, chip);
+
+	ISDBT_SetIFFrequency_Demod((uint32_t)chip->chip_pub->isdbt_para.uiISDBTIFFreqHz, chip);
+
+	// Enable CS_0 as GPIO for EWBS feature
+	r |= avl_bms_write32(chip->chip_pub->i2c_addr,
+			     stBaseAddrSet.hw_emerald_io_base +
+				 emerald_io_pad_CS_0_sel_offset,
+			     0x1);
+
+	// for ISDBT Layer independence lock
+	r |= avl_bms_write8(chip->chip_pub->i2c_addr, 0xA83, 0x01);
+
+	r |= IBase_SendRxOPWait_Demod(AVL_FW_CMD_ACQUIRE, chip);
+
+	return (r);
 }
 
 avl_error_code_t AVL_Demod_ISDBTGetModulationInfo(AVL_ISDBTModulationInfo *pstModulationInfo, avl68x2_chip *chip)
