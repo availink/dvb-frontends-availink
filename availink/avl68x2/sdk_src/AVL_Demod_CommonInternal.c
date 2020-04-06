@@ -202,39 +202,48 @@ avl_error_code_t InitErrorStat_Demod(avl68x2_chip *chip)
     return (r);
 }
 
-avl_error_code_t ErrorStatMode_Demod(AVL_ErrorStatConfig stErrorStatConfig,avl68x2_chip *chip)
+avl_error_code_t ErrorStatMode_Demod(
+    AVL_ErrorStatConfig stErrorStatConfig,
+    avl68x2_chip *chip)
 {
-    avl_error_code_t r = AVL_EC_OK;
-    struct avl_uint64 time_tick_num = {0,0};
+	avl_error_code_t r = AVL_EC_OK;
+	struct avl_uint64 time_tick_num = {0, 0};
 
-    r = avl_bms_write32(chip->chip_pub->i2c_addr,
-        stBaseAddrSet.hw_esm_base + esm_mode_offset,(uint32_t)stErrorStatConfig.eErrorStatMode);
-    r |= avl_bms_write32(chip->chip_pub->i2c_addr,
-        stBaseAddrSet.hw_esm_base + tick_type_offset,(uint32_t)stErrorStatConfig.eAutoErrorStatType);
+	r = avl_bms_write32(chip->chip_pub->i2c_addr,
+			    stBaseAddrSet.hw_esm_base + esm_mode_offset,
+			    (uint32_t)stErrorStatConfig.eErrorStatMode);
+	r |= avl_bms_write32(chip->chip_pub->i2c_addr,
+			     stBaseAddrSet.hw_esm_base + tick_type_offset,
+			     (uint32_t)stErrorStatConfig.eAutoErrorStatType);
 
-    avl_mult_32to64(&time_tick_num, chip->uiTSFrequencyHz/1000, stErrorStatConfig.uiTimeThresholdMs);
-    r |= avl_bms_write32(chip->chip_pub->i2c_addr,
-        stBaseAddrSet.hw_esm_base + time_tick_low_offset,time_tick_num.low_word);
-    r |= avl_bms_write32(chip->chip_pub->i2c_addr,
-        stBaseAddrSet.hw_esm_base + time_tick_high_offset,time_tick_num.high_word);
+	avl_mult_32to64(&time_tick_num, chip->uiTSFrequencyHz / 1000,
+			stErrorStatConfig.uiTimeThresholdMs);
+	r |= avl_bms_write32(chip->chip_pub->i2c_addr,
+			     stBaseAddrSet.hw_esm_base + time_tick_low_offset,
+			     time_tick_num.low_word);
+	r |= avl_bms_write32(chip->chip_pub->i2c_addr,
+			     stBaseAddrSet.hw_esm_base + time_tick_high_offset,
+			     time_tick_num.high_word);
 
-    r |= avl_bms_write32(chip->chip_pub->i2c_addr,
-        stBaseAddrSet.hw_esm_base + byte_tick_low_offset,stErrorStatConfig.uiTimeThresholdMs);
-    r |= avl_bms_write32(chip->chip_pub->i2c_addr,
-        stBaseAddrSet.hw_esm_base + byte_tick_high_offset,0);//high 32-bit is not used
+	r |= avl_bms_write32(chip->chip_pub->i2c_addr,
+			     stBaseAddrSet.hw_esm_base + byte_tick_low_offset,
+			     stErrorStatConfig.uiTimeThresholdMs);
+	r |= avl_bms_write32(chip->chip_pub->i2c_addr,
+			     stBaseAddrSet.hw_esm_base + byte_tick_high_offset,
+			     0); //high 32-bit is not used
 
-    if(stErrorStatConfig.eErrorStatMode == AVL_ERROR_STAT_AUTO)//auto mode
-    {
-        //reset auto error stat
-        r |= avl_bms_write32(chip->chip_pub->i2c_addr,
-            stBaseAddrSet.hw_esm_base + tick_clear_offset,0);
-        r |= avl_bms_write32(chip->chip_pub->i2c_addr,
-            stBaseAddrSet.hw_esm_base + tick_clear_offset,1);
-        r |= avl_bms_write32(chip->chip_pub->i2c_addr,
-            stBaseAddrSet.hw_esm_base + tick_clear_offset,0);
-    }
+	if (stErrorStatConfig.eErrorStatMode == AVL_ERROR_STAT_AUTO) //auto mode
+	{
+		//reset auto error stat
+		r |= avl_bms_write32(chip->chip_pub->i2c_addr,
+				     stBaseAddrSet.hw_esm_base + tick_clear_offset, 0);
+		r |= avl_bms_write32(chip->chip_pub->i2c_addr,
+				     stBaseAddrSet.hw_esm_base + tick_clear_offset, 1);
+		r |= avl_bms_write32(chip->chip_pub->i2c_addr,
+				     stBaseAddrSet.hw_esm_base + tick_clear_offset, 0);
+	}
 
-    return (r);
+	return (r);
 }
 
 avl_error_code_t ResetErrorStat_Demod(avl68x2_chip *chip)
@@ -272,6 +281,7 @@ avl_error_code_t ResetPER_Demod(avl68x2_chip *chip)
     uiTemp |= 0x00000008;
     r |= avl_bms_write32(chip->chip_pub->i2c_addr, 
         stBaseAddrSet.hw_esm_base + esm_cntrl_offset, uiTemp);
+
     uiTemp |= 0x00000001;
     r |= avl_bms_write32(chip->chip_pub->i2c_addr, 
         stBaseAddrSet.hw_esm_base + esm_cntrl_offset, uiTemp);
@@ -695,52 +705,40 @@ avl_error_code_t SetTSMode_Demod(avl68x2_chip *chip)
 	{
 		r |= SetTSParallelOrder_Demod(chip->chip_pub->ts_config.eParallelOrder, chip);
 	}
-	
 
-	if (chip->chip_pub->ts_config.eClockMode == AVL_TS_CONTINUOUS_ENABLE)
+	r |= avl_bms_write8(chip->chip_pub->i2c_addr,
+			    stBaseAddrSet.fw_config_reg_base +
+				rc_enable_ts_continuous_caddr_offset,
+			    chip->chip_pub->ts_config.eClockMode ==
+				AVL_TS_CONTINUOUS_ENABLE);
+	r |= avl_bms_write32(chip->chip_pub->i2c_addr,
+			     stBaseAddrSet.fw_config_reg_base +
+				 rc_ts_cntns_clk_frac_d_iaddr_offset,
+			     chip->uiTSFrequencyHz);
+
+	if (chip->chip_pub->ts_config.eMode == AVL_TS_SERIAL)
 	{
-		r |= avl_bms_write8(chip->chip_pub->i2c_addr,
-				    stBaseAddrSet.fw_config_reg_base +
-					rc_enable_ts_continuous_caddr_offset,
-				    1);
-		r |= avl_bms_write32(chip->chip_pub->i2c_addr,
-				     stBaseAddrSet.fw_config_reg_base +
-					 rc_ts_cntns_clk_frac_d_iaddr_offset,
-				     chip->uiTSFrequencyHz);
-
-		if (chip->chip_pub->ts_config.eMode == AVL_TS_SERIAL)
+		if (chip->chip_pub->cur_demod_mode == AVL_DVBSX)
 		{
-			switch (chip->chip_pub->cur_demod_mode)
-			{
-			case AVL_DVBSX:
-				r |= avl_bms_write32(chip->chip_pub->i2c_addr,
-						     stBaseAddrSet.fw_config_reg_base +
-							 rc_ts_cntns_clk_frac_n_iaddr_offset,
-						     chip->uiTSFrequencyHz);
-				break;
-			default:
-				r |= avl_bms_write32(chip->chip_pub->i2c_addr,
-						     stBaseAddrSet.fw_config_reg_base +
-							 rc_ts_cntns_clk_frac_n_iaddr_offset,
-						     chip->uiTSFrequencyHz / 2);
-				printk("%s CONT SER, %d Hz\n",__func__,chip->uiTSFrequencyHz);
-				break;
-			}
+			r |= avl_bms_write32(chip->chip_pub->i2c_addr,
+						stBaseAddrSet.fw_config_reg_base +
+							rc_ts_cntns_clk_frac_n_iaddr_offset,
+						chip->uiTSFrequencyHz);
 		}
 		else
 		{
 			r |= avl_bms_write32(chip->chip_pub->i2c_addr,
-					     stBaseAddrSet.fw_config_reg_base +
-						 rc_ts_cntns_clk_frac_n_iaddr_offset,
-					     chip->uiTSFrequencyHz / 8);
+						stBaseAddrSet.fw_config_reg_base +
+							rc_ts_cntns_clk_frac_n_iaddr_offset,
+						chip->uiTSFrequencyHz / 2);
 		}
 	}
 	else
 	{
-		r |= avl_bms_write8(chip->chip_pub->i2c_addr,
-				    stBaseAddrSet.fw_config_reg_base +
-					rc_enable_ts_continuous_caddr_offset,
-				    0);
+		r |= avl_bms_write32(chip->chip_pub->i2c_addr,
+					stBaseAddrSet.fw_config_reg_base +
+						rc_ts_cntns_clk_frac_n_iaddr_offset,
+					chip->uiTSFrequencyHz / 8);
 	}
 
 	return r;

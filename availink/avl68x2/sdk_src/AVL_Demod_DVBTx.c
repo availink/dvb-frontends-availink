@@ -222,43 +222,58 @@ avl_error_code_t AVL_Demod_DVBT2GetPLPList(uint8_t * pucPLPIndexArray, uint8_t *
 
 }
 
-avl_error_code_t AVL_Demod_DVBTAutoLock(AVL_DVBTxBandWidth eBandWidth, uint8_t ucDVBTLayer, avl68x2_chip *chip)
-{    
+avl_error_code_t AVL_Demod_DVBTAutoLock(
+    AVL_DVBTxBandWidth eBandWidth,
+    uint8_t ucDVBTLayer,
+    avl68x2_chip *chip)
+{
 
-    avl_error_code_t r = AVL_EC_OK;
+	avl_error_code_t r = AVL_EC_OK;
 
-    if(1 == chip->chip_priv->sleep_flag)
-    {
-        r = AVL_EC_SLEEP;
-        return r;
-    }
-    r = IBase_SendRxOPWait_Demod(AVL_FW_CMD_HALT, chip);
+	if (1 == chip->chip_priv->sleep_flag)
+	{
+		r = AVL_EC_SLEEP;
+		return r;
+	}
+	r = IBase_SendRxOPWait_Demod(AVL_FW_CMD_HALT, chip);
 
-    r = avl_bms_write8(chip->chip_pub->i2c_addr,
-              stBaseAddrSet.fw_DVBTx_config_reg_base + rc_DVBTx_l1_proc_only_caddr_offset,
-              0);
+	r = avl_bms_write8(chip->chip_pub->i2c_addr,
+			   stBaseAddrSet.fw_DVBTx_config_reg_base +
+			       rc_DVBTx_l1_proc_only_caddr_offset,
+			   0);
 
-    r = DVBTx_SetBandWidth_Demod(eBandWidth, chip);
-    r |= avl_bms_write8(chip->chip_pub->i2c_addr,
-        stBaseAddrSet.fw_DVBTx_config_reg_base + rc_DVBTx_acquire_mode_caddr_offset,(uint8_t)AVL_DVBTx_LockMode_T_ONLY);
-    r |= avl_bms_write8(chip->chip_pub->i2c_addr,
-        stBaseAddrSet.fw_DVBTx_config_reg_base + rc_DVBTx_spectrum_invert_caddr_offset,AVL_SPECTRUM_AUTO);
+	r = DVBTx_SetBandWidth_Demod(eBandWidth, chip);
+	
+	r |= avl_bms_write8(chip->chip_pub->i2c_addr,
+			    stBaseAddrSet.fw_DVBTx_config_reg_base +
+				rc_DVBTx_acquire_mode_caddr_offset,
+			    (uint8_t)AVL_DVBTx_LockMode_T_ONLY);
+	r |= avl_bms_write8(chip->chip_pub->i2c_addr,
+			    stBaseAddrSet.fw_DVBTx_config_reg_base +
+				rc_DVBTx_spectrum_invert_caddr_offset,
+			    AVL_SPECTRUM_AUTO);
 
-    r |= avl_bms_write8(chip->chip_pub->i2c_addr,
-        stBaseAddrSet.fw_DVBTx_config_reg_base + rc_DVBTx_dvbt_layer_select_caddr_offset,ucDVBTLayer);
+	r |= avl_bms_write8(chip->chip_pub->i2c_addr,
+			    stBaseAddrSet.fw_DVBTx_config_reg_base +
+				rc_DVBTx_dvbt_layer_select_caddr_offset,
+			    ucDVBTLayer);
 
+	r |= avl_bms_write8(chip->chip_pub->i2c_addr,
+			    stBaseAddrSet.fw_DVBTx_config_reg_base +
+				rc_DVBTx_data_PLP_ID_caddr_offset,
+			    0);
+	r |= avl_bms_write8(chip->chip_pub->i2c_addr,
+			    stBaseAddrSet.fw_DVBTx_config_reg_base +
+				rc_DVBTx_common_PLP_ID_caddr_offset,
+			    0);
+	r |= avl_bms_write8(chip->chip_pub->i2c_addr,
+			    stBaseAddrSet.fw_DVBTx_config_reg_base +
+				rc_DVBTx_common_PLP_present_caddr_offset,
+			    0);
 
-    r |= avl_bms_write8(chip->chip_pub->i2c_addr,
-        stBaseAddrSet.fw_DVBTx_config_reg_base + rc_DVBTx_data_PLP_ID_caddr_offset,0);
-    r |= avl_bms_write8(chip->chip_pub->i2c_addr,
-        stBaseAddrSet.fw_DVBTx_config_reg_base + rc_DVBTx_common_PLP_ID_caddr_offset,0);
-    r |= avl_bms_write8(chip->chip_pub->i2c_addr,
-        stBaseAddrSet.fw_DVBTx_config_reg_base + rc_DVBTx_common_PLP_present_caddr_offset,0);
-    
-    r |= IBase_SendRxOPWait_Demod(AVL_FW_CMD_ACQUIRE, chip);
+	r |= IBase_SendRxOPWait_Demod(AVL_FW_CMD_ACQUIRE, chip);
 
-    return (r);
-
+	return (r);
 }
 
 avl_error_code_t AVL_Demod_DVBTxGetNorDigSSI(uint8_t *pucSSI, int32_t iRFPowerdBm, avl68x2_chip *chip)

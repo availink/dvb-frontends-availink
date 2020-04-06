@@ -401,13 +401,10 @@ static int avl68x2_set_standard(struct dvb_frontend *fe)
 	dbg_avl("FW version %d.%d.%d\n", ver_info.firmware.major, ver_info.firmware.minor, ver_info.firmware.build);
 	dbg_avl("API version %d.%d.%d\n", ver_info.sdk.major, ver_info.sdk.minor, ver_info.sdk.build);
 
-	switch (c->delivery_system)
+	if (c->delivery_system == SYS_DVBS ||
+	    c->delivery_system == SYS_DVBS2)
 	{
-	case SYS_DVBS:
-	case SYS_DVBS2:
-	default:
 		r |= avl68x2_init_diseqc(fe);
-		break;
 	}
 
 	if (r)
