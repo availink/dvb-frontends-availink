@@ -29,7 +29,7 @@
 #include "AVL_Demod_DVBC.h"
 #include "AVL_Demod_ISDBT.h"
 
-//#define INCLUDE_STDOUT	1
+#define INCLUDE_STDOUT	0
 
 #define dbg_avl(fmt, args...)                                           \
 	do                                                              \
@@ -973,7 +973,7 @@ static int avl68x2_read_status(struct dvb_frontend *fe, enum fe_status *status)
 		*status = FE_HAS_SIGNAL | FE_HAS_CARRIER |
 			  FE_HAS_VITERBI | FE_HAS_SYNC | FE_HAS_LOCK;
 		ret |= get_frontend(fe, &fe->dtv_property_cache);
-		if (lock_led)
+		if (lock_led >= 0)
 		{
 			gpio_request(lock_led, KBUILD_MODNAME);
 			gpio_direction_output(lock_led, 1);
@@ -982,7 +982,7 @@ static int avl68x2_read_status(struct dvb_frontend *fe, enum fe_status *status)
 	else
 	{
 		*status = FE_HAS_SIGNAL;
-		if (lock_led)
+		if (lock_led >= 0)
 		{
 			gpio_request(lock_led, KBUILD_MODNAME);
 			gpio_direction_output(lock_led, 0);
@@ -1088,7 +1088,7 @@ static int set_frontend(struct dvb_frontend *fe)
 	struct avl68x2_priv *priv = fe->demodulator_priv;
 	int lock_led = priv->chip->chip_pub->gpio_lock_led;
 
-	if (lock_led)
+	if (lock_led >= 0)
 	{
 		gpio_request(lock_led, KBUILD_MODNAME);
 		gpio_direction_output(lock_led, 0);
@@ -1331,6 +1331,13 @@ struct dvb_frontend *avl68x2_attach(struct avl68x2_config *config,
 		dev_info(&priv->i2c->dev,
 			 KBUILD_MODNAME ": Firmware booted");
 		return &priv->frontend;
+	}
+
+
+	if(priv->chip->chip_pub->gpio_lock_led >= 0)
+	{
+		gpio_request(priv->chip->chip_pub->gpio_lock_led, KBUILD_MODNAME);
+		gpio_direction_output(priv->chip->chip_pub->gpio_lock_led, 0);
 	}
 
 err5:
