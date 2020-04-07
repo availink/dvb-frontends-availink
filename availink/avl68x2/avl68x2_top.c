@@ -990,7 +990,7 @@ static int avl68x2_read_status(struct dvb_frontend *fe, enum fe_status *status)
 	}
 	
 	if(debug > 1) {
-#if 1	  
+#if 0	  
 	  avl_bms_read32(priv->chip->chip_pub->i2c_addr, stBaseAddrSet.fw_config_reg_base +rc_ts_cntns_clk_frac_d_iaddr_offset, &tempi);
 	  printk("AVL: d:%x\n", tempi);
 	  avl_bms_read32(priv->chip->chip_pub->i2c_addr, stBaseAddrSet.fw_config_reg_base +rc_ts_cntns_clk_frac_n_iaddr_offset, &tempi);
