@@ -1249,7 +1249,7 @@ struct dvb_frontend *avl68x2_attach(struct avl68x2_config *config,
 {
 	struct avl68x2_priv *priv;
 	avl_error_code_t ret;
-	uint32_t id;
+	uint32_t id, chip_id;
 
 	dbg_avl("start demod attach");
 
@@ -1308,9 +1308,7 @@ struct dvb_frontend *avl68x2_attach(struct avl68x2_config *config,
 			KBUILD_MODNAME);
 		goto err5;
 	}
-
-	dbg_avl("chip_id= 0x%x\n", id);
-
+	dbg_avl("family_id= 0x%x\n", id);
 	if (id != AVL68XX)
 	{
 		dev_err(&priv->i2c->dev, "%s: attach failed, id mismatch",
@@ -1318,8 +1316,11 @@ struct dvb_frontend *avl68x2_attach(struct avl68x2_config *config,
 		goto err5;
 	}
 
-	dev_info(&priv->i2c->dev, "%s: found AVL68x2 id=0x%x",
-		 KBUILD_MODNAME, id);
+	ret |= AVL_Demod_GetChipID(&chip_id, priv->chip);
+	dbg_avl("chip_id= 0x%x\n",chip_id);
+
+	dev_info(&priv->i2c->dev, "%s: found AVL68x2 family=0x%x id=0x%x",
+		 KBUILD_MODNAME, id, chip_id);
 
 	if(avl68x2_get_firmware(&priv->frontend,SYS_DVBS))
 	{
