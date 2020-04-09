@@ -523,59 +523,77 @@ avl_error_code_t AVL_Demod_DVBT_GetTPSInfo(AVL_DVBT_TpsInfo *pstDVBTTpsInfo, avl
     return (r);
 }
 
-
 avl_error_code_t DVBTx_Initialize_Demod(avl68x2_chip *chip)
 {
-    avl_error_code_t r = AVL_EC_OK;
-    
-    r = avl_bms_write32(chip->chip_pub->i2c_addr,
-        stBaseAddrSet.fw_DVBTx_config_reg_base + rc_DVBTx_sample_rate_Hz_iaddr_offset, chip->uiADCFrequencyHz);
-    r |= avl_bms_write32(chip->chip_pub->i2c_addr,
-        stBaseAddrSet.fw_DVBTx_config_reg_base + rc_DVBTx_mpeg_clk_rate_Hz_iaddr_offset, chip->uiTSFrequencyHz);
-    
-    ////DDC configuration
-    r |= avl_bms_write8(chip->chip_pub->i2c_addr,
-        stBaseAddrSet.fw_DVBTx_config_reg_base + rc_DVBTx_input_format_caddr_offset,AVL_OFFBIN);
-    r |= avl_bms_write8(chip->chip_pub->i2c_addr,
-        stBaseAddrSet.fw_DVBTx_config_reg_base + rc_DVBTx_input_select_caddr_offset,AVL_ADC_IN);
-    r |= avl_bms_write8(chip->chip_pub->i2c_addr,
-        stBaseAddrSet.fw_DVBTx_config_reg_base + rc_DVBTx_tuner_type_caddr_offset, AVL_DVBTX_REAL_IF);
+	avl_error_code_t r = AVL_EC_OK;
 
-    r |= avl_bms_write8(chip->chip_pub->i2c_addr,
-        stBaseAddrSet.fw_DVBTx_config_reg_base + rc_DVBTx_rf_agc_pol_caddr_offset,
-        chip->chip_pub->dvbtx_para.eDVBTxAGCPola);
-    r |= DVBTx_SetIFFrequency_Demod(chip->chip_pub->dvbtx_para.uiDVBTxIFFreqHz,chip);
-    r |= DVBTx_SetIFInputPath_Demod((AVL_InputPath)(chip->chip_pub->dvbtx_para.eDVBTxInputPath^1),chip);
+	r = avl_bms_write32(chip->chip_pub->i2c_addr,
+			    stBaseAddrSet.fw_DVBTx_config_reg_base +
+				rc_DVBTx_sample_rate_Hz_iaddr_offset,
+			    chip->uiADCFrequencyHz);
+	r |= avl_bms_write32(chip->chip_pub->i2c_addr,
+			     stBaseAddrSet.fw_DVBTx_config_reg_base +
+				 rc_DVBTx_mpeg_clk_rate_Hz_iaddr_offset,
+			     chip->uiTSFrequencyHz);
 
-   //ADC configuration 
-    switch(chip->chip_pub->xtal)
-    {
-     case Xtal_16M :
-     case Xtal_24M :
-        {
-          r |= avl_bms_write8(chip->chip_pub->i2c_addr, 
-            stBaseAddrSet.fw_DVBTx_config_reg_base+ rc_DVBTx_adc_use_pll_clk_caddr_offset, 1);
-        }
-        break;  
-      case Xtal_30M :
-      case Xtal_27M :
-        {
-          r |= avl_bms_write8(chip->chip_pub->i2c_addr, 
-            stBaseAddrSet.fw_DVBTx_config_reg_base+ rc_DVBTx_adc_use_pll_clk_caddr_offset, 0);
-        }
-        break;
-    }
-   
-    if(chip->ucDisableTCAGC == 0)
-    {
-        r |= EnableTCAGC_Demod(chip);
-    }
-    else
-    {
-        r |= DisableTCAGC_Demod(chip);
-    }
+	////DDC configuration
+	r |= avl_bms_write8(chip->chip_pub->i2c_addr,
+			    stBaseAddrSet.fw_DVBTx_config_reg_base +
+				rc_DVBTx_input_format_caddr_offset,
+			    AVL_OFFBIN);
+	r |= avl_bms_write8(chip->chip_pub->i2c_addr,
+			    stBaseAddrSet.fw_DVBTx_config_reg_base +
+				rc_DVBTx_input_select_caddr_offset,
+			    AVL_ADC_IN);
+	r |= avl_bms_write8(chip->chip_pub->i2c_addr,
+			    stBaseAddrSet.fw_DVBTx_config_reg_base +
+				rc_DVBTx_tuner_type_caddr_offset,
+			    chip->chip_pub->tc_tuner_type);
 
-    return (r);
+	r |= avl_bms_write8(chip->chip_pub->i2c_addr,
+			    stBaseAddrSet.fw_DVBTx_config_reg_base +
+				rc_DVBTx_rf_agc_pol_caddr_offset,
+			    chip->chip_pub->dvbtx_config.eDVBTxAGCPola);
+	r |= DVBTx_SetIFFrequency_Demod(
+	    chip->chip_pub->dvbtx_config.uiDVBTxIFFreqHz,
+	    chip);
+	r |= DVBTx_SetIFInputPath_Demod(
+	    (AVL_InputPath)(chip->chip_pub->dvbtx_config.eDVBTxInputPath ^ 1),
+	    chip);
+
+	//ADC configuration
+	switch (chip->chip_pub->xtal)
+	{
+	case Xtal_16M:
+	case Xtal_24M:
+	{
+		r |= avl_bms_write8(chip->chip_pub->i2c_addr,
+				    stBaseAddrSet.fw_DVBTx_config_reg_base +
+					rc_DVBTx_adc_use_pll_clk_caddr_offset,
+				    1);
+	}
+	break;
+	case Xtal_30M:
+	case Xtal_27M:
+	{
+		r |= avl_bms_write8(chip->chip_pub->i2c_addr,
+				    stBaseAddrSet.fw_DVBTx_config_reg_base +
+					rc_DVBTx_adc_use_pll_clk_caddr_offset,
+				    0);
+	}
+	break;
+	}
+
+	if (chip->ucDisableTCAGC == 0)
+	{
+		r |= EnableTCAGC_Demod(chip);
+	}
+	else
+	{
+		r |= DisableTCAGC_Demod(chip);
+	}
+
+	return (r);
 }
 
 avl_error_code_t DVBTx_GetLockStatus_Demod( uint8_t * pucLocked, avl68x2_chip *chip)

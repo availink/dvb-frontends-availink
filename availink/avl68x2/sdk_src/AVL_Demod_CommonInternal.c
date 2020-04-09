@@ -67,7 +67,7 @@ avl_error_code_t avl68x2_init_chip_object(avl68x2_chip *chip)
 
     chip->chip_priv->agc_driven = 0;
 
-    chip->chip_pub->dvbsx_para.eDiseqcStatus = AVL_DOS_Uninitialized;
+    chip->chip_pub->eDiseqcStatus = AVL_DOS_Uninitialized;
 
     return (r);
 }
