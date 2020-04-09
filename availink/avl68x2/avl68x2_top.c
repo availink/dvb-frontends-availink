@@ -29,7 +29,7 @@
 #include "AVL_Demod_DVBC.h"
 #include "AVL_Demod_ISDBT.h"
 
-//#define INCLUDE_STDOUT	1
+#define INCLUDE_STDOUT	1
 
 #define dbg_avl(fmt, args...)                                           \
 	do                                                              \
@@ -952,6 +952,7 @@ static int get_frontend(struct dvb_frontend *fe,
 	return ret;
 }
 
+
 #if INCLUDE_STDOUT
 #include "read_stdout.c"
 #endif
@@ -1220,7 +1221,6 @@ static struct dvb_frontend_ops avl68x2_ops = {
 	    FE_CAN_INVERSION_AUTO |
 	    FE_CAN_GUARD_INTERVAL_AUTO |
 	    FE_CAN_HIERARCHY_AUTO |
-	    FE_CAN_BANDWIDTH_AUTO |
 	    FE_CAN_RECOVER},
 
     .release = avl68x2_release,
