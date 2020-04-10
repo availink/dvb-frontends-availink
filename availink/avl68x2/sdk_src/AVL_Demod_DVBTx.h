@@ -81,12 +81,6 @@
 
 #define rs_DVBTx_Signal_Presence_iaddr_offset        0x00000150
 
-typedef enum AVL_DVBTx_TunerType
-{
-    AVL_DVBTX_REAL_IF            =   0,
-    AVL_DVBTX_COMPLEX_BASEBAND   =   1,
-    AVL_DVBTX_REAL_IF_FROM_Q     =   2
-}AVL_DVBTx_TunerType;
 
 typedef enum AVL_DVBT2_PLP_Type
 {
