@@ -744,7 +744,7 @@ avl_error_code_t DVBSx_Initialize_Demod(avl68x2_chip *chip)
     }
 #else
         r |= EnableTCAGC_Demod(chip);
-        r |= DisableSAGC_Demod(chip);
+        r |= EnableSAGC_Demod(chip);
 
 #endif
 
