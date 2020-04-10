@@ -95,6 +95,8 @@ struct avl_tuner default_avl_tuner = {
 
 void avl68x2_reset(int gpio, int i)
 {
+	if(gpio < 0)
+		return;
 	if(!gpio_is_valid(gpio))
 		return;
 	
@@ -108,6 +110,8 @@ void avl68x2_set_lock_led(struct dvb_frontend *fe, int val)
 {
 	struct avl68x2_priv *priv = fe->demodulator_priv;
 	int lock_led = priv->chip->chip_pub->gpio_lock_led;
+	if(lock_led < 0)
+		return;
 	if(gpio_is_valid(lock_led))
 	{
 		gpio_direction_output(lock_led, val);
