@@ -11,7 +11,8 @@
 
 
 extern avl68x2_chip gstChipInternalArray[2];
-extern int j83b_auto_symrate;
+extern int cable_auto_symrate;
+extern int cable_auto_cfo;
 
 avl_error_code_t AVL_Demod_DVBCAutoLock(
     AVL_DVBC_Standard std,
@@ -37,12 +38,18 @@ avl_error_code_t AVL_Demod_DVBCAutoLock(
 				rc_DVBC_lock_mode_caddr_offset,
 			    1);
 
-	if (j83b_auto_symrate)
+	if (cable_auto_symrate)
 	{
+		//enable auto QAM/symbolrate detection for J83B
+		//enable auto symbolrate detection for DVB-C
 		r |= avl_bms_write32(chip->chip_pub->i2c_addr,
 				     stBaseAddrSet.fw_DVBC_config_reg_base +
 					 rc_DVBC_qam_mode_scan_control_iaddr_offset,
-				     0x0101); //enable auto QAM/symbolrate detection
+				     0x0101);
+		r |= avl_bms_write8(chip->chip_pub->i2c_addr,
+				    stBaseAddrSet.fw_DVBC_config_reg_base +
+					rc_DVBC_auto_symbol_rate_detect_caddr_offset,
+				    1);
 	}
 	else
 	{
@@ -50,7 +57,26 @@ avl_error_code_t AVL_Demod_DVBCAutoLock(
 				     stBaseAddrSet.fw_DVBC_config_reg_base +
 					 rc_DVBC_qam_mode_scan_control_iaddr_offset,
 				     0);
+		r |= avl_bms_write8(chip->chip_pub->i2c_addr,
+				    stBaseAddrSet.fw_DVBC_config_reg_base +
+					rc_DVBC_auto_symbol_rate_detect_caddr_offset,
+				    0);
 	}
+	if(cable_auto_cfo)
+	{
+		r |= avl_bms_write8(chip->chip_pub->i2c_addr,
+				    stBaseAddrSet.fw_DVBC_config_reg_base +
+					rc_DVBC_auto_cfo_detect_caddr_offset,
+				    1);
+	}
+	else
+	{
+		r |= avl_bms_write8(chip->chip_pub->i2c_addr,
+				    stBaseAddrSet.fw_DVBC_config_reg_base +
+					rc_DVBC_auto_cfo_detect_caddr_offset,
+				    0);
+	}
+	
 
 	r |= IBase_SendRxOPWait_Demod(AVL_FW_CMD_ACQUIRE, chip);
 

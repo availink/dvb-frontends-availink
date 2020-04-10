@@ -33,7 +33,7 @@
 //MAJOR = public API rev
 //minor = SDK API rev (a.k.a. SDK API MAJOR rev)
 //build number = increment on every change to implementation
-#define AVL68X2_VERSION       "1." xstr(AVL68X2_SDK_VER_MAJOR) ".0"
+#define AVL68X2_VERSION       "1." xstr(AVL68X2_SDK_VER_MAJOR) ".1"
 
 
 struct avl68x2_priv

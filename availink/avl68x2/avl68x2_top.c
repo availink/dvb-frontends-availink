@@ -47,7 +47,8 @@
 	} while (0);
 
 int debug = 0;
-int j83b_auto_symrate = 1;
+int cable_auto_symrate = 1;
+int cable_auto_cfo = 1;
 
 
 
@@ -1388,8 +1389,11 @@ err:
 module_param(debug, int, 0644);
 MODULE_PARM_DESC(debug, "\n\t\tEnable debug information");
 
-module_param(j83b_auto_symrate, int, 0644);
-MODULE_PARM_DESC(j83b_auto_symrate, "\n\t\tEnable automatic symbol rate detection for J83B");
+module_param(cable_auto_symrate, int, 0644);
+MODULE_PARM_DESC(cable_auto_symrate, "\n\t\tEnable automatic symbol rate detection for cable standards (def. on)");
+
+module_param(cable_auto_cfo, int, 0644);
+MODULE_PARM_DESC(cable_auto_cfo, "\n\t\tEnable automatic carrier frequency offset detection for cable standards (def. on)");
 
 EXPORT_SYMBOL_GPL(avl68x2_attach);
 EXPORT_SYMBOL_GPL(default_dvbtx_config);

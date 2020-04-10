@@ -10,30 +10,27 @@
 #define AVL_DVBC_H
 #include "AVL_Demod.h"
 
-
-
-
 //DVBC config registers offset address
-#define rc_DVBC_symbol_rate_Hz_iaddr_offset                     0x00000000
-#define rc_DVBC_sample_rate_Hz_iaddr_offset                     0x00000004
-#define rc_DVBC_dmd_clk_Hz_iaddr_offset                         0x00000008
-#define rc_DVBC_j83b_mode_caddr_offset                          0x00000017
-#define rc_DVBC_no_signal_input_iaddr_offset                    0x00000018
-#define rc_DVBC_tuner_type_caddr_offset                         0x00000024
-#define rc_DVBC_input_format_caddr_offset                       0x00000025
-#define rc_DVBC_spectrum_invert_caddr_offset                    0x00000026
-#define rc_DVBC_input_select_caddr_offset                       0x00000027
-#define rc_DVBC_if_freq_Hz_iaddr_offset                         0x00000028
-#define rc_DVBC_qam_mode_iaddr_offset                           0x0000002c
-#define rc_DVBC_rfagc_pol_caddr_offset						    0x00000049
-#define rc_DVBC_fec_clk_Hz_iaddr_offset                         0x00000050
-#define rc_DVBC_get_btr_crl_iaddr_offset                        0x00000080
-#define rc_DVBC_qam_mode_scan_control_iaddr_offset              0x00000090
-#define rc_DVBC_lock_mode_caddr_offset                          0x00000093
-#define rc_DVBC_adc_sel_caddr_offset							0x000001ef
-#define rc_DVBC_adc_use_pll_clk_caddr_offset				    0x000001ee
-
-
+#define rc_DVBC_symbol_rate_Hz_iaddr_offset		0x00000000
+#define rc_DVBC_sample_rate_Hz_iaddr_offset		0x00000004
+#define rc_DVBC_dmd_clk_Hz_iaddr_offset			0x00000008
+#define rc_DVBC_j83b_mode_caddr_offset			0x00000017
+#define rc_DVBC_no_signal_input_iaddr_offset		0x00000018
+#define rc_DVBC_tuner_type_caddr_offset			0x00000024
+#define rc_DVBC_input_format_caddr_offset		0x00000025
+#define rc_DVBC_spectrum_invert_caddr_offset		0x00000026
+#define rc_DVBC_input_select_caddr_offset		0x00000027
+#define rc_DVBC_if_freq_Hz_iaddr_offset			0x00000028
+#define rc_DVBC_qam_mode_iaddr_offset			0x0000002c
+#define rc_DVBC_rfagc_pol_caddr_offset			0x00000049
+#define rc_DVBC_fec_clk_Hz_iaddr_offset			0x00000050
+#define rc_DVBC_get_btr_crl_iaddr_offset		0x00000080
+#define rc_DVBC_qam_mode_scan_control_iaddr_offset	0x00000090
+#define rc_DVBC_lock_mode_caddr_offset			0x00000093
+#define rc_DVBC_adc_sel_caddr_offset			0x000001ef
+#define rc_DVBC_adc_use_pll_clk_caddr_offset		0x000001ee
+#define rc_DVBC_auto_cfo_detect_caddr_offset		0x000001f6
+#define rc_DVBC_auto_symbol_rate_detect_caddr_offset	0x000001f7
 
 //DVBC status registers offset address
 #define rs_DVBC_mode_status_iaddr_offset                        0x00000004
