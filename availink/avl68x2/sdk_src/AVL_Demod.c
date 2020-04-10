@@ -278,7 +278,7 @@ avl_error_code_t AVL_Demod_SetMode(AVL_DemodMode eDemodMode, avl68x2_chip *chip)
 
 	//r |= SetGPIOStatus_Demod(chip);
 
-	//r |= TunerI2C_Initialize_Demod(chip);
+	r |= TunerI2C_Initialize_Demod(chip);
 
 	r |= InitErrorStat_Demod(chip);
 

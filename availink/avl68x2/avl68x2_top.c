@@ -1047,7 +1047,7 @@ static int avl68x2_read_status(struct dvb_frontend *fe, enum fe_status *status)
 #endif	   
 	  ret |= AVL_Demod_GetSNR (&SNR_x100db, priv->chip);
 	  ret = (int)AVL_Demod_GetPER(&ber, priv->chip);
-	  printk("AVL: %s: read status %d, snr = %d, ber = %d\n",__func__,*status, SNR_x100db, ber);
+	  printk("AVL: %s: read status %d, snr = %d, per = %d\n",__func__,*status, SNR_x100db, ber);
 	}
 
 #if INCLUDE_STDOUT
