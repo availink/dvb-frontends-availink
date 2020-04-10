@@ -203,7 +203,6 @@ avl_error_code_t AVL_Demod_SetMode(AVL_DemodMode eDemodMode, avl68x2_chip *chip)
 	uint32_t uiMaxRetries = 40; //time out window 5*40 = 200ms
 	uint8_t *pInitialData = 0;
 	uint32_t i = 0;
-	uint32_t ui_patch_idx = 0;
 
 	r = GetMode_Demod(&chip->chip_pub->cur_demod_mode, chip);
 	if (r != AVL_EC_OK)

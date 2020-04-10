@@ -29,7 +29,8 @@
 #include "AVL_Demod_DVBC.h"
 #include "AVL_Demod_ISDBT.h"
 
-#define INCLUDE_STDOUT	1
+#define INCLUDE_STDOUT	0
+
 
 #define dbg_avl(fmt, args...)                                           \
 	do                                                              \
@@ -974,7 +975,7 @@ static int avl68x2_read_status(struct dvb_frontend *fe, enum fe_status *status)
 		*status = FE_HAS_SIGNAL | FE_HAS_CARRIER |
 			  FE_HAS_VITERBI | FE_HAS_SYNC | FE_HAS_LOCK;
 		ret |= get_frontend(fe, &fe->dtv_property_cache);
-		if (lock_led)
+		if (lock_led >= 0)
 		{
 			gpio_request(lock_led, KBUILD_MODNAME);
 			gpio_direction_output(lock_led, 1);
@@ -983,7 +984,7 @@ static int avl68x2_read_status(struct dvb_frontend *fe, enum fe_status *status)
 	else
 	{
 		*status = FE_HAS_SIGNAL;
-		if (lock_led)
+		if (lock_led >= 0)
 		{
 			gpio_request(lock_led, KBUILD_MODNAME);
 			gpio_direction_output(lock_led, 0);
@@ -1089,7 +1090,7 @@ static int set_frontend(struct dvb_frontend *fe)
 	struct avl68x2_priv *priv = fe->demodulator_priv;
 	int lock_led = priv->chip->chip_pub->gpio_lock_led;
 
-	if (lock_led)
+	if (lock_led >= 0)
 	{
 		gpio_request(lock_led, KBUILD_MODNAME);
 		gpio_direction_output(lock_led, 0);
@@ -1249,7 +1250,7 @@ struct dvb_frontend *avl68x2_attach(struct avl68x2_config *config,
 {
 	struct avl68x2_priv *priv;
 	avl_error_code_t ret;
-	uint32_t id;
+	uint32_t id, chip_id;
 
 	dbg_avl("start demod attach");
 
@@ -1308,9 +1309,7 @@ struct dvb_frontend *avl68x2_attach(struct avl68x2_config *config,
 			KBUILD_MODNAME);
 		goto err5;
 	}
-
-	dbg_avl("chip_id= 0x%x\n", id);
-
+	dbg_avl("family_id= 0x%x\n", id);
 	if (id != AVL68XX)
 	{
 		dev_err(&priv->i2c->dev, "%s: attach failed, id mismatch",
@@ -1318,8 +1317,11 @@ struct dvb_frontend *avl68x2_attach(struct avl68x2_config *config,
 		goto err5;
 	}
 
-	dev_info(&priv->i2c->dev, "%s: found AVL68x2 id=0x%x",
-		 KBUILD_MODNAME, id);
+	ret |= AVL_Demod_GetChipID(&chip_id, priv->chip);
+	dbg_avl("chip_id= 0x%x\n",chip_id);
+
+	dev_info(&priv->i2c->dev, "%s: found AVL68x2 family=0x%x id=0x%x",
+		 KBUILD_MODNAME, id, chip_id);
 
 	if(avl68x2_get_firmware(&priv->frontend,SYS_DVBS))
 	{
@@ -1331,6 +1333,13 @@ struct dvb_frontend *avl68x2_attach(struct avl68x2_config *config,
 		dev_info(&priv->i2c->dev,
 			 KBUILD_MODNAME ": Firmware booted");
 		return &priv->frontend;
+	}
+
+
+	if(priv->chip->chip_pub->gpio_lock_led >= 0)
+	{
+		gpio_request(priv->chip->chip_pub->gpio_lock_led, KBUILD_MODNAME);
+		gpio_direction_output(priv->chip->chip_pub->gpio_lock_led, 0);
 	}
 
 err5:
