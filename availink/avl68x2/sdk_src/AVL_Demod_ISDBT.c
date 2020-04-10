@@ -16,7 +16,9 @@ static int BW_FFT_Table[2]=
     10835979    //bw=8.0MHz
   };
 
-avl_error_code_t AVL_Demod_ISDBTAutoLock(avl68x2_chip *chip)
+avl_error_code_t AVL_Demod_ISDBTAutoLock(
+	AVL_ISDBT_BandWidth bw,
+avl68x2_chip *chip)
 {
 	avl_error_code_t r = AVL_EC_OK;
 
@@ -27,7 +29,10 @@ avl_error_code_t AVL_Demod_ISDBTAutoLock(avl68x2_chip *chip)
 	}
 	r = IBase_SendRxOPWait_Demod(AVL_FW_CMD_HALT, chip);
 
-	ISDBT_SetIFFrequency_Demod((uint32_t)chip->chip_pub->isdbt_para.uiISDBTIFFreqHz, chip);
+	r |= ISDBT_SetBandWidth_Demod(bw,chip);
+	r |= ISDBT_SetIFFrequency_Demod(
+	    (uint32_t)chip->chip_pub->isdbt_config.uiISDBTIFFreqHz,
+	    chip);
 
 	// Enable CS_0 as GPIO for EWBS feature
 	r |= avl_bms_write32(chip->chip_pub->i2c_addr,
@@ -36,7 +41,10 @@ avl_error_code_t AVL_Demod_ISDBTAutoLock(avl68x2_chip *chip)
 			     0x1);
 
 	// for ISDBT Layer independence lock
-	r |= avl_bms_write8(chip->chip_pub->i2c_addr, 0xA83, 0x01);
+	r |= avl_bms_write8(chip->chip_pub->i2c_addr,
+			    stBaseAddrSet.fw_ISDBT_config_reg_base +
+				rc_ISDBT_mult_layer_op_mode_caddr_offset,
+			    0x01);
 
 	r |= IBase_SendRxOPWait_Demod(AVL_FW_CMD_ACQUIRE, chip);
 
@@ -99,60 +107,81 @@ avl_error_code_t AVL_Demod_ISDBTGetModulationInfo(AVL_ISDBTModulationInfo *pstMo
 
 avl_error_code_t ISDBT_Initialize_Demod(avl68x2_chip *chip)
 {
-    avl_error_code_t r = AVL_EC_OK;
+	avl_error_code_t r = AVL_EC_OK;
 
-    r = avl_bms_write32(chip->chip_pub->i2c_addr, stBaseAddrSet.fw_ISDBT_config_reg_base + rc_ISDBT_sample_rate_Hz_iaddr_offset, chip->uiADCFrequencyHz);
-    r |= avl_bms_write32(chip->chip_pub->i2c_addr, stBaseAddrSet.fw_ISDBT_config_reg_base + rc_ISDBT_TS_clk_rate_Hz_iaddr_offset, chip->uiTSFrequencyHz);
+	r = avl_bms_write32(chip->chip_pub->i2c_addr,
+			    stBaseAddrSet.fw_ISDBT_config_reg_base +
+				rc_ISDBT_sample_rate_Hz_iaddr_offset,
+			    chip->uiADCFrequencyHz);
+	r |= avl_bms_write32(chip->chip_pub->i2c_addr,
+			     stBaseAddrSet.fw_ISDBT_config_reg_base +
+				 rc_ISDBT_TS_clk_rate_Hz_iaddr_offset,
+			     chip->uiTSFrequencyHz);
 
-    //DDC configuration
-    r |= avl_bms_write8(chip->chip_pub->i2c_addr, stBaseAddrSet.fw_ISDBT_config_reg_base + rc_ISDBT_input_format_caddr_offset, AVL_OFFBIN);//ADC in
-    r |= avl_bms_write8(chip->chip_pub->i2c_addr, stBaseAddrSet.fw_ISDBT_config_reg_base + rc_ISDBT_input_select_caddr_offset, AVL_ADC_IN);//RX_OFFBIN
-    r |= avl_bms_write8(chip->chip_pub->i2c_addr, stBaseAddrSet.fw_ISDBT_config_reg_base + rc_ISDBT_tuner_type_caddr_offset, 2);//RX_REAL_IF_FROM_Q
+	//DDC configuration
+	r |= avl_bms_write8(chip->chip_pub->i2c_addr,
+			    stBaseAddrSet.fw_ISDBT_config_reg_base +
+				rc_ISDBT_input_format_caddr_offset,
+			    AVL_OFFBIN); //ADC in
+	r |= avl_bms_write8(chip->chip_pub->i2c_addr,
+			    stBaseAddrSet.fw_ISDBT_config_reg_base +
+				rc_ISDBT_input_select_caddr_offset,
+			    AVL_ADC_IN); //RX_OFFBIN
+	r |= avl_bms_write8(chip->chip_pub->i2c_addr,
+			    stBaseAddrSet.fw_ISDBT_config_reg_base +
+				rc_ISDBT_tuner_type_caddr_offset,
+			    chip->chip_pub->tc_tuner_type);
 
-    r |= avl_bms_write8(chip->chip_pub->i2c_addr,
-        stBaseAddrSet.fw_ISDBT_config_reg_base + rc_ISDBT_rf_agc_pol_caddr_offset,
-        chip->chip_pub->isdbt_para.eISDBTAGCPola);
+	r |= avl_bms_write8(chip->chip_pub->i2c_addr,
+			    stBaseAddrSet.fw_ISDBT_config_reg_base +
+				rc_ISDBT_rf_agc_pol_caddr_offset,
+			    chip->chip_pub->isdbt_config.eISDBTAGCPola);
 
-    r |= ISDBT_SetIFFrequency_Demod(chip->chip_pub->isdbt_para.uiISDBTIFFreqHz,chip);
-    r |= ISDBT_SetIFInputPath_Demod((AVL_InputPath)(chip->chip_pub->isdbt_para.eISDBTInputPath^1),chip);
-    r |= ISDBT_SetBandWidth_Demod(chip->chip_pub->isdbt_para.eISDBTBandwidth, chip);
-    
-    //ADC configuration 
-    switch(chip->chip_pub->xtal)
-    {
-     case Xtal_16M :
-     case Xtal_24M :
-        {
-          r |= avl_bms_write8(chip->chip_pub->i2c_addr, 
-            stBaseAddrSet.fw_ISDBT_config_reg_base + rc_ISDBT_adc_use_pll_clk_offset, 1);
-          
-        }
-        break;  
-        
-    case Xtal_30M :
-    case Xtal_27M :
-        {
-          r |= avl_bms_write8(chip->chip_pub->i2c_addr, 
-            stBaseAddrSet.fw_ISDBT_config_reg_base + rc_ISDBT_adc_use_pll_clk_offset, 0);
-          
-        }
-        break;
-    }
+	r |= ISDBT_SetIFFrequency_Demod(
+	    chip->chip_pub->isdbt_config.uiISDBTIFFreqHz,
+	    chip);
+	r |= ISDBT_SetIFInputPath_Demod(
+	    (AVL_InputPath)(chip->chip_pub->isdbt_config.eISDBTInputPath ^ 1),
+	    chip);
 
-    //AGC configuration
-    r |= avl_bms_write32(chip->chip_pub->i2c_addr,
-        stBaseAddrSet.hw_gpio_debug_base + agc1_sel_offset, 6);
-    
-    if(chip->ucDisableTCAGC == 0)
-    {
-        r |= EnableTCAGC_Demod(chip);
-    }
-    else
-    {
-        r |= DisableTCAGC_Demod(chip);
-    }
+	//ADC configuration
+	switch (chip->chip_pub->xtal)
+	{
+	case Xtal_16M:
+	case Xtal_24M:
+	{
+		r |= avl_bms_write8(chip->chip_pub->i2c_addr,
+				    stBaseAddrSet.fw_ISDBT_config_reg_base +
+					rc_ISDBT_adc_use_pll_clk_caddr_offset,
+				    1);
+	}
+	break;
 
-    return (r);
+	case Xtal_30M:
+	case Xtal_27M:
+	{
+		r |= avl_bms_write8(chip->chip_pub->i2c_addr,
+				    stBaseAddrSet.fw_ISDBT_config_reg_base +
+					rc_ISDBT_adc_use_pll_clk_caddr_offset,
+				    0);
+	}
+	break;
+	}
+
+	//AGC configuration
+	r |= avl_bms_write32(chip->chip_pub->i2c_addr,
+			     stBaseAddrSet.hw_gpio_debug_base + agc1_sel_offset, 6);
+
+	if (chip->ucDisableTCAGC == 0)
+	{
+		r |= EnableTCAGC_Demod(chip);
+	}
+	else
+	{
+		r |= DisableTCAGC_Demod(chip);
+	}
+
+	return (r);
 }
 
 avl_error_code_t ISDBT_GetLockStatus_Demod( uint8_t * pucLocked, avl68x2_chip *chip )

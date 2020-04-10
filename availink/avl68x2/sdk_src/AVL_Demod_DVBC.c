@@ -11,56 +11,92 @@
 
 
 extern avl68x2_chip gstChipInternalArray[2];
+extern int j83b_auto_symrate;
 
-avl_error_code_t AVL_Demod_DVBCAutoLock(avl68x2_chip *chip)
+avl_error_code_t AVL_Demod_DVBCAutoLock(
+    AVL_DVBC_Standard std,
+    uint32_t uiSymbolRateSps,
+    avl68x2_chip *chip)
 {
-    avl_error_code_t r = AVL_EC_OK;
+	avl_error_code_t r = AVL_EC_OK;
 
-    if(1 == chip->chip_priv->sleep_flag)
-    {
-        r = AVL_EC_SLEEP;
-        return r;
-    }
+	if (1 == chip->chip_priv->sleep_flag)
+	{
+		r = AVL_EC_SLEEP;
+		return r;
+	}
 
-    r = IBase_SendRxOPWait_Demod(AVL_FW_CMD_HALT, chip);
+	r = IBase_SendRxOPWait_Demod(AVL_FW_CMD_HALT, chip);
 
-    r |= avl_bms_write32(chip->chip_pub->i2c_addr, 
-        stBaseAddrSet.fw_DVBC_config_reg_base + rc_DVBC_qam_mode_scan_control_iaddr_offset, 0x0101);  
-    
-    r |= IBase_SendRxOPWait_Demod(AVL_FW_CMD_ACQUIRE, chip);
+	r |= DVBC_SetStandard_Demod(std, chip);
 
-    return r;
+	r |= DVBC_SetSymbolRate_Demod(uiSymbolRateSps, chip);
+
+	r |= avl_bms_write8(chip->chip_pub->i2c_addr,
+			    stBaseAddrSet.fw_DVBC_config_reg_base +
+				rc_DVBC_lock_mode_caddr_offset,
+			    1);
+
+	if (j83b_auto_symrate)
+	{
+		r |= avl_bms_write32(chip->chip_pub->i2c_addr,
+				     stBaseAddrSet.fw_DVBC_config_reg_base +
+					 rc_DVBC_qam_mode_scan_control_iaddr_offset,
+				     0x0101); //enable auto QAM/symbolrate detection
+	}
+	else
+	{
+		r |= avl_bms_write32(chip->chip_pub->i2c_addr,
+				     stBaseAddrSet.fw_DVBC_config_reg_base +
+					 rc_DVBC_qam_mode_scan_control_iaddr_offset,
+				     0);
+	}
+
+	r |= IBase_SendRxOPWait_Demod(AVL_FW_CMD_ACQUIRE, chip);
+
+	return r;
 }
 
-avl_error_code_t AVL_Demod_DVBCManualLock (uint32_t uiSymbolRateSps,AVL_DVBCQAMMode eQAMMode, avl68x2_chip *chip)
+avl_error_code_t AVL_Demod_DVBCManualLock(
+    AVL_DVBC_Standard std,
+    uint32_t uiSymbolRateSps,
+    AVL_DVBCQAMMode eQAMMode,
+    avl68x2_chip *chip)
 {
-    avl_error_code_t r = AVL_EC_OK;
-    uint32_t uiTemp = 0;
+	avl_error_code_t r = AVL_EC_OK;
+	uint32_t uiTemp = 0;
 
-    if(1 == chip->chip_priv->sleep_flag)
-    {
-        r = AVL_EC_SLEEP;
-        return r;
-    }
+	if (1 == chip->chip_priv->sleep_flag)
+	{
+		r = AVL_EC_SLEEP;
+		return r;
+	}
 
-    r = IBase_SendRxOPWait_Demod(AVL_FW_CMD_HALT, chip);
-    
-    r |= avl_bms_write32(chip->chip_pub->i2c_addr, 
-        stBaseAddrSet.fw_DVBC_config_reg_base + rc_DVBC_symbol_rate_Hz_iaddr_offset, uiSymbolRateSps);
-    r |= avl_bms_read32(chip->chip_pub->i2c_addr, 
-        stBaseAddrSet.fw_DVBC_config_reg_base + rc_DVBC_qam_mode_iaddr_offset, &uiTemp);                   
-    uiTemp &= 0xFFFFFF00;
-    
-    uiTemp |= ((uint32_t)(eQAMMode))<<0;
-    r |= avl_bms_write32(chip->chip_pub->i2c_addr, 
-        stBaseAddrSet.fw_DVBC_config_reg_base + rc_DVBC_qam_mode_iaddr_offset, uiTemp);   
+	r = IBase_SendRxOPWait_Demod(AVL_FW_CMD_HALT, chip);
 
-    r |= avl_bms_write8(chip->chip_pub->i2c_addr, 
-        stBaseAddrSet.fw_DVBC_config_reg_base + rc_DVBC_lock_mode_caddr_offset, 0);
+	r |= DVBC_SetStandard_Demod(std, chip);
 
-    r |= IBase_SendRxOPWait_Demod(AVL_FW_CMD_ACQUIRE, chip);
+	r |= DVBC_SetSymbolRate_Demod(uiSymbolRateSps, chip);
+	r |= avl_bms_read32(chip->chip_pub->i2c_addr,
+			    stBaseAddrSet.fw_DVBC_config_reg_base +
+				rc_DVBC_qam_mode_iaddr_offset,
+			    &uiTemp);
+	uiTemp &= 0xFFFFFF00;
 
-    return r ;
+	uiTemp |= ((uint32_t)(eQAMMode)) << 0;
+	r |= avl_bms_write32(chip->chip_pub->i2c_addr,
+			     stBaseAddrSet.fw_DVBC_config_reg_base +
+				 rc_DVBC_qam_mode_iaddr_offset,
+			     uiTemp);
+
+	r |= avl_bms_write8(chip->chip_pub->i2c_addr,
+			    stBaseAddrSet.fw_DVBC_config_reg_base +
+				rc_DVBC_lock_mode_caddr_offset,
+			    0);
+
+	r |= IBase_SendRxOPWait_Demod(AVL_FW_CMD_ACQUIRE, chip);
+
+	return r;
 }
 
 avl_error_code_t AVL_Demod_DVBCGetModulationInfo(AVL_DVBCModulationInfo *pstModulationInfo, avl68x2_chip *chip)
@@ -84,10 +120,6 @@ avl_error_code_t DVBC_Initialize_Demod(avl68x2_chip *chip)
 {
     avl_error_code_t r = AVL_EC_OK;  
 
-    r = avl_bms_write8(chip->chip_pub->i2c_addr, 
-         stBaseAddrSet.fw_DVBC_config_reg_base + rc_DVBC_j83b_mode_caddr_offset, 
-         chip->chip_pub->dvbc_para.eDVBCStandard);
-
     r |= avl_bms_write32(chip->chip_pub->i2c_addr, 
         stBaseAddrSet.fw_DVBC_config_reg_base + rc_DVBC_dmd_clk_Hz_iaddr_offset,
         chip->uiCoreFrequencyHz);
@@ -97,14 +129,12 @@ avl_error_code_t DVBC_Initialize_Demod(avl68x2_chip *chip)
 
     r |= avl_bms_write8(chip->chip_pub->i2c_addr,
         stBaseAddrSet.fw_DVBC_config_reg_base + rc_DVBC_rfagc_pol_caddr_offset,
-        chip->chip_pub->dvbc_para.eDVBCAGCPola);
+        chip->chip_pub->dvbc_config.eDVBCAGCPola);
     
    
     
-    r |= DVBC_SetIFFrequency_Demod(chip->chip_pub->dvbc_para.uiDVBCIFFreqHz,chip);
-    r |= DVBC_SetIFInputPath_Demod((AVL_InputPath)(chip->chip_pub->dvbc_para.eDVBCInputPath^1),chip);
-    r |= DVBC_SetSymbolRate_Demod(chip->chip_pub->dvbc_para.uiDVBCSymbolRateSps,chip);
-    r |= DVBC_SetStandard_Demod(chip->chip_pub->dvbc_para.eDVBCStandard,chip);
+    r |= DVBC_SetIFFrequency_Demod(chip->chip_pub->dvbc_config.uiDVBCIFFreqHz,chip);
+    r |= DVBC_SetIFInputPath_Demod((AVL_InputPath)(chip->chip_pub->dvbc_config.eDVBCInputPath^1),chip);
 
     //DDC configuration
     r |= avl_bms_write8(chip->chip_pub->i2c_addr, 
@@ -112,7 +142,8 @@ avl_error_code_t DVBC_Initialize_Demod(avl68x2_chip *chip)
     r |= avl_bms_write8(chip->chip_pub->i2c_addr, 
         stBaseAddrSet.fw_DVBC_config_reg_base + rc_DVBC_input_select_caddr_offset, AVL_OFFBIN);//RX_OFFBIN
     r |= avl_bms_write8(chip->chip_pub->i2c_addr, 
-        stBaseAddrSet.fw_DVBC_config_reg_base + rc_DVBC_tuner_type_caddr_offset, AVL_DVBC_IF);//IF
+        stBaseAddrSet.fw_DVBC_config_reg_base + rc_DVBC_tuner_type_caddr_offset,
+	chip->chip_pub->tc_tuner_type);
 
     //ADC configuration 
     switch(chip->chip_pub->xtal)

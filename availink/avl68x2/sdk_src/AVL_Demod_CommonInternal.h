@@ -486,12 +486,6 @@
     }AVL_GPIOPinValue;
 
   
-  typedef struct AVL_DVBTxPara
-  {
-    AVL_InputPath eDVBTxInputPath;
-    uint32_t uiDVBTxIFFreqHz;
-    AVL_AGCPola eDVBTxAGCPola;
-  } AVL_DVBTxPara;
   
   typedef enum AVL_Diseqc_WaveFormMode
     {
@@ -499,26 +493,12 @@
       AVL_DWM_Envelope = 1                        // Envelope waveform mode
     }AVL_Diseqc_WaveFormMode;
   
-  typedef struct AVL_DVBSxPara
-  {
-    AVL_DiseqcStatus eDiseqcStatus;
-    AVL_AGCPola eDVBSxAGCPola;
-    AVL_Diseqc_WaveFormMode e22KWaveForm;
-  }AVL_DVBSxPara;
-  
   typedef enum AVL_ISDBT_BandWidth
     {
       AVL_ISDBT_BW_6M  =   0,
       AVL_ISDBT_BW_8M  =   1,
     }AVL_ISDBT_BandWidth;
   
-  typedef struct AVL_ISDBTPara
-  {
-    AVL_InputPath eISDBTInputPath;
-    AVL_ISDBT_BandWidth eISDBTBandwidth;
-    uint32_t uiISDBTIFFreqHz;
-    AVL_AGCPola eISDBTAGCPola;
-  } AVL_ISDBTPara;
   
   typedef struct AVL_DTMBPara
   {
@@ -534,15 +514,6 @@
       AVL_DVBC_J83B    =   1,           //the J83B standard
       AVL_DVBC_UNKNOWN =   2
     }AVL_DVBC_Standard;
-  
-  typedef struct AVL_DVBCPara
-  {
-    AVL_InputPath eDVBCInputPath;
-    uint32_t uiDVBCIFFreqHz;
-    uint32_t uiDVBCSymbolRateSps;
-    AVL_AGCPola eDVBCAGCPola;
-    AVL_DVBC_Standard eDVBCStandard;
-  } AVL_DVBCPara;
   
   /**************************************************/
   
@@ -583,9 +554,7 @@
   { 
     AVL_InputPath eDVBCInputPath;
     uint32_t uiDVBCIFFreqHz;
-    uint32_t uiDVBCSymbolRateSps;
     AVL_AGCPola eDVBCAGCPola;
-    AVL_DVBC_Standard eDVBCStandard;
   } AVL_DVBCConfig;
   
   typedef struct AVL_DVBSxConfig
@@ -598,10 +567,16 @@
   typedef struct AVL_ISDBTConfig
   { 
     AVL_InputPath eISDBTInputPath;
-    AVL_ISDBT_BandWidth eISDBTBandwidth;
     uint32_t uiISDBTIFFreqHz;
     AVL_AGCPola eISDBTAGCPola;
   } AVL_ISDBTConfig;
+
+  typedef enum AVL_TunerType
+	{
+		AVL_REAL_IF            =   0,
+		AVL_COMPLEX_BASEBAND   =   1,
+		AVL_REAL_IF_FROM_Q     =   2
+	} AVL_TunerType;
 
   typedef struct AVL_BaseAddressSet
   {
@@ -665,14 +640,17 @@ typedef struct avl68x2_chip_pub
   AVL_TSConfig ts_config;
 
   AVL_DemodMode cur_demod_mode;
-  AVL_DVBTxPara dvbtx_para;
-  AVL_DVBSxPara dvbsx_para;
-  AVL_ISDBTPara isdbt_para;
-  AVL_DVBCPara dvbc_para;
+  AVL_DVBTxConfig dvbtx_config;
+  AVL_DVBSxConfig dvbsx_config;
+  AVL_ISDBTConfig isdbt_config;
+  AVL_DVBCConfig dvbc_config;
 
   int32_t gpio_lock_led;
   int32_t gpio_fec_reset;
 
+  AVL_DiseqcStatus eDiseqcStatus;
+
+  AVL_TunerType tc_tuner_type;
   struct avl_tuner *tuner;
 } avl68x2_chip_pub;
 

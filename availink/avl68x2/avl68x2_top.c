@@ -29,7 +29,7 @@
 #include "AVL_Demod_DVBC.h"
 #include "AVL_Demod_ISDBT.h"
 
-#define INCLUDE_STDOUT	0
+#define INCLUDE_STDOUT	1
 
 
 #define dbg_avl(fmt, args...)                                           \
@@ -39,8 +39,15 @@
 			printk("AVL: %s: " fmt "\n", __func__, ##args); \
 	} while (0);
 
-static int debug = 0;
+#define dbg_lvl_avl(lvl,fmt, args...)                                   \
+	do                                                              \
+	{                                                               \
+		if (debug >= lvl)                                       \
+			printk("AVL: %s: " fmt "\n", __func__, ##args); \
+	} while (0);
 
+int debug = 0;
+int j83b_auto_symrate = 1;
 
 
 
@@ -60,7 +67,6 @@ const AVL_DVBSxConfig default_dvbsx_config =
 const AVL_ISDBTConfig default_isdbt_config =
 {
     .eISDBTInputPath = AVL_IF_I,
-    .eISDBTBandwidth = AVL_ISDBT_BW_6M,
     .uiISDBTIFFreqHz = 5*1000*1000,
     .eISDBTAGCPola = AVL_AGC_NORMAL
 };
@@ -69,9 +75,7 @@ const AVL_DVBCConfig default_dvbc_config =
 {
     .eDVBCInputPath = AVL_IF_I,
     .uiDVBCIFFreqHz = 5*1000*1000,
-    .uiDVBCSymbolRateSps = 6875*1000,
-    .eDVBCAGCPola = AVL_AGC_NORMAL,
-    .eDVBCStandard = AVL_DVBC_J83A
+    .eDVBCAGCPola = AVL_AGC_NORMAL
 };
 
 struct avl_tuner default_avl_tuner = {
@@ -91,13 +95,27 @@ struct avl_tuner default_avl_tuner = {
 
 void avl68x2_reset(int gpio, int i)
 {
-	if(!gpio)
+	if(!gpio_is_valid(gpio))
 		return;
 	
 	gpio_direction_output(gpio, i);
 	msleep(600);
 	gpio_direction_output(gpio, 1 - i);
 	msleep(200);
+}
+
+void avl68x2_set_lock_led(struct dvb_frontend *fe, int val)
+{
+	struct avl68x2_priv *priv = fe->demodulator_priv;
+	int lock_led = priv->chip->chip_pub->gpio_lock_led;
+	if(gpio_is_valid(lock_led))
+	{
+		gpio_direction_output(lock_led, val);
+	}
+	else
+	{
+		dbg_lvl_avl(3,"invalid lock LED GPIO %d", lock_led);
+	}
 }
 
 static int diseqc_set_voltage(
@@ -153,7 +171,7 @@ static int avl68x2_init_diseqc(struct dvb_frontend *fe)
   }
   else
   {
-    priv->chip->chip_pub->dvbsx_para.eDiseqcStatus = AVL_DOS_Initialized;
+    priv->chip->chip_pub->eDiseqcStatus = AVL_DOS_Initialized;
   }
 
   diseqc_set_voltage(fe, SEC_VOLTAGE_OFF);
@@ -241,23 +259,40 @@ static int avl68x2_acquire_dvbc(struct dvb_frontend *fe)
 {
   avl_error_code_t r = AVL_EC_OK;
   struct avl68x2_priv *priv = fe->demodulator_priv;
-  r = AVL_Demod_DVBCAutoLock(priv->chip);
+  struct dtv_frontend_properties *c = &fe->dtv_property_cache;
+  dbg_avl("ACQUIRE DVB-C");
+  r |= AVL_Demod_DVBCAutoLock(AVL_DVBC_J83A, c->symbol_rate, priv->chip);
   return r;
 }
 
 static int avl68x2_acquire_dvbc_b(struct dvb_frontend *fe)
 {
   avl_error_code_t r = AVL_EC_OK;
-  r = avl68x2_acquire_dvbc(fe);
+  struct avl68x2_priv *priv = fe->demodulator_priv;
+  struct dtv_frontend_properties *c = &fe->dtv_property_cache;
+  dbg_avl("ACQUIRE J.83B");
+  r |= AVL_Demod_DVBCAutoLock(AVL_DVBC_J83B, c->symbol_rate, priv->chip);
   return r;
 }
 
 static int avl68x2_acquire_isdbt(struct dvb_frontend *fe)
 {
-  avl_error_code_t r = AVL_EC_OK;
-  struct avl68x2_priv *priv = fe->demodulator_priv;
-  r = AVL_Demod_ISDBTAutoLock(priv->chip);
-  return r;
+	avl_error_code_t r = AVL_EC_OK;
+	struct avl68x2_priv *priv = fe->demodulator_priv;
+	struct dtv_frontend_properties *c = &fe->dtv_property_cache;
+	AVL_ISDBT_BandWidth bw;
+	dbg_avl("ACQUIRE ISDB-T");
+
+	if (c->bandwidth_hz <= 6000000)
+	{
+		bw = AVL_ISDBT_BW_6M;
+	}
+	else
+	{
+		bw = AVL_ISDBT_BW_8M;
+	}
+	r = AVL_Demod_ISDBTAutoLock(bw, priv->chip);
+	return r;
 }
 
 static int avl68x2_get_firmware(struct dvb_frontend *fe, int force_fw)
@@ -303,7 +338,7 @@ static int avl68x2_get_firmware(struct dvb_frontend *fe, int force_fw)
 	if (fw_status != 0)
 	{
 		dev_err(&priv->i2c->dev,
-			KBUILD_MODNAME ": firmware file not found");
+			KBUILD_MODNAME ": firmware %s not found",fw_path);
 		return fw_status;
 	}
 	else
@@ -328,8 +363,8 @@ static int avl68x2_get_firmware(struct dvb_frontend *fe, int force_fw)
 		else
 		{
 			dev_info(&priv->i2c->dev,
-				 KBUILD_MODNAME ": Firmware version %d.%d.%d found",
-				 fw_maj, fw_min, fw_build);
+				 KBUILD_MODNAME ": loaded firmware %s, version %d.%d.%d",
+				 fw_path, fw_maj, fw_min, fw_build);
 		}
 	}
 
@@ -414,6 +449,8 @@ static int avl68x2_set_standard(struct dvb_frontend *fe)
 			KBUILD_MODNAME);
 	}
 
+	release_firmware(priv->fw);
+
 	return r;
 }
 
@@ -477,14 +514,14 @@ static int diseqc_set_tone(struct dvb_frontend *fe, enum fe_sec_tone_mode tone)
 	switch (tone)
 	{
 	case SEC_TONE_ON:
-		if (chip_pub->dvbsx_para.eDiseqcStatus !=
+		if (chip_pub->eDiseqcStatus !=
 		AVL_DOS_InContinuous)
 		{
 			r = AVL_Demod_DVBSx_Diseqc_StartContinuous(priv->chip);
 		}
 		break;
 	case SEC_TONE_OFF:
-		if (chip_pub->dvbsx_para.eDiseqcStatus ==
+		if (chip_pub->eDiseqcStatus ==
 		AVL_DOS_InContinuous)
 		{
 			r = AVL_Demod_DVBSx_Diseqc_StopContinuous(priv->chip);
@@ -967,7 +1004,6 @@ static int avl68x2_read_status(struct dvb_frontend *fe, enum fe_status *status)
 	uint32_t tempi = 0;
 	int32_t SNR_x100db = 0;
 	int32_t ber = 0;
-	int lock_led = priv->chip->chip_pub->gpio_lock_led;
 
 	ret = AVL_Demod_GetLockStatus(&lock, priv->chip);
 	if (!ret && lock == AVL_STATUS_LOCK)
@@ -975,20 +1011,12 @@ static int avl68x2_read_status(struct dvb_frontend *fe, enum fe_status *status)
 		*status = FE_HAS_SIGNAL | FE_HAS_CARRIER |
 			  FE_HAS_VITERBI | FE_HAS_SYNC | FE_HAS_LOCK;
 		ret |= get_frontend(fe, &fe->dtv_property_cache);
-		if (lock_led >= 0)
-		{
-			gpio_request(lock_led, KBUILD_MODNAME);
-			gpio_direction_output(lock_led, 1);
-		}
+		avl68x2_set_lock_led(fe,1);
 	}
 	else
 	{
 		*status = FE_HAS_SIGNAL;
-		if (lock_led >= 0)
-		{
-			gpio_request(lock_led, KBUILD_MODNAME);
-			gpio_direction_output(lock_led, 0);
-		}
+		avl68x2_set_lock_led(fe,0);
 	}
 	
 	if(debug > 1) {
@@ -1024,7 +1052,7 @@ static int avl68x2_read_status(struct dvb_frontend *fe, enum fe_status *status)
 #endif	   
 	  ret |= AVL_Demod_GetSNR (&SNR_x100db, priv->chip);
 	  ret = (int)AVL_Demod_GetPER(&ber, priv->chip);
-	  printk("AVL: %s: read status %d, snr = %d, ber = %d\n",__func__,*status, SNR_x100db, ber);
+	  printk("AVL: %s: read status %d, snr = %d, per = %d\n",__func__,*status, SNR_x100db, ber);
 	}
 
 #if INCLUDE_STDOUT
@@ -1088,13 +1116,8 @@ static int set_frontend(struct dvb_frontend *fe)
 	int ret;
 	struct dtv_frontend_properties *c = &fe->dtv_property_cache;
 	struct avl68x2_priv *priv = fe->demodulator_priv;
-	int lock_led = priv->chip->chip_pub->gpio_lock_led;
 
-	if (lock_led >= 0)
-	{
-		gpio_request(lock_led, KBUILD_MODNAME);
-		gpio_direction_output(lock_led, 0);
-	}
+	avl68x2_set_lock_led(fe,0);
 
 	/* setup tuner */
 	if (fe->ops.tuner_ops.set_params)
@@ -1178,7 +1201,9 @@ static int avl68x2_sleep(struct dvb_frontend *fe)
 static void avl68x2_release(struct dvb_frontend *fe)
 {
 	struct avl68x2_priv *priv = fe->demodulator_priv;
+	int lock_led = priv->chip->chip_pub->gpio_lock_led;
 	dbg_avl("release");
+	gpio_free(lock_led);
 	kfree(priv->chip->chip_pub);
 	kfree(priv->chip->chip_priv);
 	kfree(priv->chip->stStdSpecFunc);
@@ -1261,7 +1286,7 @@ struct dvb_frontend *avl68x2_attach(struct avl68x2_config *config,
 	dbg_avl("priv alloc'ed = %llx", (unsigned long long int)priv);
 
 	memcpy(&priv->frontend.ops, &avl68x2_ops,
-	       sizeof(struct dvb_frontend_ops));
+	       sizeof(avl68x2_ops));
 
 	priv->frontend.demodulator_priv = priv;
 	priv->i2c = i2c;
@@ -1332,14 +1357,14 @@ struct dvb_frontend *avl68x2_attach(struct avl68x2_config *config,
 	{
 		dev_info(&priv->i2c->dev,
 			 KBUILD_MODNAME ": Firmware booted");
+
+		release_firmware(priv->fw);
+
+		gpio_request(priv->chip->chip_pub->gpio_lock_led,
+			     KBUILD_MODNAME);
+		avl68x2_set_lock_led(&priv->frontend, 0);
+
 		return &priv->frontend;
-	}
-
-
-	if(priv->chip->chip_pub->gpio_lock_led >= 0)
-	{
-		gpio_request(priv->chip->chip_pub->gpio_lock_led, KBUILD_MODNAME);
-		gpio_direction_output(priv->chip->chip_pub->gpio_lock_led, 0);
 	}
 
 err5:
@@ -1357,7 +1382,10 @@ err:
 }
 
 module_param(debug, int, 0644);
-MODULE_PARM_DESC(debug, "\n\t\t Enable debug information");
+MODULE_PARM_DESC(debug, "\n\t\tEnable debug information");
+
+module_param(j83b_auto_symrate, int, 0644);
+MODULE_PARM_DESC(j83b_auto_symrate, "\n\t\tEnable automatic symbol rate detection for J83B");
 
 EXPORT_SYMBOL_GPL(avl68x2_attach);
 EXPORT_SYMBOL_GPL(default_dvbtx_config);

@@ -199,8 +199,8 @@ avl_error_code_t AVL_Demod_GetPER(uint32_t *puiPERxe9, avl68x2_chip *chip)
 avl_error_code_t AVL_Demod_SetMode(AVL_DemodMode eDemodMode, avl68x2_chip *chip)
 {
 	avl_error_code_t r = AVL_EC_OK;
-	uint32_t uiTimeDelay = 5;
-	uint32_t uiMaxRetries = 40; //time out window 5*40 = 200ms
+	uint32_t uiTimeDelay = 10;
+	uint32_t uiMaxRetries = 80;
 	uint8_t *pInitialData = 0;
 	uint32_t i = 0;
 
@@ -258,7 +258,8 @@ avl_error_code_t AVL_Demod_SetMode(AVL_DemodMode eDemodMode, avl68x2_chip *chip)
 			}
 			avl_bsp_delay(uiTimeDelay);
 		}
-		printk("%s:%d r=%d\n", __FUNCTION__, __LINE__, r);
+		avl_bms_read32(chip->chip_pub->i2c_addr,rs_core_ready_word_iaddr_offset, &i);
+		printk("%s:%d r=%d ready word 0x%x\n", __FUNCTION__, __LINE__, r, i);
 		chip->chip_pub->cur_demod_mode = eDemodMode;
 
 		r |= SetInternalFunc_Demod(chip->chip_pub->cur_demod_mode, chip);
@@ -277,7 +278,7 @@ avl_error_code_t AVL_Demod_SetMode(AVL_DemodMode eDemodMode, avl68x2_chip *chip)
 
 	//r |= SetGPIOStatus_Demod(chip);
 
-	//r |= TunerI2C_Initialize_Demod(chip);
+	r |= TunerI2C_Initialize_Demod(chip);
 
 	r |= InitErrorStat_Demod(chip);
 

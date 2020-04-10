@@ -41,12 +41,6 @@
 #define rs_DVBC_j83b_il_mode_caddr_offset                       0x0000001d
 #define rs_DVBC_post_viterbi_BER_estimate_x10M_iaddr_offset     0x0000004c
 
-typedef enum AVL_DVBC_TunerType
-{
-    AVL_DVBC_IF          =       0,
-    AVL_DVBC_BASEBAND    =       1
-}AVL_DVBC_TunerType;
-
 typedef enum AVL_DVBC_ChannelType
 {
     AVL_DVBC_I_CHANNEL   =       0,
@@ -86,8 +80,8 @@ typedef struct AVL_DVBCModulationInfo
 	AVL_DVBCInterleaveMode  eInterleaveMode;
 }AVL_DVBCModulationInfo;
  
-avl_error_code_t AVL_Demod_DVBCAutoLock(avl68x2_chip *chip);
-avl_error_code_t AVL_Demod_DVBCManualLock (uint32_t uiSymbolRateSps, AVL_DVBCQAMMode eQAMMode, avl68x2_chip *chip);
+avl_error_code_t AVL_Demod_DVBCAutoLock(AVL_DVBC_Standard std, uint32_t uiSymbolRateSps, avl68x2_chip *chip);
+avl_error_code_t AVL_Demod_DVBCManualLock(AVL_DVBC_Standard std, uint32_t uiSymbolRateSps, AVL_DVBCQAMMode eQAMMode, avl68x2_chip *chip);
 avl_error_code_t AVL_Demod_DVBCGetModulationInfo(AVL_DVBCModulationInfo *pstModulationInfo, avl68x2_chip *chip);
     
 avl_error_code_t DVBC_Initialize_Demod(avl68x2_chip *chip);

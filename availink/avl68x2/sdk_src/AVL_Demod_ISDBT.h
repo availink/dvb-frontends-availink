@@ -20,9 +20,9 @@
 #define rc_ISDBT_nom_carrier_freq_Hz_iaddr_offset                         0x00000044
 #define rc_ISDBT_TS_clk_rate_Hz_iaddr_offset                              0x0000006c
 #define rc_ISDBT_adc_sel_caddr_offset                                     0x00000077
-#define rc_ISDBT_adc_use_pll_clk_offset                                   0x00000076
-#define rc_ISDBT_layer_out_auto_filt_offset                               0x00000082
-#define rc_ISDBT_mult_layer_op_mode_offset                                0x00000083
+#define rc_ISDBT_adc_use_pll_clk_caddr_offset                             0x00000076
+#define rc_ISDBT_layer_out_auto_filt_caddr_offset                         0x00000082
+#define rc_ISDBT_mult_layer_op_mode_caddr_offset                          0x00000083
 
 #define rs_ISDBT_mode_caddr_offset                                        0x00000001
 #define rs_ISDBT_system_type_caddr_offset                                 0x00000002
@@ -53,12 +53,6 @@
 
 #define rs_errstat_clear__offset                                          0x0000002c /* type = RW */
 
-	typedef enum AVL_ISDBT_TunerType
-	{
-		AVL_ISDBT_REAL_IF            =   0,
-		AVL_ISDBT_COMPLEX_BASEBAND   =   1,
-		AVL_ISDBT_REAL_IF_FROM_Q     =   2
-	}AVL_ISDBT_TunerType;
 
 	typedef enum AVL_ISDBT_Standard
 	{
@@ -151,7 +145,7 @@
     avl_error_code_t ISDBT_GetEWBS_Demod(uint8_t * pucEWBS,avl68x2_chip *chip);
     avl_error_code_t ISDBT_Reset_EWBSChangeFlag_Demod(avl68x2_chip *chip);
 
-	avl_error_code_t AVL_Demod_ISDBTAutoLock(avl68x2_chip *chip);
+	avl_error_code_t AVL_Demod_ISDBTAutoLock(AVL_ISDBT_BandWidth bw, avl68x2_chip *chip);
 	avl_error_code_t AVL_Demod_ISDBTGetModulationInfo(AVL_ISDBTModulationInfo *pstModulationInfo, avl68x2_chip *chip);
 
 	avl_error_code_t ISDBT_Initialize_Demod(avl68x2_chip *chip);
