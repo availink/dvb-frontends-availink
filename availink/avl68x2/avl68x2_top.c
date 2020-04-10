@@ -45,8 +45,8 @@
 			printk("AVL: %s: " fmt "\n", __func__, ##args); \
 	} while (0);
 
-static int debug = 0;
-
+int debug = 0;
+int j83b_auto_symrate = 1;
 
 
 
@@ -259,6 +259,7 @@ static int avl68x2_acquire_dvbc(struct dvb_frontend *fe)
   avl_error_code_t r = AVL_EC_OK;
   struct avl68x2_priv *priv = fe->demodulator_priv;
   struct dtv_frontend_properties *c = &fe->dtv_property_cache;
+  dbg_avl("ACQUIRE DVB-C");
   r |= AVL_Demod_DVBCAutoLock(AVL_DVBC_J83A, c->symbol_rate, priv->chip);
   return r;
 }
@@ -268,6 +269,7 @@ static int avl68x2_acquire_dvbc_b(struct dvb_frontend *fe)
   avl_error_code_t r = AVL_EC_OK;
   struct avl68x2_priv *priv = fe->demodulator_priv;
   struct dtv_frontend_properties *c = &fe->dtv_property_cache;
+  dbg_avl("ACQUIRE J.83B");
   r |= AVL_Demod_DVBCAutoLock(AVL_DVBC_J83B, c->symbol_rate, priv->chip);
   return r;
 }
@@ -278,6 +280,7 @@ static int avl68x2_acquire_isdbt(struct dvb_frontend *fe)
 	struct avl68x2_priv *priv = fe->demodulator_priv;
 	struct dtv_frontend_properties *c = &fe->dtv_property_cache;
 	AVL_ISDBT_BandWidth bw;
+	dbg_avl("ACQUIRE ISDB-T");
 
 	if (c->bandwidth_hz <= 6000000)
 	{
@@ -1377,7 +1380,10 @@ err:
 }
 
 module_param(debug, int, 0644);
-MODULE_PARM_DESC(debug, "\n\t\t Enable debug information");
+MODULE_PARM_DESC(debug, "\n\t\tEnable debug information");
+
+module_param(j83b_auto_symrate, int, 0644);
+MODULE_PARM_DESC(j83b_auto_symrate, "\n\t\tEnable automatic symbol rate detection for J83B");
 
 EXPORT_SYMBOL_GPL(avl68x2_attach);
 EXPORT_SYMBOL_GPL(default_dvbtx_config);
