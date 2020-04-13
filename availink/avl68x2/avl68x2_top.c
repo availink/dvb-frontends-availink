@@ -50,34 +50,29 @@ int debug = 0;
 int cable_auto_symrate = 1;
 int cable_auto_cfo = 1;
 
-
-
 const AVL_DVBTxConfig default_dvbtx_config =
-{
-    .eDVBTxInputPath = AVL_IF_I,
-    .uiDVBTxIFFreqHz = 5*1000*1000,
-    .eDVBTxAGCPola = AVL_AGC_NORMAL//AVL_AGC_INVERTED
+    {
+	.eDVBTxInputPath = AVL_IF_I,
+	.uiDVBTxIFFreqHz = 5 * 1000 * 1000,
+	.eDVBTxAGCPola = AVL_AGC_NORMAL //AVL_AGC_INVERTED
 };
 
 const AVL_DVBSxConfig default_dvbsx_config =
-{
-    .eDVBSxAGCPola = AVL_AGC_INVERTED,
-    .e22KWaveForm = AVL_DWM_Normal
-};
+    {
+	.eDVBSxAGCPola = AVL_AGC_INVERTED,
+	.e22KWaveForm = AVL_DWM_Normal};
 
 const AVL_ISDBTConfig default_isdbt_config =
-{
-    .eISDBTInputPath = AVL_IF_I,
-    .uiISDBTIFFreqHz = 5*1000*1000,
-    .eISDBTAGCPola = AVL_AGC_NORMAL
-};
+    {
+	.eISDBTInputPath = AVL_IF_I,
+	.uiISDBTIFFreqHz = 5 * 1000 * 1000,
+	.eISDBTAGCPola = AVL_AGC_NORMAL};
 
 const AVL_DVBCConfig default_dvbc_config =
-{
-    .eDVBCInputPath = AVL_IF_I,
-    .uiDVBCIFFreqHz = 5*1000*1000,
-    .eDVBCAGCPola = AVL_AGC_NORMAL
-};
+    {
+	.eDVBCInputPath = AVL_IF_I,
+	.uiDVBCIFFreqHz = 5 * 1000 * 1000,
+	.eDVBCAGCPola = AVL_AGC_NORMAL};
 
 struct avl_tuner default_avl_tuner = {
     .blindscan_mode = 0,
@@ -222,8 +217,6 @@ static int avl68x2_acquire_dvbtx(struct dvb_frontend *fe)
 	avl_error_code_t r = AVL_EC_OK;
 	AVL_DVBTxBandWidth bw;
 
-	dbg_avl("ACQUIRE T/T2");
-
 	if (c->bandwidth_hz <= 1700000)
 	{
 		bw = AVL_DVBTx_BW_1M7;
@@ -247,10 +240,12 @@ static int avl68x2_acquire_dvbtx(struct dvb_frontend *fe)
 
 	if (c->delivery_system == SYS_DVBT)
 	{
+		dbg_avl("ACQUIRE T ONLY");
 		r = AVL_Demod_DVBTAutoLock(bw, 0, priv->chip);
 	}
 	else
 	{
+		dbg_avl("ACQUIRE T/T2");
 		r = AVL_Demod_DVBT2AutoLock(bw,
 					    AVL_DVBT2_PROFILE_UNKNOWN,
 					    c->stream_id,

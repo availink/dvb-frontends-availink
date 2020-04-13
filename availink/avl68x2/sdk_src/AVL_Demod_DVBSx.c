@@ -731,20 +731,8 @@ avl_error_code_t DVBSx_Initialize_Demod(avl68x2_chip *chip)
             stBaseAddrSet.fw_DVBSx_config_reg_base + rc_DVBSx_show_detail_saddr_offset, 
             0);// 1: print more std_out information
 
-#if 0
-    if(chip->ucDisableSAGC == 0)
-    {
-        r |= EnableSAGC_Demod(chip);
-    }
-    else
-    {
-        r |= DisableSAGC_Demod(chip);
-    }
-#else
-        r |= EnableTCAGC_Demod(chip);
-        r |= EnableSAGC_Demod(chip);
+    r |= ConfigAGCOutput_Demod(chip);
 
-#endif
 
    /* r |= avl_bms_write16(chip->chip_pub->i2c_addr,
       stBaseAddrSet.fw_DVBSx_config_reg_base + rc_DVBSx_auto_pnd_collect_frames_saddr_offset, 3);*/

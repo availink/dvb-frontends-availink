@@ -195,14 +195,7 @@ avl_error_code_t DVBC_Initialize_Demod(avl68x2_chip *chip)
         stBaseAddrSet.fw_DVBC_config_reg_base + rc_DVBC_sample_rate_Hz_iaddr_offset,
         chip->uiADCFrequencyHz);
 
-    if(chip->ucDisableTCAGC == 0)
-    {
-        r |= EnableTCAGC_Demod(chip);
-    }
-    else
-    {
-        r |= DisableTCAGC_Demod(chip);
-    }
+    r |= ConfigAGCOutput_Demod(chip);
 
     return (r);
 }

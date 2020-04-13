@@ -165,8 +165,6 @@ avl_error_code_t EnableTSOutput_Demod(avl68x2_chip *chip)
 
     avl_error_code_t r = AVL_EC_OK;
 
-    chip->ucDisableTSOutput = 0;
-
     r = avl_bms_write32(chip->chip_pub->i2c_addr, 
        stBaseAddrSet.hw_TS_tri_state_cntrl_base, 0);
 
@@ -176,8 +174,6 @@ avl_error_code_t EnableTSOutput_Demod(avl68x2_chip *chip)
 avl_error_code_t DisableTSOutput_Demod(avl68x2_chip *chip)
 {
     avl_error_code_t r = AVL_EC_OK;
-
-    chip->ucDisableTSOutput = 1;
 
     r = avl_bms_write32(chip->chip_pub->i2c_addr, 
         stBaseAddrSet.hw_TS_tri_state_cntrl_base, 0xfff);
@@ -792,10 +788,8 @@ avl_error_code_t EnableTCAGC_Demod(avl68x2_chip *chip)
 {
     avl_error_code_t r = AVL_EC_OK;
 
-    chip->ucDisableTCAGC = 0;
-
     r = avl_bms_write32(chip->chip_pub->i2c_addr,
-        stBaseAddrSet.hw_gpio_debug_base + agc1_sel_offset, 6);
+        stBaseAddrSet.hw_gpio_debug_base + agc1_sel_offset, AVL_AGC_ON_VAL);
 
     return r;
 }
@@ -804,10 +798,8 @@ avl_error_code_t DisableTCAGC_Demod(avl68x2_chip *chip)
 {
     avl_error_code_t r = AVL_EC_OK;
 
-    chip->ucDisableTCAGC = 1;
-
     r = avl_bms_write32(chip->chip_pub->i2c_addr,
-        stBaseAddrSet.hw_gpio_debug_base + agc1_sel_offset, 2);
+        stBaseAddrSet.hw_gpio_debug_base + agc1_sel_offset, AVL_AGC_OFF_VAL);
 
     return r;
 }
@@ -816,10 +808,8 @@ avl_error_code_t EnableSAGC_Demod(avl68x2_chip *chip)
 {
     avl_error_code_t r = AVL_EC_OK;
 
-    chip->ucDisableSAGC = 0;
-
     r = avl_bms_write32(chip->chip_pub->i2c_addr,
-        stBaseAddrSet.hw_gpio_debug_base + agc2_sel_offset, 6);
+        stBaseAddrSet.hw_gpio_debug_base + agc2_sel_offset, AVL_AGC_ON_VAL);
 
     return r;
 }
@@ -828,13 +818,48 @@ avl_error_code_t DisableSAGC_Demod(avl68x2_chip *chip)
 {
     avl_error_code_t r = AVL_EC_OK;
 
-    chip->ucDisableSAGC = 1;
-
     r = avl_bms_write32(chip->chip_pub->i2c_addr,
-        stBaseAddrSet.hw_gpio_debug_base + agc2_sel_offset, 2);
+        stBaseAddrSet.hw_gpio_debug_base + agc2_sel_offset, AVL_AGC_OFF_VAL);
 
     return r;
 }
+
+avl_error_code_t ConfigAGCOutput_Demod(avl68x2_chip *chip)
+{
+	avl_error_code_t r = AVL_EC_OK;
+	AVL_AGC_Selection agc_sel;
+
+	switch (chip->chip_pub->cur_demod_mode)
+	{
+	case AVL_DVBC:
+	case AVL_DVBTX:
+	case AVL_ISDBT:
+		agc_sel = chip->chip_pub->tc_agc_selection;
+		break;
+	case AVL_DVBSX:
+		agc_sel = chip->chip_pub->s_agc_selection;
+		break;
+	}
+	printk("AGC SEL %d\n",(int)agc_sel);
+	if ((agc_sel == AVL_S_AGC_ONLY) || (agc_sel == AVL_BOTH_AGC))
+	{
+		r |= EnableSAGC_Demod(chip);
+	}
+	else
+	{
+		r |= DisableSAGC_Demod(chip);
+	}
+	if ((agc_sel == AVL_TC_AGC_ONLY) || (agc_sel == AVL_BOTH_AGC))
+	{
+		r |= EnableTCAGC_Demod(chip);
+	}
+	else
+	{
+		r |= DisableTCAGC_Demod(chip);
+	}
+	return r;
+}
+
 
 
 avl_error_code_t SetTSSerialPin_Demod(AVL_TSSerialPin eTSSerialPin, avl68x2_chip *chip)

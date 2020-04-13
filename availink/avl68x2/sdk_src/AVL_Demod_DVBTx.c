@@ -584,14 +584,7 @@ avl_error_code_t DVBTx_Initialize_Demod(avl68x2_chip *chip)
 	break;
 	}
 
-	if (chip->ucDisableTCAGC == 0)
-	{
-		r |= EnableTCAGC_Demod(chip);
-	}
-	else
-	{
-		r |= DisableTCAGC_Demod(chip);
-	}
+	r |= ConfigAGCOutput_Demod(chip);
 
 	return (r);
 }

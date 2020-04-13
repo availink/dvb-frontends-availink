@@ -44,9 +44,6 @@ avl_error_code_t AVL_Demod_Initialize(
 
 	r |= SetInternalFunc_Demod(chip->chip_pub->cur_demod_mode, chip);
 
-	chip->ucDisableTCAGC = 0;
-	chip->ucDisableSAGC = 0;
-
 	r |= IRx_Initialize_Demod(chip); //load defaults
 
 	r |= SetTSMode_Demod(chip);
@@ -364,10 +361,7 @@ avl_error_code_t AVL_Demod_Wakeup(avl68x2_chip *chip)
 
 
 
-    if(chip->ucDisableTSOutput == 0)
-    {
-        r |= EnableTSOutput_Demod(chip);
-    }
+    r |= EnableTSOutput_Demod(chip);
 
     r |= TunerI2C_Initialize_Demod(chip);
 
@@ -423,8 +417,6 @@ avl_error_code_t AVL_Demod_TsOn(avl68x2_chip *chip)
 {
     avl_error_code_t r = AVL_EC_OK;
 
-    chip->ucDisableTSOutput = 0;
-
     r = avl_bms_write32(chip->chip_pub->i2c_addr, 
         stBaseAddrSet.hw_TS_tri_state_cntrl_base, 0);
 
@@ -434,8 +426,6 @@ avl_error_code_t AVL_Demod_TsOn(avl68x2_chip *chip)
 avl_error_code_t AVL_Demod_TsOff(avl68x2_chip *chip)
 {
     avl_error_code_t r = AVL_EC_OK;
-
-    chip->ucDisableTSOutput = 1;
 
     r = avl_bms_write32(chip->chip_pub->i2c_addr, 
         stBaseAddrSet.hw_TS_tri_state_cntrl_base, 0xfff);

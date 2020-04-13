@@ -168,18 +168,7 @@ avl_error_code_t ISDBT_Initialize_Demod(avl68x2_chip *chip)
 	break;
 	}
 
-	//AGC configuration
-	r |= avl_bms_write32(chip->chip_pub->i2c_addr,
-			     stBaseAddrSet.hw_gpio_debug_base + agc1_sel_offset, 6);
-
-	if (chip->ucDisableTCAGC == 0)
-	{
-		r |= EnableTCAGC_Demod(chip);
-	}
-	else
-	{
-		r |= DisableTCAGC_Demod(chip);
-	}
+	r |= ConfigAGCOutput_Demod(chip);
 
 	return (r);
 }

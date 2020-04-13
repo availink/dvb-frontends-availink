@@ -499,21 +499,23 @@
       AVL_ISDBT_BW_8M  =   1,
     }AVL_ISDBT_BandWidth;
   
-  
-  typedef struct AVL_DTMBPara
-  {
-    AVL_InputPath eDTMBInputPath;
-    uint32_t uiDTMBIFFreqHz;
-    uint32_t uiDTMBSymbolRateHz;
-    AVL_AGCPola eDTMBAGCPola;
-  } AVL_DTMBPara;
-  
   typedef enum AVL_DVBC_Standard
     {
       AVL_DVBC_J83A    =   0,           //the J83A standard
       AVL_DVBC_J83B    =   1,           //the J83B standard
       AVL_DVBC_UNKNOWN =   2
     }AVL_DVBC_Standard;
+
+  typedef enum AVL_AGC_Selection
+  {
+    AVL_NO_AGC = 0,
+    AVL_TC_AGC_ONLY = 1,
+    AVL_S_AGC_ONLY = 2,
+    AVL_BOTH_AGC = 3
+  } AVL_AGC_Selection;
+
+  #define AVL_AGC_ON_VAL  6
+  #define AVL_AGC_OFF_VAL 2
   
   /**************************************************/
   
@@ -650,6 +652,8 @@ typedef struct avl68x2_chip_pub
 
   AVL_DiseqcStatus eDiseqcStatus;
 
+  AVL_AGC_Selection tc_agc_selection;
+  AVL_AGC_Selection s_agc_selection;
   AVL_TunerType tc_tuner_type;
   struct avl_tuner *tuner;
 } avl68x2_chip_pub;
@@ -680,14 +684,6 @@ typedef struct avl68x2_chip_pub
     AVL_ErrorStats stAVLErrorStat;
 
     
-    
-    
-    
-    
-    
-    uint8_t ucDisableTCAGC;
-    uint8_t ucDisableSAGC;
-    uint8_t ucDisableTSOutput;
     
     //uint8_t ucPin37Status; // 0 - InPut; 1- OutPut
     //uint8_t ucPin38Status;
@@ -737,11 +733,13 @@ typedef struct avl68x2_chip_pub
   avl_error_code_t IBase_GetRxOPStatus_Demod(avl68x2_chip *chip);
   avl_error_code_t SetTSMode_Demod(avl68x2_chip *chip);
   avl_error_code_t SetInternalFunc_Demod(AVL_DemodMode eDemodMode, avl68x2_chip *chip);
-  avl_error_code_t SetAGCPola_Demod(AVL_AGCPola enumAGCPola, avl68x2_chip *chip);
+
   avl_error_code_t EnableTCAGC_Demod(avl68x2_chip *chip);
   avl_error_code_t DisableTCAGC_Demod(avl68x2_chip *chip);
   avl_error_code_t EnableSAGC_Demod(avl68x2_chip *chip);
   avl_error_code_t DisableSAGC_Demod(avl68x2_chip *chip);
+  avl_error_code_t ConfigAGCOutput_Demod(avl68x2_chip *chip);
+
   avl_error_code_t SetTSSerialPin_Demod(AVL_TSSerialPin TSSerialPin, avl68x2_chip *chip);
   avl_error_code_t SetTSSerialOrder_Demod(AVL_TSSerialOrder TSSerialOrder, avl68x2_chip *chip);
   avl_error_code_t SetTSSerialSyncPulse_Demod(AVL_TSSerialSyncPulse TSSerialSyncPulse, avl68x2_chip *chip);
