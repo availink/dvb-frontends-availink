@@ -517,6 +517,12 @@
   #define AVL_AGC_ON_VAL  6
   #define AVL_AGC_OFF_VAL 2
   
+  // Defines the device spectrum polarity setting. 
+  typedef enum AVL_SpectrumPolarity
+  {
+      AVL_Spectrum_Normal = 0,
+      AVL_Spectrum_Invert = 1
+  }AVL_SpectrumPolarity;
   /**************************************************/
   
   
@@ -655,6 +661,7 @@ typedef struct avl68x2_chip_pub
   AVL_AGC_Selection tc_agc_selection;
   AVL_AGC_Selection s_agc_selection;
   AVL_TunerType tc_tuner_type;
+  AVL_SpectrumPolarity tuner_pol; //S tuner spectrum polarity
   struct avl_tuner *tuner;
 } avl68x2_chip_pub;
 
