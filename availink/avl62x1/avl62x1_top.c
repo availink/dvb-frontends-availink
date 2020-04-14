@@ -446,8 +446,8 @@ static int update_fe_props(
     struct avl62x1_stream_info *stream_info)
 {
 	uint16_t r = AVL_EC_OK;
-	props->frequency = carrier_info->rf_freq_khz * 1000 +
-			   carrier_info->carrier_freq_offset_hz;
+	props->frequency = carrier_info->rf_freq_khz +
+			   carrier_info->carrier_freq_offset_hz/1000;
 
 	switch (carrier_info->modulation)
 	{
@@ -735,7 +735,7 @@ static int read_ber(struct dvb_frontend *fe, u32 *ber)
 	return ret;
 }
 
-static int get_frontend_algo(struct dvb_frontend *fe)
+static enum dvbfe_algo get_frontend_algo(struct dvb_frontend *fe)
 {
 	return DVBFE_ALGO_HW;
 }

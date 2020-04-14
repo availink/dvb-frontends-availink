@@ -827,7 +827,7 @@ avl_error_code_t DisableSAGC_Demod(avl68x2_chip *chip)
 avl_error_code_t ConfigAGCOutput_Demod(avl68x2_chip *chip)
 {
 	avl_error_code_t r = AVL_EC_OK;
-	AVL_AGC_Selection agc_sel;
+	AVL_AGC_Selection agc_sel = AVL_BOTH_AGC;
 
 	switch (chip->chip_pub->cur_demod_mode)
 	{
@@ -837,6 +837,7 @@ avl_error_code_t ConfigAGCOutput_Demod(avl68x2_chip *chip)
 		agc_sel = chip->chip_pub->tc_agc_selection;
 		break;
 	case AVL_DVBSX:
+	default:
 		agc_sel = chip->chip_pub->s_agc_selection;
 		break;
 	}

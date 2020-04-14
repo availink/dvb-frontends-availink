@@ -21,9 +21,11 @@
 #define rc_DVBSx_aagc_acq_gain_saddr_offset                               0x000000fe
 #define rc_DVBSx_Max_LowIF_sps_iaddr_offset                               0x000000a4
 #define rc_DVBSx_int_dmd_clk_MHz_saddr_offset                             0x00000164
+#define rc_DVBSx_int_nom_carrier_freq_MHz_saddr_offset                    0x00000166
 #define rc_DVBSx_int_mpeg_clk_MHz_saddr_offset                            0x00000168
 #define rc_DVBSx_int_fec_clk_MHz_saddr_offset                             0x0000016a
 #define rc_DVBSx_fec_bypass_coderate_saddr_offset                         0x0000019a
+#define rc_DVBSx_blind_scan_freq_step_100kHz_saddr_offset                 0x000001a8
 #define rc_DVBSx_tuner_frequency_100kHz_saddr_offset                      0x000001c0
 #define rc_DVBSx_tuner_LPF_100kHz_saddr_offset                            0x000001c6
 #define rc_DVBSx_blind_scan_start_freq_100kHz_saddr_offset                0x000001cc
@@ -171,18 +173,18 @@ typedef enum AVL_Diseqc_RxTime
 // Stores blind scan info
 typedef struct AVL_BSInfo
 {
-    uint16_t m_uiProgress;                        // The percentage completion of the blind scan procedure. A value of 100 indicates that the blind scan is finished.
-    uint16_t m_uiChannelCount;                    // The number of channels detected thus far by the blind scan operation.  The Availink device can store up to 120 detected channels.
-    uint16_t m_uiNextStartFreq_100kHz;            // The start frequency of the next scan in units of 100kHz.
-    uint16_t m_uiResultCode;                      // The result of the blind scan operation.  Possible values are:  0 - blind scan operation normal; 1 -- more than 120 channels have been detected.
+    uint16_t progress;                        // The percentage completion of the blind scan procedure. A value of 100 indicates that the blind scan is finished.
+    uint16_t num_carriers;                    // The number of channels detected thus far by the blind scan operation.  The Availink device can store up to 120 detected channels.
+    uint16_t next_tuner_center_freq_100khz;            // The start frequency of the next scan in units of 100kHz.
+    uint16_t result_code;                      // The result of the blind scan operation.  Possible values are:  0 - blind scan operation normal; 1 -- more than 120 channels have been detected.
 }AVL_BSInfo;
 
 // Stores channel info
 typedef struct AVL_ChannelInfo
 {
-    uint32_t m_uiFrequency_kHz;                   // The channel carrier frequency in units of kHz. 
-    uint32_t m_uiSymbolRate_Hz;                   // The symbol rate in units of Hz. 
-    uint32_t m_Flags;                             // Contains bit-mapped fields which store additional channel configuration information.
+    uint32_t rf_freq_khz;                   // The channel carrier frequency in units of kHz. 
+    uint32_t symbol_rate_hz;                   // The symbol rate in units of Hz. 
+    uint32_t flags;                             // Contains bit-mapped fields which store additional channel configuration information.
 }AVL_ChannelInfo;
 
 typedef struct AVL_DVBSxModulationInfo
@@ -196,21 +198,13 @@ typedef struct AVL_DVBSxModulationInfo
 }AVL_DVBSxModulationInfo;
 
 
-// Defines the device spectrum polarity setting. 
-typedef enum AVL_BlindSanSpectrumPolarity
-{
-    AVL_Spectrum_Invert = 0,
-    AVL_Spectrum_Normal = 1
-}AVL_BlindSanSpectrumPolarity;
-
 /// Stores the blind scan parameters which are passed to the blind scan function.
 typedef struct AVL_BlindScanPara
 {
-    uint16_t m_uiStartFreq_100kHz;                // The start scan frequency in units of 100kHz. The minimum value depends on the tuner specification. 
-    uint16_t m_uiStopFreq_100kHz;                 // The stop scan frequency in units of 100kHz. The maximum value depends on the tuner specification.
-    uint16_t m_uiMinSymRate_kHz;                  // The minimum symbol rate to be scanned in units of kHz. The minimum value is 1000 kHz.
-    uint16_t m_uiMaxSymRate_kHz;                  // The maximum symbol rate to be scanned in units of kHz. The maximum value is 45000 kHz.
-    AVL_BlindSanSpectrumPolarity m_enumBSSpectrumPolarity;
+    uint16_t tuner_lpf_100khz;
+    uint16_t tuner_center_freq_100khz;
+    uint16_t min_symrate_khz;
+    uint16_t max_symrate_khz;
 }AVL_BlindScanPara;
 
 // Stores DiSEqC operation parameters
@@ -241,10 +235,10 @@ typedef struct AVL_Diseqc_RxStatus
 avl_error_code_t AVL_Demod_DVBSxAutoLock(uint32_t uiSymbolRateSps, avl68x2_chip *chip);
 avl_error_code_t AVL_Demod_DVBSxGetModulationInfo(AVL_DVBSxModulationInfo *pstModulationInfo, avl68x2_chip *chip);
 avl_error_code_t AVL_Demod_DVBSx_Diseqc_IsSafeToSwitchMode(avl68x2_chip *chip);
-avl_error_code_t AVL_Demod_DVBSx_BlindScan_Start(AVL_BlindScanPara * pBSPara, uint16_t uiTunerLPF_100kHz, avl68x2_chip *chip);
-avl_error_code_t AVL_Demod_DVBSx_BlindScan_GetStatus(AVL_BSInfo * pBSInfo, avl68x2_chip *chip);
+avl_error_code_t AVL_Demod_DVBSx_BlindScan_Start(AVL_BlindScanPara * pBSPara, avl68x2_chip *chip);
+avl_error_code_t AVL_Demod_DVBSx_BlindScan_GetStatus(AVL_BlindScanPara *pBSPara, AVL_BSInfo * pBSInfo, avl68x2_chip *chip);
 avl_error_code_t AVL_Demod_DVBSx_BlindScan_Cancel(avl68x2_chip *chip);
-avl_error_code_t AVL_Demod_DVBSx_BlindScan_ReadChannelInfo(uint16_t uiStartIndex, uint16_t * pChannelCount,  AVL_ChannelInfo * pChannel, avl68x2_chip *chip);
+avl_error_code_t AVL_Demod_DVBSx_BlindScan_ReadChannelInfo(uint16_t max_chans, AVL_ChannelInfo * pChannel, avl68x2_chip *chip);
 avl_error_code_t AVL_Demod_DVBSx_BlindScan_Reset(avl68x2_chip *chip);
 avl_error_code_t AVL_Demod_DVBSx_SetFunctionalMode(AVL_FunctionalMode enumFunctionalMode,avl68x2_chip *chip);
 avl_error_code_t AVL_Demod_DVBSx_GetFunctionalMode(AVL_FunctionalMode * pFunctionalMode, avl68x2_chip *chip);

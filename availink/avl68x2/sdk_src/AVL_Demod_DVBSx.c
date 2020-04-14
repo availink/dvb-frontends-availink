@@ -10,7 +10,9 @@
 
 #define Diseqc_delay 20
 
-avl_error_code_t AVL_Demod_DVBSxAutoLock(uint32_t uiSymbolRateSps, avl68x2_chip *chip)
+avl_error_code_t AVL_Demod_DVBSxAutoLock(
+	uint32_t uiSymbolRateSps,
+	avl68x2_chip *chip)
 {
     avl_error_code_t r = AVL_EC_OK;
     AVL_FunctionalMode enumFunctionalMode = AVL_FuncMode_BlindScan;
@@ -29,26 +31,30 @@ avl_error_code_t AVL_Demod_DVBSxAutoLock(uint32_t uiSymbolRateSps, avl68x2_chip 
     {
     
         r |= avl_bms_write16(chip->chip_pub->i2c_addr,
-                                stBaseAddrSet.fw_DVBSx_status_reg_base + rs_DVBSx_fec_lock_saddr_offset, 0);
+                                stBaseAddrSet.fw_DVBSx_status_reg_base +
+				rs_DVBSx_fec_lock_saddr_offset, 0);
 
         r |= avl_bms_write16(chip->chip_pub->i2c_addr, 
-                                stBaseAddrSet.fw_DVBSx_config_reg_base + rc_DVBSx_decode_mode_saddr_offset, 
-                                0x14);
+                                stBaseAddrSet.fw_DVBSx_config_reg_base +
+				rc_DVBSx_decode_mode_saddr_offset, 0x14);
+
         r |= avl_bms_write16(chip->chip_pub->i2c_addr, 
-                                stBaseAddrSet.fw_DVBSx_config_reg_base + rc_DVBSx_fec_bypass_coderate_saddr_offset, 
+                                stBaseAddrSet.fw_DVBSx_config_reg_base +
+				rc_DVBSx_fec_bypass_coderate_saddr_offset, 
                                 0);//DVBS auto lock
 
         r |= avl_bms_write16(chip->chip_pub->i2c_addr, 
-                                stBaseAddrSet.fw_DVBSx_config_reg_base + rc_DVBSx_iq_mode_saddr_offset, 
+                                stBaseAddrSet.fw_DVBSx_config_reg_base +
+				rc_DVBSx_iq_mode_saddr_offset, 
                                 1);//enable spectrum auto detection
-        r |= avl_bms_write16(chip->chip_pub->i2c_addr, 
-                                stBaseAddrSet.fw_DVBSx_config_reg_base + rc_DVBSx_decode_mode_saddr_offset,
-                                0x14);
-        r |= avl_bms_write16(chip->chip_pub->i2c_addr, 
-                                stBaseAddrSet.fw_DVBSx_config_reg_base + rc_DVBSx_fec_bypass_coderate_saddr_offset, 0);
         
-        r |= avl_bms_write32(chip->chip_pub->i2c_addr, 
-                                stBaseAddrSet.fw_DVBSx_config_reg_base + rc_DVBSx_int_sym_rate_MHz_iaddr_offset, 
+        r |= avl_bms_write16(chip->chip_pub->i2c_addr, 
+                                stBaseAddrSet.fw_DVBSx_config_reg_base +
+				rc_DVBSx_fec_bypass_coderate_saddr_offset, 0);
+
+	r |= avl_bms_write32(chip->chip_pub->i2c_addr, 
+                                stBaseAddrSet.fw_DVBSx_config_reg_base +
+				rc_DVBSx_int_sym_rate_MHz_iaddr_offset, 
                                 uiSymbolRateSps);
       
 
@@ -95,86 +101,100 @@ avl_error_code_t AVL_Demod_DVBSxGetModulationInfo(AVL_DVBSxModulationInfo *pstMo
 
 }
 
-avl_error_code_t AVL_Demod_DVBSx_BlindScan_Start(AVL_BlindScanPara * pBSPara, uint16_t uiTunerLPF_100kHz, avl68x2_chip *chip)
+avl_error_code_t AVL_Demod_DVBSx_BlindScan_Start(AVL_BlindScanPara *pBSPara, avl68x2_chip *chip)
 {
-    avl_error_code_t r = AVL_EC_OK;
-    uint16_t uiCarrierFreq_100kHz = 0;
-    uint16_t uiMinSymRate = 0;
-    AVL_FunctionalMode enumFunctionalMode = AVL_FuncMode_Demod;
+	avl_error_code_t r = AVL_EC_OK;
+	uint16_t uiMinSymRate = 0;
 
-    r = AVL_Demod_DVBSx_GetFunctionalMode(&enumFunctionalMode, chip);
+	r |= avl_bms_write16(chip->chip_pub->i2c_addr,
+			     stBaseAddrSet.fw_DVBSx_config_reg_base +
+			     rc_DVBSx_tuner_LPF_100kHz_saddr_offset,
+			     pBSPara->tuner_lpf_100khz);
+	r |= avl_bms_write16(chip->chip_pub->i2c_addr,
+			     stBaseAddrSet.fw_DVBSx_config_reg_base +
+			     rc_DVBSx_blind_scan_tuner_spectrum_inversion_saddr_offset,
+			     chip->chip_pub->tuner_pol);
 
-    if (enumFunctionalMode == AVL_FuncMode_BlindScan)
-    {
-        r |= avl_bms_write16(chip->chip_pub->i2c_addr,
-            stBaseAddrSet.fw_DVBSx_config_reg_base + rc_DVBSx_tuner_LPF_100kHz_saddr_offset, uiTunerLPF_100kHz);
-        r |= avl_bms_write16(chip->chip_pub->i2c_addr,
-            stBaseAddrSet.fw_DVBSx_config_reg_base + rc_DVBSx_blind_scan_tuner_spectrum_inversion_saddr_offset, pBSPara->m_enumBSSpectrumPolarity);
+	uiMinSymRate = pBSPara->min_symrate_khz - 200; // give some tolerance
 
-        uiMinSymRate = pBSPara->m_uiMinSymRate_kHz - 200;       // give some tolerance
+	if (uiMinSymRate < 800) //Blind scan doesn't support symbol rate less then 1M, give 200K margin
+	{
+		uiMinSymRate = 800;
+	}
 
-        if (uiMinSymRate < 800)       //Blind scan doesn't support symbol rate less then 1M, give 200K margin
-        {
-            uiMinSymRate = 800;
-        }
+	if(r)
+		return r;
 
-        if( pBSPara->m_uiStartFreq_100kHz < pBSPara->m_uiStopFreq_100kHz )
-        {
-            if( AVL_EC_OK == r )
-            {
-                uiCarrierFreq_100kHz = ((pBSPara->m_uiStopFreq_100kHz)+(pBSPara->m_uiStartFreq_100kHz))>>1;
-                r |= avl_bms_write16(chip->chip_pub->i2c_addr,
-                    stBaseAddrSet.fw_DVBSx_config_reg_base + rc_DVBSx_tuner_frequency_100kHz_saddr_offset, uiCarrierFreq_100kHz);
-                r |= avl_bms_write16(chip->chip_pub->i2c_addr,
-                    stBaseAddrSet.fw_DVBSx_config_reg_base + rc_DVBSx_blind_scan_min_sym_rate_kHz_saddr_offset, uiMinSymRate);
-                r |= avl_bms_write16(chip->chip_pub->i2c_addr,
-                    stBaseAddrSet.fw_DVBSx_config_reg_base + rc_DVBSx_blind_scan_max_sym_rate_kHz_saddr_offset, (pBSPara->m_uiMaxSymRate_kHz)+200);
-                r |= avl_bms_write16(chip->chip_pub->i2c_addr,
-                    stBaseAddrSet.fw_DVBSx_config_reg_base + rc_DVBSx_blind_scan_start_freq_100kHz_saddr_offset, (pBSPara->m_uiStartFreq_100kHz));
-                r |= avl_bms_write16(chip->chip_pub->i2c_addr,
-                    stBaseAddrSet.fw_DVBSx_config_reg_base + rc_DVBSx_blind_scan_end_freq_100kHz_saddr_offset, (pBSPara->m_uiStopFreq_100kHz));
-                r |= avl_bms_write16(chip->chip_pub->i2c_addr,
-                    stBaseAddrSet.fw_DVBSx_status_reg_base + rs_DVBSx_blind_scan_progress_saddr_offset, 0);
+	r |= avl_bms_write16(chip->chip_pub->i2c_addr,
+			     stBaseAddrSet.fw_DVBSx_config_reg_base +
+				 rc_DVBSx_tuner_frequency_100kHz_saddr_offset,
+			     pBSPara->tuner_center_freq_100khz);
+	r |= avl_bms_write16(chip->chip_pub->i2c_addr,
+			     stBaseAddrSet.fw_DVBSx_config_reg_base +
+				 rc_DVBSx_blind_scan_min_sym_rate_kHz_saddr_offset,
+			     uiMinSymRate);
+	r |= avl_bms_write16(chip->chip_pub->i2c_addr,
+			     stBaseAddrSet.fw_DVBSx_config_reg_base +
+				 rc_DVBSx_blind_scan_max_sym_rate_kHz_saddr_offset,
+			     (pBSPara->max_symrate_khz) + 200);
+	r |= avl_bms_write16(chip->chip_pub->i2c_addr,
+			     stBaseAddrSet.fw_DVBSx_config_reg_base +
+				 rc_DVBSx_blind_scan_start_freq_100kHz_saddr_offset,
+			     (pBSPara->tuner_center_freq_100khz -
+			      pBSPara->tuner_lpf_100khz));
+	
+	r |= avl_bms_write16(chip->chip_pub->i2c_addr,
+			     stBaseAddrSet.fw_DVBSx_status_reg_base +
+				 rc_DVBSx_blind_scan_freq_step_100kHz_saddr_offset,
+			     80); //always step by at least 8MHz
 
-                if( AVL_EC_OK == r )
-                {
-                    r |= IBase_SendRxOPWait_Demod(AVL_FW_CMD_HALT, chip );
-                    
-                    r = IBase_SendRxOPWait_Demod(AVL_FW_CMD_BLIND_SCAN, chip);
-                }
-            }
-        }
-        else
-        {
-            r = AVL_EC_GENERAL_FAIL;
-        }
-    }
-    else
-    {
-        r = AVL_EC_GENERAL_FAIL;
-    }
+	r |= avl_bms_write16(chip->chip_pub->i2c_addr,
+			     stBaseAddrSet.fw_DVBSx_status_reg_base +
+				 rs_DVBSx_blind_scan_progress_saddr_offset,
+			     0);
 
-    return (r);
+	if(r)
+		return r;
+	
+	r |= IBase_SendRxOPWait_Demod(AVL_FW_CMD_HALT, chip);
+	r |= IBase_SendRxOPWait_Demod(AVL_FW_CMD_BLIND_SCAN, chip);
+	
+	return (r);
 }
 
-avl_error_code_t AVL_Demod_DVBSx_BlindScan_GetStatus(AVL_BSInfo * pBSInfo, avl68x2_chip *chip)
+avl_error_code_t AVL_Demod_DVBSx_BlindScan_GetStatus(
+	AVL_BlindScanPara *pBSPara,
+	AVL_BSInfo *pBSInfo,
+	avl68x2_chip *chip)
 {
-    avl_error_code_t r = AVL_EC_OK;
+	avl_error_code_t r = AVL_EC_OK;
+	uint16_t next_start_freq_100khz;
 
-    r = avl_bms_read16(chip->chip_pub->i2c_addr,
-        stBaseAddrSet.fw_DVBSx_status_reg_base + rs_DVBSx_blind_scan_progress_saddr_offset, &(pBSInfo->m_uiProgress));
-    r |= avl_bms_read16(chip->chip_pub->i2c_addr,
-        stBaseAddrSet.fw_DVBSx_status_reg_base + rs_DVBSx_blind_scan_channel_count_saddr_offset, &(pBSInfo->m_uiChannelCount));
-    r |= avl_bms_read16(chip->chip_pub->i2c_addr,
-        stBaseAddrSet.fw_DVBSx_config_reg_base + rc_DVBSx_blind_scan_start_freq_100kHz_saddr_offset, &(pBSInfo->m_uiNextStartFreq_100kHz));
-    r |= avl_bms_read16(chip->chip_pub->i2c_addr,
-        stBaseAddrSet.fw_DVBSx_status_reg_base + rs_DVBSx_blind_scan_error_code_saddr_offset, &(pBSInfo->m_uiResultCode));
-    if( pBSInfo->m_uiProgress > 100 )
-    {
-        pBSInfo->m_uiProgress = 100;
-    }
-    
-    return(r);
+	r = avl_bms_read16(chip->chip_pub->i2c_addr,
+			   stBaseAddrSet.fw_DVBSx_status_reg_base +
+			       rs_DVBSx_blind_scan_progress_saddr_offset,
+			   &(pBSInfo->progress));
+	r |= avl_bms_read16(chip->chip_pub->i2c_addr,
+			    stBaseAddrSet.fw_DVBSx_status_reg_base +
+				rs_DVBSx_blind_scan_channel_count_saddr_offset,
+			    &(pBSInfo->num_carriers));
+	r |= avl_bms_read16(chip->chip_pub->i2c_addr,
+			    stBaseAddrSet.fw_DVBSx_config_reg_base +
+				rc_DVBSx_blind_scan_start_freq_100kHz_saddr_offset,
+			    &next_start_freq_100khz);
+	r |= avl_bms_read16(chip->chip_pub->i2c_addr,
+			    stBaseAddrSet.fw_DVBSx_status_reg_base +
+				rs_DVBSx_blind_scan_error_code_saddr_offset,
+			    &(pBSInfo->result_code));
+	if (pBSInfo->progress > 100)
+	{
+		pBSInfo->progress = 100;
+	}
+
+	pBSInfo->next_tuner_center_freq_100khz = next_start_freq_100khz +
+		pBSPara->tuner_lpf_100khz;
+
+	return (r);
 }
 
 avl_error_code_t AVL_Demod_DVBSx_BlindScan_Cancel(avl68x2_chip *chip)
@@ -196,57 +216,69 @@ avl_error_code_t AVL_Demod_DVBSx_BlindScan_Cancel(avl68x2_chip *chip)
     return(r);
 }
 
-avl_error_code_t AVL_Demod_DVBSx_BlindScan_ReadChannelInfo(uint16_t uiStartIndex, uint16_t * pChannelCount, AVL_ChannelInfo * pChannel, avl68x2_chip *chip)
+avl_error_code_t AVL_Demod_DVBSx_BlindScan_ReadChannelInfo(uint16_t max_chans, AVL_ChannelInfo *pChannel, avl68x2_chip *chip)
 {
-    avl_error_code_t r = 0;
-    uint32_t channel_addr = 0;
-    uint16_t i1 = 0;
-    uint16_t i2 = 0;
-    uint32_t uiMinFreq = 0;
-    uint16_t iMinIdx = 0;
-    AVL_ChannelInfo sTempChannel;
+	avl_error_code_t r = 0;
+	uint32_t channel_addr = 0;
+	uint16_t i1 = 0;
+	uint16_t i2 = 0;
+	uint32_t uiMinFreq = 0;
+	uint16_t iMinIdx = 0;
+	uint16_t n_chans;
+	AVL_ChannelInfo sTempChannel;
 
-    r = avl_bms_read16(chip->chip_pub->i2c_addr,
-        stBaseAddrSet.fw_DVBSx_status_reg_base + rs_DVBSx_blind_scan_channel_count_saddr_offset, &i1);
-    if( (uiStartIndex + (*pChannelCount)) > (i1) )
-    {
-        *pChannelCount = i1-uiStartIndex;
-    }
-    r |= avl_bms_read16(chip->chip_pub->i2c_addr,
-        stBaseAddrSet.fw_DVBSx_config_reg_base + rc_DVBSx_blind_scan_channel_info_offset_saddr_offset, &i1);
-    channel_addr = stBaseAddrSet.hw_blind_scan_info_base + uiStartIndex*sizeof(AVL_ChannelInfo);
-    for( i1=0; i1<(*pChannelCount); i1++ )
-    {
-#if 1  //for some processors which can not read 12 bytes        
-        //dump the channel information
-        r |= avl_bms_read32(chip->chip_pub->i2c_addr, channel_addr, &(pChannel[i1].m_uiFrequency_kHz));
-        channel_addr += 4;
-        r |= avl_bms_read32(chip->chip_pub->i2c_addr, channel_addr, &(pChannel[i1].m_uiSymbolRate_Hz));
-        channel_addr += 4;
-        r |= avl_bms_read32(chip->chip_pub->i2c_addr, channel_addr, &(pChannel[i1].m_Flags));
-        channel_addr += 4;
-#endif      
-    }
+	r = avl_bms_read16(chip->chip_pub->i2c_addr,
+			   stBaseAddrSet.fw_DVBSx_status_reg_base +
+			       rs_DVBSx_blind_scan_channel_count_saddr_offset,
+			   &i1);
+	n_chans = max_chans;
+	if (n_chans > i1)
+	{
+		n_chans = i1;
+	}
 
-    // Sort the results
-    for(i1=0; i1<(*pChannelCount); i1++)
-    {
-        iMinIdx = i1;
-        uiMinFreq = pChannel[i1].m_uiFrequency_kHz;
-        for(i2=(i1+1); i2<(*pChannelCount); i2++)
-        {
-            if(pChannel[i2].m_uiFrequency_kHz < uiMinFreq)
-            {
-                uiMinFreq = pChannel[i2].m_uiFrequency_kHz;
-                iMinIdx = i2;
-            }
-        }
-        sTempChannel = pChannel[iMinIdx];
-        pChannel[iMinIdx] = pChannel[i1];
-        pChannel[i1] = sTempChannel;
-    }
+	r |= avl_bms_read16(chip->chip_pub->i2c_addr,
+			    stBaseAddrSet.fw_DVBSx_config_reg_base +
+				rc_DVBSx_blind_scan_channel_info_offset_saddr_offset,
+			    &i1);
 
-    return(r);
+	channel_addr = stBaseAddrSet.hw_blind_scan_info_base;
+
+	for (i1 = 0; i1 < n_chans; i1++)
+	{
+		r |= avl_bms_read32(chip->chip_pub->i2c_addr,
+				    channel_addr,
+				    &(pChannel[i1].rf_freq_khz));
+		channel_addr += 4;
+		r |= avl_bms_read32(chip->chip_pub->i2c_addr,
+				    channel_addr,
+				    &(pChannel[i1].symbol_rate_hz));
+		channel_addr += 4;
+		r |= avl_bms_read32(chip->chip_pub->i2c_addr,
+				    channel_addr,
+				    &(pChannel[i1].flags));
+		channel_addr += 4;
+	}
+
+	// Sort the results
+	for (i1 = 0; i1 < n_chans; i1++)
+	{
+		iMinIdx = i1;
+		uiMinFreq = pChannel[i1].rf_freq_khz;
+		for (i2 = (i1 + 1); i2 < n_chans; i2++)
+		{
+			if (pChannel[i2].rf_freq_khz < uiMinFreq)
+			{
+				uiMinFreq = pChannel[i2].rf_freq_khz;
+				iMinIdx = i2;
+			}
+		}
+		sTempChannel = pChannel[iMinIdx];
+		pChannel[iMinIdx] = pChannel[i1];
+		pChannel[i1] = sTempChannel;
+	}
+
+	return (r);
 }
 
 avl_error_code_t AVL_Demod_DVBSx_BlindScan_Reset(avl68x2_chip *chip)
