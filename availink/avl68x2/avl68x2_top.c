@@ -1114,6 +1114,7 @@ static int avl68x2fe_algo(struct dvb_frontend *fe)
 static int set_frontend(struct dvb_frontend *fe)
 {
 	int ret;
+	int annex_b = 0;
 	struct dtv_frontend_properties *c = &fe->dtv_property_cache;
 	struct avl68x2_priv *priv = fe->demodulator_priv;
 
@@ -1139,12 +1140,15 @@ static int set_frontend(struct dvb_frontend *fe)
 		return ret;
 	}
 
-	if (c->delivery_system == SYS_DVBC_ANNEX_A && c->symbol_rate < 6000000)
+	if ((c->delivery_system == SYS_DVBC_ANNEX_A) &&
+	    ((c->symbol_rate == 5056941) || (c->symbol_rate == 5360537)))
 	{
-		c->delivery_system = SYS_DVBC_ANNEX_B;
-		c->bandwidth_hz = 6000000;
+	  c->bandwidth_hz = 6000000;
+	  annex_b = 1;
 	}
 
+
+	
 	switch (c->delivery_system)
 	{
 	case SYS_DVBT:
@@ -1152,8 +1156,12 @@ static int set_frontend(struct dvb_frontend *fe)
 		ret = avl68x2_acquire_dvbtx(fe);
 		break;
 	case SYS_DVBC_ANNEX_A:
-		ret = avl68x2_acquire_dvbc(fe);
-		break;
+	        if(annex_b) {
+		        ret = avl68x2_acquire_dvbc_b(fe);
+	        } else { 
+	                ret = avl68x2_acquire_dvbc(fe);
+	        }
+	        break;
 	case SYS_DVBC_ANNEX_B:
 		ret = avl68x2_acquire_dvbc_b(fe);
 		break;
