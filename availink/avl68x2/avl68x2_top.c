@@ -1225,11 +1225,7 @@ static struct dvb_frontend_ops avl68x2_ops = {
 	       SYS_DVBC_ANNEX_A, SYS_DVBC_ANNEX_B,
 	       SYS_ISDBT},
     .info = {
-	.name = "Availink avl68x2",
-	.frequency_min_hz = 175 * MHz,
-	.frequency_max_hz = 2150 * MHz,
-	.frequency_stepsize_hz = 0,
-	.frequency_tolerance_hz = 0,
+	.name = "Availink AVL68x2",
 	.symbol_rate_min = 1 * MHz,
 	.symbol_rate_max = 55 * MHz,
 	.caps =
