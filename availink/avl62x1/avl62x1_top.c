@@ -19,73 +19,42 @@
 #include "avl62x1_api.h"
 #include "avl_tuner.h"
 
-#define dbg_avl(fmt, args...)                                           \
-	do                                                              \
-	{                                                               \
-		if (debug)                                              \
-			printk("%s(): " fmt "\n", __func__, ##args); \
+
+#define p_debug(fmt, args...)					\
+	do							\
+	{							\
+		if (debug)					\
+			printk("avl62x1:%s DEBUG: " fmt "\n",	\
+				__func__, ##args);		\
+	} while (0);
+
+#define p_debug_lvl(lvl,fmt, args...)				\
+	do							\
+	{							\
+		if (debug >= lvl)				\
+			printk("avl62x1:%s DEBUG: " fmt "\n",	\
+				__func__, ##args);		\
+	} while (0);
+
+#define p_error(fmt, args...)					\
+	do							\
+	{							\
+		printk("avl62x1:%s ERROR: " fmt "\n",		\
+			__func__, ##args);			\
+	} while (0);
+
+#define p_info(fmt, args...)					\
+	do							\
+	{							\
+		printk("avl62x1:%s INFO: " fmt "\n",		\
+			__func__, ##args);			\
 	} while (0);
 
 static struct avl62x1_bs_state bs_states[AVL_MAX_NUM_DEMODS] = {0};
 
 static int debug = 0;
-module_param(debug, int, 0644);
-MODULE_PARM_DESC(debug, " 1: enable debug messages");
-
 static unsigned short bs_mode = 0;
-static int bs_mode_set(const char *val, const struct kernel_param *kp)
-{
-	int n = 0, ret, i;
-	ret = kstrtoint(val, 0, &n);
-	for(i=0; i<AVL_MAX_NUM_DEMODS; i++) {
-		bs_states[i].bs_mode = (n>>i) & 1;
-	}
-	printk("bs_mode = 0x%x\n",n);
-	return param_set_int(val, kp);
-}
-static int bs_mode_get(char *buffer, const struct kernel_param *kp)
-{
-	sprintf(buffer,"0x%.4x",bs_mode);
-	return strlen(buffer);
-}
-static const struct kernel_param_ops bs_mode_ops = {
-	.set	= bs_mode_set,
-	.get	= bs_mode_get
-};
-module_param_cb(bs_mode, &bs_mode_ops, &bs_mode, 0644);
-MODULE_PARM_DESC(bs_mode, " 16 bit encoding [15:0], one per demod. 1: operate in blindscan mode, 0: normal DVB acquisition mode");
-
-static int bs_tuner_bw = 40000000;
-static int bs_tuner_bw_set(const char *val, const struct kernel_param *kp)
-{
-	int n = 0, ret;
-	ret = kstrtoint(val, 10, &n);
-	if (ret != 0 || n < 10000000 || n > 40000000)
-		return -EINVAL;
-	return param_set_int(val, kp);
-}
-static const struct kernel_param_ops bs_tuner_bw_ops = {
-	.set	= bs_tuner_bw_set,
-	.get	= param_get_int
-};
-module_param_cb(bs_tuner_bw, &bs_tuner_bw_ops, &bs_tuner_bw, 0644);
-MODULE_PARM_DESC(bs_tuner_bw, " tuner bandwidth (Hz) for blindscan mode [10000000:40000000]");
-
 static int bs_min_sr = 1000000;
-static int bs_min_sr_set(const char *val, const struct kernel_param *kp)
-{
-	int n = 0, ret;
-	ret = kstrtoint(val, 10, &n);
-	if (ret != 0 || n < 1000000 || n > 55000000)
-		return -EINVAL;
-	return param_set_int(val, kp);
-}
-static const struct kernel_param_ops bs_min_sr_ops = {
-	.set	= bs_min_sr_set,
-	.get	= param_get_int
-};
-module_param_cb(bs_min_sr, &bs_min_sr_ops, &bs_min_sr, 0644);
-MODULE_PARM_DESC(bs_min_sr, " minimum symbol rate (Hz) for blindscan mode [1000000:55000000]");
 
 static int diseqc_set_voltage(struct dvb_frontend *fe,
 			      enum fe_sec_voltage voltage);
@@ -142,7 +111,7 @@ static int avl68x2_init_diseqc(struct dvb_frontend *fe)
 	r |= avl62x1_init_diseqc(&params, priv->chip);
 	if (AVL_EC_OK != r)
 	{
-		dbg_avl("Diseqc Init failed !\n");
+		p_debug("Diseqc Init failed !\n");
 	}
 
 	diseqc_set_voltage(fe, SEC_VOLTAGE_OFF);
@@ -155,12 +124,11 @@ static int i2c_gate_ctrl(struct dvb_frontend *fe, int enable)
 	struct avl62x1_priv *priv = fe->demodulator_priv;
 	uint16_t ret = AVL_EC_OK;
 
-	dbg_avl("%d\n", enable);
+	p_debug("%d\n", enable);
 
 	if (priv->chip == NULL)
 	{
-		dev_err(&priv->i2c->dev,
-			KBUILD_MODNAME ": NULL fe->demodulator_priv->chip");
+		p_error("NULL fe->demodulator_priv->chip");
 	}
 
 	if (enable)
@@ -182,7 +150,7 @@ static int acquire_dvbs_s2(struct dvb_frontend *fe)
 	struct avl62x1_carrier_info carrier_info;
 	struct avl62x1_stream_info stream_info;
 	
-	dbg_avl("Freq:%d khz,sym:%d hz", c->frequency, c->symbol_rate);
+	p_debug("Freq:%d khz,sym:%d hz", c->frequency, c->symbol_rate);
 
 	carrier_info.rf_freq_khz = c->frequency;
 	carrier_info.carrier_freq_offset_hz = 0;
@@ -242,7 +210,7 @@ static int set_dvb_mode(struct dvb_frontend *fe,
 	if (priv->delivery_system == delsys)
 		return 0;
 
-	dbg_avl("initing demod for delsys=%d", delsys);
+	p_debug("initing demod for delsys=%d", delsys);
 
 	switch (priv->delivery_system)
 	{
@@ -263,7 +231,7 @@ static int set_dvb_mode(struct dvb_frontend *fe,
 	r = avl_bsp_reset();
 	if (AVL_EC_OK != r)
 	{
-		dbg_avl("Failed to Resed demod via BSP!\n");
+		p_debug("Failed to Resed demod via BSP!\n");
 		return 0;
 	}
 
@@ -271,21 +239,21 @@ static int set_dvb_mode(struct dvb_frontend *fe,
 	r |= avl62x1_initialize(priv->chip);
 	if (AVL_EC_OK != r)
 	{
-		dbg_avl("AVL_AVL62X1_Initialize failed !\n");
+		p_debug("AVL_AVL62X1_Initialize failed !\n");
 		return (r);
 	}
 
 	r |= avl62x1_get_version(&ver_info, priv->chip);
 	if (AVL_EC_OK != r)
 	{
-		dbg_avl("avl62x1_get_version failed\n");
+		p_debug("avl62x1_get_version failed\n");
 		return (r);
 	}
-	dbg_avl("FW version %d.%d.%d\n",
+	p_debug("FW version %d.%d.%d\n",
 		ver_info.firmware.major,
 		ver_info.firmware.minor,
 		ver_info.firmware.build);
-	dbg_avl("SDK version %d.%d.%d\n",
+	p_debug("SDK version %d.%d.%d\n",
 		ver_info.sdk.major,
 		ver_info.sdk.minor,
 		ver_info.sdk.build);
@@ -303,7 +271,7 @@ static int set_dvb_mode(struct dvb_frontend *fe,
 
 	if (ret)
 	{
-		dev_err(&priv->i2c->dev, KBUILD_MODNAME ": demod init failed");
+		p_error("demod init failed");
 	}
 
 	return ret;
@@ -315,7 +283,7 @@ uint16_t diseqc_send_cmd(struct avl62x1_priv *priv,
 {
 	uint16_t r = AVL_EC_OK;
 	struct avl62x1_diseqc_tx_status tx_status;
-	dbg_avl(" %*ph", cmdsize, cmd);
+	p_debug(" %*ph", cmdsize, cmd);
 
 	r = avl62x1_send_diseqc_data(cmd, cmdsize, priv->chip);
 	if (r != AVL_EC_OK)
@@ -366,14 +334,14 @@ static int diseqc_set_tone(struct dvb_frontend *fe, enum fe_sec_tone_mode tone)
 	struct avl62x1_priv *priv = fe->demodulator_priv;
 	int r = AVL_EC_OK;
 
-	dbg_avl("tone: %s", tone==SEC_TONE_ON ? "ON" : "OFF");
+	p_debug("tone: %s", tone==SEC_TONE_ON ? "ON" : "OFF");
 	switch (tone)
 	{
 	case SEC_TONE_ON:
 		if (priv->chip->chip_priv->diseqc_op_status !=
 		    avl62x1_dos_continuous)
 		{
-			dbg_avl("call avl62x1_diseqc_tone_on()");
+			p_debug("call avl62x1_diseqc_tone_on()");
 			r = (int)avl62x1_diseqc_tone_on(priv->chip);
 		}
 		break;
@@ -381,7 +349,7 @@ static int diseqc_set_tone(struct dvb_frontend *fe, enum fe_sec_tone_mode tone)
 		if (priv->chip->chip_priv->diseqc_op_status ==
 		    avl62x1_dos_continuous)
 		{
-			dbg_avl("call avl62x1_diseqc_tone_off()");
+			p_debug("call avl62x1_diseqc_tone_off()");
 			r = (int)avl62x1_diseqc_tone_off(priv->chip);
 		}
 		break;
@@ -390,7 +358,7 @@ static int diseqc_set_tone(struct dvb_frontend *fe, enum fe_sec_tone_mode tone)
 	}
 
 	if(r != AVL_EC_OK) {
-		dbg_avl("diseqc_set_tone() FAILURE!");
+		p_debug("diseqc_set_tone() FAILURE!");
 	}
 
 	return r;
@@ -403,7 +371,7 @@ static int diseqc_set_voltage(struct dvb_frontend *fe,
 	avl62x1_gpio_pin_value enable, sel;
 	int ret;
 
-	dbg_avl("volt: %d", voltage);
+	p_debug("volt: %d", voltage);
 
 	switch (voltage)
 	{
@@ -425,7 +393,7 @@ static int diseqc_set_voltage(struct dvb_frontend *fe,
 		return -EINVAL;
 	}
 
-	dbg_avl("lnb_pwr_en %d, lnb_pwr_sel %d",enable,sel);
+	p_debug("lnb_pwr_en %d, lnb_pwr_sel %d",enable,sel);
 
 	ret = (int)avl62x1_set_gpio_value(avl62x1_gpio_pin_lnb_pwr_en,
 					  enable,
@@ -435,7 +403,7 @@ static int diseqc_set_voltage(struct dvb_frontend *fe,
 					   priv->chip);
 
 	if(ret != AVL_EC_OK) {
-		dbg_avl("diseqc_set_voltage() FAILURE!");
+		p_debug("diseqc_set_voltage() FAILURE!");
 	}
 	return ret;
 }
@@ -577,7 +545,7 @@ static int get_frontend(struct dvb_frontend *fe,
 		return ret;
 	}
 
-	//dbg_avl("ENTER");
+	//p_debug("ENTER");
 
 	ret = avl62x1_get_lock_status(&lock,
 				      priv->chip);
@@ -671,7 +639,7 @@ static int read_status(struct dvb_frontend *fe, enum fe_status *status)
 		return AVL_EC_OK;
 	}
 
-	//dbg_avl("ENTER");
+	//p_debug("ENTER");
 
 	r = avl62x1_get_lock_status(&lock,
 				    priv->chip);
@@ -690,41 +658,41 @@ static int read_status(struct dvb_frontend *fe, enum fe_status *status)
 	return r;
 }
 
-static int read_signal_strength(struct dvb_frontend *fe, u16 *strength)
+static int read_signal_strength(struct dvb_frontend *fe, uint16_t *strength)
 {
 	struct dtv_frontend_properties *c = &fe->dtv_property_cache;
 	int i;
 
-	//dbg_avl("ENTER");
+	//p_debug("ENTER");
 
 	*strength = 0;
 	for (i = 0; i < c->strength.len; i++)
 		if (c->strength.stat[i].scale == FE_SCALE_RELATIVE)
-			*strength = (u16)c->strength.stat[i].uvalue;
+			*strength = (uint16_t)c->strength.stat[i].uvalue;
 
 	return 0;
 }
 
-static int read_snr(struct dvb_frontend *fe, u16 *snr)
+static int read_snr(struct dvb_frontend *fe, uint16_t *snr)
 {
 	struct dtv_frontend_properties *c = &fe->dtv_property_cache;
 	int i;
 
-	//dbg_avl("ENTER");
+	//p_debug("ENTER");
 
 	*snr = 0;
 	for (i = 0; i < c->cnr.len; i++)
 		if (c->cnr.stat[i].scale == FE_SCALE_RELATIVE)
-			*snr = (u16)c->cnr.stat[i].uvalue;
+			*snr = (uint16_t)c->cnr.stat[i].uvalue;
 
 	return 0;
 }
-static int read_ber(struct dvb_frontend *fe, u32 *ber)
+static int read_ber(struct dvb_frontend *fe, uint32_t *ber)
 {
 	struct avl62x1_priv *priv = fe->demodulator_priv;
 	int ret;
 
-	//dbg_avl("ENTER");
+	//p_debug("ENTER");
 
 	//FIXME
 	*ber = 10e7;
@@ -754,7 +722,7 @@ static int blindscan_get_stream_list(struct dvb_frontend *fe)
 	struct avl62x1_stream_info *tmp_strs;
 	
 
-	dbg_avl("ENTER");
+	p_debug("ENTER");
 
 	r = avl62x1_get_num_streams(&num_streams, priv->chip);
 	
@@ -798,7 +766,7 @@ static int blindscan_get_stream_list(struct dvb_frontend *fe)
 			}
 		}
 	}
-	dbg_avl("Adding %d streams for T2MI PLP's",t2mi_add_str);
+	p_debug("Adding %d streams for T2MI PLP's",t2mi_add_str);
 
 	//realloc with new number of streams
 	tmp_strs = kzalloc(
@@ -837,7 +805,7 @@ static int blindscan_get_stream_list(struct dvb_frontend *fe)
 				state->streams[s1].t2mi.plp_list.list_size = 1;
 				state->streams[s1].t2mi.plp_list.list[0] =
 				    state->streams[s].t2mi.plp_list.list[p];
-				dbg_avl("expanded PLP ID %d",
+				p_debug("expanded PLP ID %d",
 					state->streams[s1].t2mi.plp_list.list[0]);
 			}
 		}
@@ -847,8 +815,8 @@ static int blindscan_get_stream_list(struct dvb_frontend *fe)
 	num_streams += t2mi_add_str;
 	state->carriers[state->cur_carrier].num_streams = num_streams;
 
-	dbg_avl("got %d streams",num_streams);
-	dbg_avl("EXIT");
+	p_debug("got %d streams",num_streams);
+	p_debug("EXIT");
 
 	return r;
 }
@@ -866,8 +834,8 @@ static int blindscan_confirm_carrier(struct dvb_frontend *fe)
 	const uint16_t timeout = 20;
 	const uint32_t delay = 100;
 
-	dbg_avl("ENTER");
-	dbg_avl("confirming carrier @ %d kHz...",
+	p_debug("ENTER");
+	p_debug("confirming carrier @ %d kHz...",
 		state->carriers[state->cur_carrier].rf_freq_khz);
 	
 	r = avl62x1_blindscan_confirm_carrier(
@@ -879,7 +847,7 @@ static int blindscan_confirm_carrier(struct dvb_frontend *fe)
 	cntr = 0;
 	do
 	{
-		dbg_avl("CC %dms",cntr*delay);
+		p_debug("CC %dms",cntr*delay);
 		r |= avl62x1_get_discovery_status(
 		    &status,
 		    priv->chip);
@@ -891,14 +859,14 @@ static int blindscan_confirm_carrier(struct dvb_frontend *fe)
 
 	if ((cntr >= timeout) || (r != AVL_EC_OK))
 	{
-		dbg_avl("confirm carrier timed out");
-		dbg_avl("EXIT");
+		p_debug("confirm carrier timed out");
+		p_debug("EXIT");
 		return AVL_EC_TimeOut;
 	}
 	else
 	{
-		dbg_avl("carrier confirmed");
-		dbg_avl("EXIT");
+		p_debug("carrier confirmed");
+		p_debug("EXIT");
 		return r;
 	}
 }
@@ -915,7 +883,7 @@ static int blindscan_get_next_stream(struct dvb_frontend *fe)
 	struct avl62x1_carrier_info *carrier;
 	struct avl62x1_stream_info *stream;
 
-	dbg_avl("ENTER");
+	p_debug("ENTER");
 
 	carrier = &state->carriers[state->cur_carrier];
 	stream = NULL;
@@ -929,7 +897,7 @@ static int blindscan_get_next_stream(struct dvb_frontend *fe)
 	//  from the next carrier, if there is one.
 	while (state->cur_carrier < state->info.num_carriers)
 	{
-		dbg_avl("cur_carrier %d",state->cur_carrier);
+		p_debug("cur_carrier %d",state->cur_carrier);
 		carrier = &state->carriers[state->cur_carrier];
 		stream = NULL;
 
@@ -949,19 +917,19 @@ static int blindscan_get_next_stream(struct dvb_frontend *fe)
 				//go to next carrier
 				state->cur_stream = 0;
 				carrier->num_streams = 0;
-				dbg_avl("carrier not confirmed");
+				p_debug("carrier not confirmed");
 				state->cur_carrier++;
-				dbg_avl("next carrier %d", state->cur_carrier);
+				p_debug("next carrier %d", state->cur_carrier);
 				continue;
 			}
 		}
 
-		dbg_avl("carrier->num_streams %d",carrier->num_streams);
+		p_debug("carrier->num_streams %d",carrier->num_streams);
 
 		while ((state->cur_stream < carrier->num_streams) &&
 		       (stream == NULL))
 		{
-			dbg_avl("cur_stream %d",state->cur_stream);
+			p_debug("cur_stream %d",state->cur_stream);
 			stream = &state->streams[state->cur_stream];
 
 			//put current stream info into DVB props
@@ -984,7 +952,7 @@ static int blindscan_get_next_stream(struct dvb_frontend *fe)
 			    AVL62X1_BS_CTRL_VALID_STREAM_MASK;
 
 			state->cur_stream++;
-			dbg_avl("next stream %d", state->cur_stream);
+			p_debug("next stream %d", state->cur_stream);
 
 		}
 
@@ -992,7 +960,7 @@ static int blindscan_get_next_stream(struct dvb_frontend *fe)
 			break;
 
 		state->cur_carrier++;
-		dbg_avl("next carrier %d", state->cur_carrier);
+		p_debug("next carrier %d", state->cur_carrier);
 
 	}
 
@@ -1001,7 +969,7 @@ static int blindscan_get_next_stream(struct dvb_frontend *fe)
 	{
 		//no more streams. signal back the tuner step
 		c->AVL62X1_BS_CTRL_PROP |= state->info.next_freq_step_hz/1000;
-		dbg_avl("no more streams. step tuner by %d",
+		p_debug("no more streams. step tuner by %d",
 			c->AVL62X1_BS_CTRL_PROP);
 	}
 	else
@@ -1010,7 +978,7 @@ static int blindscan_get_next_stream(struct dvb_frontend *fe)
 		c->AVL62X1_BS_CTRL_PROP |= AVL62X1_BS_CTRL_MORE_RESULTS_MASK;
 	}
 
-	dbg_avl("EXIT");
+	p_debug("EXIT");
 
 	return r;
 }
@@ -1028,9 +996,9 @@ static int blindscan_step(struct dvb_frontend *fe)
 	const uint16_t timeout = 30;
 	const uint32_t delay = 100;
 
-	dbg_avl("ENTER");
+	p_debug("ENTER");
 
-	dbg_avl("BS CTRL %d",c->AVL62X1_BS_CTRL_PROP);
+	p_debug("BS CTRL %d",c->AVL62X1_BS_CTRL_PROP);
 	
 	if(c->AVL62X1_BS_CTRL_PROP & AVL62X1_BS_CTRL_NEW_TUNE_MASK) {
 		//allow tuner time to settle
@@ -1038,11 +1006,13 @@ static int blindscan_step(struct dvb_frontend *fe)
 
 		//new frequency was tuned, so run a new carrier search
 		state->params.tuner_center_freq_100khz = c->frequency / 100;
-		state->params.tuner_lpf_100khz = bs_tuner_bw / 100000;
+		//state->params.tuner_lpf_100khz = bs_tuner_bw / 100000;
+		state->params.tuner_lpf_100khz = ((c->symbol_rate * 135) / 100) / 100000;
 		state->params.min_symrate_khz = bs_min_sr / 1000;
 
-		dbg_avl("NEW TUNE: start carrier search @%d kHz",
-			c->frequency);
+		p_debug("NEW TUNE: start carrier search @%d kHz, LPF %d MHz",
+			c->frequency,
+			state->params.tuner_lpf_100khz/10);
 
 		state->num_carriers = 0;
 
@@ -1055,7 +1025,7 @@ static int blindscan_step(struct dvb_frontend *fe)
 			avl_bsp_delay(delay);
 			r = avl62x1_blindscan_get_status(&state->info,
 							 priv->chip);
-			dbg_avl("CS %dms",cntr*delay);
+			p_debug("CS %dms",cntr*delay);
 			cntr++;
 
 		} while (!state->info.finished &&
@@ -1063,11 +1033,11 @@ static int blindscan_step(struct dvb_frontend *fe)
 
 		if ((cntr >= timeout) || (r != AVL_EC_OK))
 		{
-			dbg_avl("carrier search timeout");
+			p_debug("carrier search timeout");
 			return AVL_EC_TimeOut;
 		}
 
-		dbg_avl("carrier search found %d carriers",
+		p_debug("carrier search found %d carriers",
 			state->info.num_carriers);
 
 		if(state->info.num_carriers > 0) {
@@ -1095,11 +1065,11 @@ static int blindscan_step(struct dvb_frontend *fe)
 			c->AVL62X1_BS_CTRL_PROP = state->info.next_freq_step_hz;
 		}
 	} else {
-		dbg_avl("OLD TUNE");
+		p_debug("OLD TUNE");
 		r = blindscan_get_next_stream(fe);
 	}
 
-	dbg_avl("EXIT %d",r);
+	p_debug("EXIT %d",r);
 
 	return r;
 }
@@ -1113,7 +1083,7 @@ static int set_frontend(struct dvb_frontend *fe)
 	    (priv->chip->chip_pub->i2c_addr >> AVL_DEMOD_ID_SHIFT) &
 	    AVL_DEMOD_ID_MASK;
 
-	dbg_avl("ENTER");
+	p_debug("ENTER");
 
 	/* tune tuner if necessary*/
 	if (fe->ops.tuner_ops.set_params &&
@@ -1123,22 +1093,22 @@ static int set_frontend(struct dvb_frontend *fe)
 	{
 		if (fe->ops.i2c_gate_ctrl)
 			fe->ops.i2c_gate_ctrl(fe, 1);
-		dbg_avl("calling fe->ops.tuner_ops.set_params()\n");
+		p_debug("calling fe->ops.tuner_ops.set_params()\n");
 		ret = fe->ops.tuner_ops.set_params(fe);
 		if (fe->ops.i2c_gate_ctrl)
 			fe->ops.i2c_gate_ctrl(fe, 0);
 		if (ret) {
-			dbg_avl("Tuning FAILED\n");
+			p_debug("Tuning FAILED\n");
 			return ret;
 		} else {
-			dbg_avl("Tuned to %d kHz",c->frequency);
+			p_debug("Tuned to %d kHz",c->frequency);
 		}
 	}
 	if(bs_states[demod_id].bs_mode) {
-		dbg_avl("BS STEP");
+		p_debug("BS STEP");
 		ret = blindscan_step(fe);
 	} else {
-		dbg_avl("ACQUIRE");
+		p_debug("ACQUIRE");
 		ret = acquire_dvbs_s2(fe);
 	}
 
@@ -1151,7 +1121,7 @@ static int tune(struct dvb_frontend *fe,
 		unsigned int *delay,
 		enum fe_status *status)
 {
-	dbg_avl("ENTER");
+	p_debug("ENTER");
 	*delay = HZ / 5;
 	if (re_tune)
 	{
@@ -1159,7 +1129,7 @@ static int tune(struct dvb_frontend *fe,
 		if (ret)
 			return ret;
 	}
-	dbg_avl("EXIT");
+	p_debug("EXIT");
 	return read_status(fe, status);
 }
 
@@ -1238,13 +1208,13 @@ struct dvb_frontend *avl62x1_attach(struct avl62x1_config *config,
 {
 	struct avl62x1_priv *priv;
 	uint16_t ret;
-	u32 id;
+	uint32_t id;
 	int fw_status;
 	unsigned int fw_maj, fw_min, fw_build;
 
-	printk(KBUILD_MODNAME ": driver version %s\n", AVL62X1_VERSION);
+	p_info("driver version %s\n", AVL62X1_VERSION);
 
-	dbg_avl("enter %s()", __FUNCTION__);
+	p_debug("enter %s()", __FUNCTION__);
 
 	priv = kzalloc(sizeof(struct avl62x1_priv), GFP_KERNEL);
 	if (priv == NULL)
@@ -1278,7 +1248,7 @@ struct dvb_frontend *avl62x1_attach(struct avl62x1_config *config,
 
 	priv->chip->chip_pub->tuner = &default_avl_tuner;
 
-	dbg_avl("Demod ID %d, I2C addr 0x%x",
+	p_debug("Demod ID %d, I2C addr 0x%x",
 		(priv->chip->chip_pub->i2c_addr >> AVL_DEMOD_ID_SHIFT) &
 		    AVL_DEMOD_ID_MASK,
 		priv->chip->chip_pub->i2c_addr & 0xFF);
@@ -1290,8 +1260,7 @@ struct dvb_frontend *avl62x1_attach(struct avl62x1_config *config,
 	ret = avl62x1_init_chip_object(priv->chip);
 	if (ret)
 	{
-		dev_err(&priv->i2c->dev,
-			KBUILD_MODNAME ": chip object init failed");
+		p_error("chip object init failed");
 		goto err4;
 	}
 
@@ -1299,29 +1268,26 @@ struct dvb_frontend *avl62x1_attach(struct avl62x1_config *config,
 	ret = avl62x1_get_chip_id(priv->chip->chip_pub->i2c_addr, &id);
 	if (ret)
 	{
-		dev_err(&priv->i2c->dev,
-			KBUILD_MODNAME ": attach failed reading id");
+		p_error("attach failed reading id");
 		goto err4;
 	}
 
-	dbg_avl("chip_id 0x%x\n", id);
+	p_debug("chip_id 0x%x\n", id);
 
 	if (id != AVL62X1_CHIP_ID)
 	{
-		dev_err(&priv->i2c->dev,
-			KBUILD_MODNAME ": attach failed, id mismatch");
+		p_error("attach failed, id mismatch");
 		goto err4;
 	}
 
-	dev_info(&priv->i2c->dev, KBUILD_MODNAME ": found AVL62x1 id=0x%x", id);
+	p_info("found AVL62x1 id=0x%x", id);
 
 	fw_status = request_firmware(&priv->fw,
 				     AVL62X1_FIRMWARE,
 				     i2c->dev.parent);
 	if (fw_status != 0)
 	{
-		dev_err(&priv->i2c->dev,
-			KBUILD_MODNAME ": firmware file not found");
+		p_error("firmware file not found");
 		goto err4;
 	}
 	else
@@ -1334,26 +1300,22 @@ struct dvb_frontend *avl62x1_attach(struct avl62x1_config *config,
 		if(fw_min != AVL62X1_SDK_VER_MINOR)
 		{
 			//SDK-FW API rev must match
-			dev_err(&priv->i2c->dev,
-				KBUILD_MODNAME ": Firmware version %d.%d.%d incompatible with this driver version",
+			p_error("Firmware version %d.%d.%d incompatible with this driver version",
 				fw_maj, fw_min, fw_build);
-			dev_err(&priv->i2c->dev,
-				KBUILD_MODNAME ": Firmware minor version must be %d",
+			p_error("Firmware minor version must be %d",
 				AVL62X1_SDK_VER_MINOR);
 			goto err5;
 		}
 		else
 		{
-			dev_info(&priv->i2c->dev,
-				 KBUILD_MODNAME ": Firmware version %d.%d.%d found",
+			p_info("Firmware version %d.%d.%d found",
 				 fw_maj, fw_min, fw_build);
 		}
 	}
 
 	if (!set_dvb_mode(&priv->frontend, SYS_DVBS2))
 	{
-		dev_info(&priv->i2c->dev,
-			 KBUILD_MODNAME ": Firmware booted");
+		p_info("Firmware booted");
 		release_firmware(priv->fw);
 		return &priv->frontend;
 	}
@@ -1376,7 +1338,7 @@ EXPORT_SYMBOL_GPL(avl62x1_attach);
 static int __init mod_init(void) {
 	uint8_t i;
 
-	dbg_avl("ENTER");
+	p_debug("ENTER");
 
 	for(i=0; i<AVL_MAX_NUM_DEMODS; i++) {
 		bs_states[i].bs_mode = (bs_mode>>i) & 1;
@@ -1386,7 +1348,7 @@ static int __init mod_init(void) {
 		bs_states[i].carriers = NULL;
 		bs_states[i].streams = NULL;
 	}
-	dbg_avl("EXIT");
+	p_debug("EXIT");
 	return 0;
 }
 module_init(mod_init);
@@ -1404,6 +1366,49 @@ static void __exit mod_exit(void) {
 	
 }
 module_exit(mod_exit);
+
+module_param(debug, int, 0644);
+MODULE_PARM_DESC(debug, " 1: enable debug messages");
+
+
+static int bs_mode_set(const char *val, const struct kernel_param *kp)
+{
+	int n = 0, ret, i;
+	ret = kstrtoint(val, 0, &n);
+	for(i=0; i<AVL_MAX_NUM_DEMODS; i++) {
+		bs_states[i].bs_mode = (n>>i) & 1;
+	}
+	printk("bs_mode = 0x%x\n",n);
+	return param_set_int(val, kp);
+}
+static int bs_mode_get(char *buffer, const struct kernel_param *kp)
+{
+	sprintf(buffer,"0x%.4x",bs_mode);
+	return strlen(buffer);
+}
+static const struct kernel_param_ops bs_mode_ops = {
+	.set	= bs_mode_set,
+	.get	= bs_mode_get
+};
+module_param_cb(bs_mode, &bs_mode_ops, &bs_mode, 0644);
+MODULE_PARM_DESC(bs_mode, " 16 bit encoding [15:0], one per demod. 1: operate in blindscan mode, 0: normal DVB acquisition mode");
+
+
+
+static int bs_min_sr_set(const char *val, const struct kernel_param *kp)
+{
+	int n = 0, ret;
+	ret = kstrtoint(val, 10, &n);
+	if (ret != 0 || n < 1000000 || n > 55000000)
+		return -EINVAL;
+	return param_set_int(val, kp);
+}
+static const struct kernel_param_ops bs_min_sr_ops = {
+	.set	= bs_min_sr_set,
+	.get	= param_get_int
+};
+module_param_cb(bs_min_sr, &bs_min_sr_ops, &bs_min_sr, 0644);
+MODULE_PARM_DESC(bs_min_sr, " minimum symbol rate (Hz) for blindscan mode [1000000:55000000]");
 
 MODULE_DESCRIPTION("Availink AVL62X1 DVB-S/S2/S2X demodulator driver");
 MODULE_AUTHOR("Availink, Inc. (gpl@availink.com)");
