@@ -1315,7 +1315,7 @@ static int blindscan_step(struct dvb_frontend *fe)
 		state->params.tuner_center_freq_100khz = c->frequency / 100;
 		state->params.tuner_lpf_100khz = bs_tuner_bw / 100000;
 		state->params.min_symrate_khz = bs_min_sr / 1000;
-		state->params.max_symrate_khz = avl68x2_ops.info.symbol_rate_max;
+		state->params.max_symrate_khz = avl68x2_ops.info.symbol_rate_max / 1000;
 
 		p_debug("NEW TUNE: start carrier search @%d kHz",
 			c->frequency);
@@ -1657,9 +1657,11 @@ struct dvb_frontend *avl68x2_attach(struct avl68x2_config *config,
 		p_info("Firmware booted");
 
 		release_firmware(priv->fw);
-
-		gpio_request(priv->chip->chip_pub->gpio_lock_led,
-			     KBUILD_MODNAME);
+		if(gpio_is_valid(priv->chip->chip_pub->gpio_lock_led))
+		  {
+		    gpio_request(priv->chip->chip_pub->gpio_lock_led,
+				 KBUILD_MODNAME);
+		  }
 		avl68x2_set_lock_led(&priv->frontend, 0);
 
 		return &priv->frontend;
