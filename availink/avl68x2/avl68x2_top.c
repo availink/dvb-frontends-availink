@@ -69,7 +69,6 @@ int debug = 0;
 int cable_auto_symrate = 1;
 int cable_auto_cfo = 1;
 static unsigned short bs_mode = 0;
-static int bs_tuner_bw = 40000000;
 static int bs_min_sr = 1000000;
 //---------------------------------
 
@@ -1313,13 +1312,15 @@ static int blindscan_step(struct dvb_frontend *fe)
 
 		//new frequency was tuned, so run a new carrier search
 		state->params.tuner_center_freq_100khz = c->frequency / 100;
-		state->params.tuner_lpf_100khz = bs_tuner_bw / 100000;
+		//state->params.tuner_lpf_100khz = bs_tuner_bw / 100000;
+		state->params.tuner_lpf_100khz = ((c->symbol_rate * 135) / 100) / 100000;
 		state->params.min_symrate_khz = bs_min_sr / 1000;
 		state->params.max_symrate_khz =
 		    avl68x2_ops.info.symbol_rate_max / 1000;
 
-		p_debug("NEW TUNE: start carrier search @%d kHz",
-			c->frequency);
+		p_debug("NEW TUNE: start carrier search @%d kHz, LPF %d MHz",
+			c->frequency,
+			state->params.tuner_lpf_100khz/10);
 
 		state->num_carriers = 0;
 
@@ -1786,22 +1787,6 @@ static const struct kernel_param_ops bs_mode_ops = {
 };
 module_param_cb(bs_mode, &bs_mode_ops, &bs_mode, 0644);
 MODULE_PARM_DESC(bs_mode, " 16 bit encoding [15:0], one per demod. 1: operate in blindscan mode, 0: normal DVB acquisition mode");
-
-
-static int bs_tuner_bw_set(const char *val, const struct kernel_param *kp)
-{
-	int n = 0, ret;
-	ret = kstrtoint(val, 10, &n);
-	if (ret != 0 || n < 10000000 || n > 40000000)
-		return -EINVAL;
-	return param_set_int(val, kp);
-}
-static const struct kernel_param_ops bs_tuner_bw_ops = {
-	.set	= bs_tuner_bw_set,
-	.get	= param_get_int
-};
-module_param_cb(bs_tuner_bw, &bs_tuner_bw_ops, &bs_tuner_bw, 0644);
-MODULE_PARM_DESC(bs_tuner_bw, " tuner bandwidth (Hz) for blindscan mode [10000000:40000000]");
 
 
 static int bs_min_sr_set(const char *val, const struct kernel_param *kp)
