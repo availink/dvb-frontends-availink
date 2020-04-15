@@ -565,7 +565,7 @@ static int update_fe_props_sx(struct dvb_frontend *fe,
 	ret |= AVL_Demod_DVBSx_GetFreqOffset(&cfo, priv->chip);
 	//p_debug("tuner_freq: %d", priv->chip->chip_pub->tuner_freq_hz);
 	//p_debug("cfo: %d", cfo);
-	props->frequency = priv->chip->chip_pub->tuner_freq_hz + cfo;
+	props->frequency = (priv->chip->chip_pub->tuner_freq_hz + cfo)/1000;
   
 	ret |= AVL_Demod_DVBSxGetModulationInfo(&modinfo, priv->chip);
 	switch (modinfo.eDVBSxModulationMode)
