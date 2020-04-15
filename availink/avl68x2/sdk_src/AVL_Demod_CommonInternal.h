@@ -663,6 +663,7 @@ typedef struct avl68x2_chip_pub
   AVL_TunerType tc_tuner_type;
   AVL_SpectrumPolarity tuner_pol; //S tuner spectrum polarity
   struct avl_tuner *tuner;
+  int32_t tuner_freq_hz;
 } avl68x2_chip_pub;
 
   typedef struct avl68x2_chip

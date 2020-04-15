@@ -562,8 +562,10 @@ static int update_fe_props_sx(struct dvb_frontend *fe,
 	props->stream_id = 0;
 
 	ret |= AVL_Demod_DVBSx_GetFreqOffset(&cfo, priv->chip);
-	props->frequency += cfo;
-
+	//p_debug("tuner_freq: %d", priv->chip->chip_pub->tuner_freq_hz);
+	//p_debug("cfo: %d", cfo);
+	props->frequency = (priv->chip->chip_pub->tuner_freq_hz + cfo)/1000;
+  
 	ret |= AVL_Demod_DVBSxGetModulationInfo(&modinfo, priv->chip);
 	switch (modinfo.eDVBSxModulationMode)
 	{
@@ -1172,6 +1174,9 @@ static int blindscan_confirm_carrier(struct dvb_frontend *fe)
 	if (fe->ops.i2c_gate_ctrl)
 		fe->ops.i2c_gate_ctrl(fe, 1);
 	r = fe->ops.tuner_ops.set_params(fe);
+	priv->chip->chip_pub->tuner_freq_hz = c->frequency * 1000;
+	p_debug("tuner_freq: %d", priv->chip->chip_pub->tuner_freq_hz);
+	  
 	if (fe->ops.i2c_gate_ctrl)
 		fe->ops.i2c_gate_ctrl(fe, 0);
 	if (r) {
@@ -1415,6 +1420,8 @@ static int set_frontend(struct dvb_frontend *fe)
 		if (fe->ops.i2c_gate_ctrl)
 			fe->ops.i2c_gate_ctrl(fe, 1);
 		ret = fe->ops.tuner_ops.set_params(fe);
+		priv->chip->chip_pub->tuner_freq_hz = c->frequency * 1000;
+		//p_debug("tuner_freq: %d", priv->chip->chip_pub->tuner_freq_hz);
 		if (fe->ops.i2c_gate_ctrl)
 			fe->ops.i2c_gate_ctrl(fe, 0);
 		if (ret) {
