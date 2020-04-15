@@ -1320,7 +1320,8 @@ static int blindscan_step(struct dvb_frontend *fe)
 		state->params.tuner_center_freq_100khz = c->frequency / 100;
 		state->params.tuner_lpf_100khz = bs_tuner_bw / 100000;
 		state->params.min_symrate_khz = bs_min_sr / 1000;
-		state->params.max_symrate_khz = avl68x2_ops.info.symbol_rate_max / 1000;
+		state->params.max_symrate_khz =
+		    avl68x2_ops.info.symbol_rate_max / 1000;
 
 		p_debug("NEW TUNE: start carrier search @%d kHz",
 			c->frequency);
@@ -1516,7 +1517,10 @@ static void avl68x2_release(struct dvb_frontend *fe)
 	struct avl68x2_priv *priv = fe->demodulator_priv;
 	int lock_led = priv->chip->chip_pub->gpio_lock_led;
 	p_debug("release");
-	gpio_free(lock_led);
+	if(gpio_is_valid(lock_led))
+	{
+		gpio_free(lock_led);
+	}
 	kfree(priv->chip->chip_pub);
 	kfree(priv->chip->chip_priv);
 	kfree(priv->chip->stStdSpecFunc);
@@ -1528,7 +1532,7 @@ static struct dvb_frontend_ops avl68x2_ops = {
     .delsys = {SYS_DVBS, SYS_DVBS2,
 	       SYS_DVBT, SYS_DVBT2,
 	       SYS_DVBC_ANNEX_A, SYS_DVBC_ANNEX_B,
-	       SYS_ISDBT},
+	       SYS_ISDBT, SYS_UNDEFINED},
     .info = {
 	.name = "Availink avl68x2",
 	.symbol_rate_min = 1 * MHz,
@@ -1584,7 +1588,39 @@ struct dvb_frontend *avl68x2_attach(struct avl68x2_config *config,
 {
 	struct avl68x2_priv *priv;
 	avl_error_code_t ret;
-	uint32_t id, chip_id;
+	uint32_t id, chip_id, part_num;
+	uint8_t delsys_b[8] = {
+		    SYS_DVBC_ANNEX_A,
+		    SYS_DVBC_ANNEX_B,
+		    SYS_ISDBT,
+		    SYS_DVBS,
+		    SYS_DVBS2,
+		    SYS_DVBT,
+		    SYS_DVBT2,
+		    SYS_UNDEFINED};
+	uint8_t delsys_d[6] = {
+		    SYS_DVBC_ANNEX_A,
+		    SYS_DVBC_ANNEX_B,
+		    SYS_ISDBT,
+		    SYS_DVBS,
+		    SYS_DVBS2,
+		    SYS_UNDEFINED};
+	uint8_t delsys_e[5] = {
+		    SYS_DVBC_ANNEX_A,
+		    SYS_DVBC_ANNEX_B,
+		    SYS_DVBT,
+		    SYS_DVBT2,
+		    SYS_UNDEFINED};
+	uint8_t delsys_f[7] = {
+		    SYS_DVBC_ANNEX_A,
+		    SYS_DVBC_ANNEX_B,
+		    SYS_DVBS,
+		    SYS_DVBS2,
+		    SYS_DVBT,
+		    SYS_DVBT2,
+		    SYS_UNDEFINED};
+	char feat_str[256];
+	
 
 	p_debug("start demod attach");
 
@@ -1594,9 +1630,6 @@ struct dvb_frontend *avl68x2_attach(struct avl68x2_config *config,
 
 	p_debug("priv alloc'ed = %llx", (unsigned long long int)priv);
 
-	memcpy(&priv->frontend.ops, &avl68x2_ops,
-	       sizeof(avl68x2_ops));
-
 	priv->frontend.demodulator_priv = priv;
 	priv->i2c = i2c;
 	priv->delivery_system = -1;
@@ -1605,15 +1638,19 @@ struct dvb_frontend *avl68x2_attach(struct avl68x2_config *config,
 	if (priv->chip == NULL)
 		goto err1;
 
-	priv->chip->stStdSpecFunc = kzalloc(sizeof(struct AVL_StandardSpecificFunctions), GFP_KERNEL);
+	priv->chip->stStdSpecFunc = kzalloc(
+	    sizeof(struct AVL_StandardSpecificFunctions),
+	    GFP_KERNEL);
 	if (priv->chip->stStdSpecFunc == NULL)
 		goto err2;
 
-	priv->chip->chip_priv = kzalloc(sizeof(struct avl68x2_chip_priv), GFP_KERNEL);
+	priv->chip->chip_priv = kzalloc(sizeof(struct avl68x2_chip_priv),
+					GFP_KERNEL);
 	if (priv->chip->chip_priv == NULL)
 		goto err3;
 
-	priv->chip->chip_pub = kzalloc(sizeof(struct avl68x2_chip_pub), GFP_KERNEL);
+	priv->chip->chip_pub = kzalloc(sizeof(struct avl68x2_chip_pub),
+				       GFP_KERNEL);
 	if (priv->chip->chip_pub == NULL)
 		goto err4;
 
@@ -1625,7 +1662,8 @@ struct dvb_frontend *avl68x2_attach(struct avl68x2_config *config,
 	priv->chip->chip_pub->tuner = &default_avl_tuner;
 
 	p_debug("Demod ID %d, I2C addr 0x%x",
-		(priv->chip->chip_pub->i2c_addr >> AVL_DEMOD_ID_SHIFT) & AVL_DEMOD_ID_MASK,
+		(priv->chip->chip_pub->i2c_addr >> AVL_DEMOD_ID_SHIFT) &
+		    AVL_DEMOD_ID_MASK,
 		priv->chip->chip_pub->i2c_addr & 0xFF);
 
 	// associate demod ID with i2c_adapter
@@ -1652,23 +1690,60 @@ struct dvb_frontend *avl68x2_attach(struct avl68x2_config *config,
 	ret |= AVL_Demod_GetChipID(&chip_id, priv->chip);
 	p_debug("chip_id= 0x%x\n",chip_id);
 
-	p_info("found AVL68x2 family=0x%x id=0x%x", id, chip_id);
+	switch (chip_id)
+	{
+	case 0xb:
+		//C, I, S, T
+		memcpy(&avl68x2_ops.delsys,
+		       delsys_b, sizeof(delsys_b));
+		strncpy(feat_str,"DVB-C/Sx/Tx, J.83B, and ISDB-T",255);
+		part_num = 6882;
+		break;
+	case 0xd:
+		//C, I, S
+		memcpy(&avl68x2_ops.delsys,
+		       delsys_d, sizeof(delsys_d));
+		strncpy(feat_str,"DVB-C/Sx, J.83B, and ISDB-T",255);
+		part_num = 6812;
+		break;
+	case 0xe:
+		//C, T
+		memcpy(&avl68x2_ops.delsys,
+		       delsys_e, sizeof(delsys_e));
+		strncpy(feat_str,"DVB-C/Tx and J.83B",255);
+		part_num = 6762;
+		break;
+	case 0xf:
+		//C, S, T
+		memcpy(&avl68x2_ops.delsys,
+		       delsys_f, sizeof(delsys_f));
+		strncpy(feat_str,"DVB-C/Sx/Tx and J.83B",255);
+		part_num = 6862;
+		break;
+	default:
+		part_num = 0;
+	}
+	memcpy(&priv->frontend.ops, &avl68x2_ops,
+	       sizeof(avl68x2_ops));
 
-	if(avl68x2_get_firmware(&priv->frontend,SYS_DVBS))
+	p_info("found AVL%d supporting %s", part_num, feat_str);
+
+	if(avl68x2_get_firmware(&priv->frontend,SYS_DVBC_ANNEX_A))
 	{
 		goto err5;
 	}
 
-	if (!AVL_Demod_Initialize(AVL_DVBSX,priv->chip))
+	if (!AVL_Demod_Initialize(AVL_DVBC,priv->chip))
 	{
 		p_info("Firmware booted");
 
 		release_firmware(priv->fw);
+
 		if(gpio_is_valid(priv->chip->chip_pub->gpio_lock_led))
-		  {
-		    gpio_request(priv->chip->chip_pub->gpio_lock_led,
-				 KBUILD_MODNAME);
-		  }
+		{
+			gpio_request(priv->chip->chip_pub->gpio_lock_led,
+				KBUILD_MODNAME);
+		}
 		avl68x2_set_lock_led(&priv->frontend, 0);
 
 		return &priv->frontend;
