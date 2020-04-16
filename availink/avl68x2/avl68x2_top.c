@@ -1028,7 +1028,7 @@ static int get_frontend(struct dvb_frontend *fe,
 
 
 #if INCLUDE_STDOUT
-#include "read_stdout.c"
+#include "read_stdout_68x2.c"
 #endif
 
 static int avl68x2_read_status(struct dvb_frontend *fe, enum fe_status *status)
@@ -1310,7 +1310,7 @@ static int blindscan_step(struct dvb_frontend *fe)
 	    AVL_DEMOD_ID_MASK;
 	struct avl68x2_bs_state *state = &(bs_states[demod_id]);
 	uint16_t cntr;
-	const uint16_t timeout = 30;
+	const uint16_t timeout = 50;
 	const uint32_t delay = 100;
 	uint32_t tuner_step_khz;
 
@@ -1360,7 +1360,6 @@ static int blindscan_step(struct dvb_frontend *fe)
 		if ((cntr >= timeout) || (r != AVL_EC_OK))
 		{
 			p_debug("carrier search timeout");
-			return AVL_EC_TimeOut;
 		}
 
 		p_debug("carrier search found %d carriers",

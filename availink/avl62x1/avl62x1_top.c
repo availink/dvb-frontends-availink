@@ -19,6 +19,7 @@
 #include "avl62x1_api.h"
 #include "avl_tuner.h"
 
+#define INCLUDE_STDOUT	0
 
 #define p_debug(fmt, args...)					\
 	do							\
@@ -155,7 +156,10 @@ static int acquire_dvbs_s2(struct dvb_frontend *fe)
 	carrier_info.rf_freq_khz = c->frequency;
 	carrier_info.carrier_freq_offset_hz = 0;
 	carrier_info.symbol_rate_hz = c->symbol_rate;
-	if ((c->stream_id >> AVL62X1_BS_IS_T2MI_SHIFT) & 0x1)
+	//"-1" means ISI not specified and is very unlikely to be a valid
+	//  decoding of the other t2mi fields
+	if ((c->stream_id != -1) &&
+	    ((c->stream_id >> AVL62X1_BS_IS_T2MI_SHIFT) & 0x1))
 	{
 		stream_info.stream_type = avl62x1_t2mi;
 		stream_info.t2mi.pid =
@@ -171,7 +175,7 @@ static int acquire_dvbs_s2(struct dvb_frontend *fe)
 	else
 	{
 		stream_info.stream_type = avl62x1_transport;
-		stream_info.isi = c->stream_id & 0xFF;
+		stream_info.isi = (c->stream_id == -1) ? 0 : (c->stream_id & 0xFF);
 #if DVB_VER_ATLEAST(5, 11)
 		//use scrambling_sequence_index if it's not the default n=0 val
 		if (c->scrambling_sequence_index)
@@ -622,6 +626,10 @@ static int get_frontend(struct dvb_frontend *fe,
 	return ret;
 }
 
+#if INCLUDE_STDOUT
+#include "read_stdout_62x1.c"
+#endif
+
 static int read_status(struct dvb_frontend *fe, enum fe_status *status)
 {
 	int r;
@@ -630,6 +638,12 @@ static int read_status(struct dvb_frontend *fe, enum fe_status *status)
 	int8_t demod_id =
 	    (priv->chip->chip_pub->i2c_addr >> AVL_DEMOD_ID_SHIFT) &
 	    AVL_DEMOD_ID_MASK;
+
+#if INCLUDE_STDOUT
+	if(debug > 2) {
+		printk("%s",read_stdout(fe));
+	}
+#endif
 
 	if(bs_states[demod_id].bs_mode) {
 		if(bs_states[demod_id].info.finished)
@@ -733,6 +747,7 @@ static int blindscan_get_stream_list(struct dvb_frontend *fe)
 		GFP_KERNEL);
 	if(!state->streams)
 	{
+		p_error("alloc failed");
 		return AVL_EC_MemoryRunout;
 	}
 
@@ -993,7 +1008,7 @@ static int blindscan_step(struct dvb_frontend *fe)
 	    AVL_DEMOD_ID_MASK;
 	struct avl62x1_bs_state *state = &(bs_states[demod_id]);
 	uint16_t cntr;
-	const uint16_t timeout = 30;
+	const uint16_t timeout = 50;
 	const uint32_t delay = 100;
 
 	p_debug("ENTER");
@@ -1034,7 +1049,6 @@ static int blindscan_step(struct dvb_frontend *fe)
 		if ((cntr >= timeout) || (r != AVL_EC_OK))
 		{
 			p_debug("carrier search timeout");
-			return AVL_EC_TimeOut;
 		}
 
 		p_debug("carrier search found %d carriers",
@@ -1121,7 +1135,6 @@ static int tune(struct dvb_frontend *fe,
 		unsigned int *delay,
 		enum fe_status *status)
 {
-	p_debug("ENTER");
 	*delay = HZ / 5;
 	if (re_tune)
 	{
@@ -1129,7 +1142,6 @@ static int tune(struct dvb_frontend *fe,
 		if (ret)
 			return ret;
 	}
-	p_debug("EXIT");
 	return read_status(fe, status);
 }
 
