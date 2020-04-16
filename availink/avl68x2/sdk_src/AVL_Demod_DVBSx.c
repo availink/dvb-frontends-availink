@@ -351,29 +351,29 @@ avl_error_code_t AVL_Demod_DVBSx_SetDishPointingMode( AVL_Switch enumOn_Off, avl
 
 avl_error_code_t AVL_Demod_DVBSx_Diseqc_IsSafeToSwitchMode(avl68x2_chip *chip)
 {
-    avl_error_code_t r = AVL_EC_OK;
-    uint32_t i1 = 0;
+	avl_error_code_t r = AVL_EC_OK;
+	uint32_t i1 = 0;
 
-    switch(chip->chip_pub->eDiseqcStatus)
-    {
-    case AVL_DOS_InModulation:
-    case AVL_DOS_InTone:
-        r = avl_bms_read32(chip->chip_pub->i2c_addr,
-            stBaseAddrSet.hw_diseqc_base + hw_diseqc_tx_st_offset, &i1);
-        if( 1 != ((i1 & 0x00000040) >> 6) ) //check if the last transmit is done
-        {
-            r |= AVL_EC_RUNNING;
-        }
-        break;
-    case AVL_DOS_InContinuous:
-    case AVL_DOS_Initialized:
-        break;
-    default:
-        r = AVL_EC_GENERAL_FAIL;
-        break;
-    }
+	switch (chip->chip_pub->eDiseqcStatus)
+	{
+	case AVL_DOS_InModulation:
+	case AVL_DOS_InTone:
+		r = avl_bms_read32(chip->chip_pub->i2c_addr,
+				   stBaseAddrSet.hw_diseqc_base + hw_diseqc_tx_st_offset, &i1);
+		if (1 != ((i1 & 0x00000040) >> 6)) //check if the last transmit is done
+		{
+			r |= AVL_EC_RUNNING;
+		}
+		break;
+	case AVL_DOS_InContinuous:
+	case AVL_DOS_Initialized:
+		break;
+	default:
+		r = AVL_EC_GENERAL_FAIL;
+		break;
+	}
 
-    return(r);
+	return (r);
 }
 
 avl_error_code_t AVL_Demod_DVBSx_Diseqc_ReadModulationData( uint8_t * pucBuff, uint8_t * pucSize, avl68x2_chip *chip)
@@ -674,57 +674,69 @@ avl_error_code_t AVL_Demod_DVBSx_Diseqc_SendTone( uint8_t ucTone, uint8_t ucCoun
     return (r);
 }
 
-avl_error_code_t AVL_Demod_DVBSx_Diseqc_StartContinuous (avl68x2_chip *chip)
+avl_error_code_t AVL_Demod_DVBSx_Diseqc_StartContinuous(avl68x2_chip *chip)
 {
-    avl_error_code_t r = 0;
-    uint32_t i1 = 0;
+	avl_error_code_t r = 0;
+	uint32_t i1 = 0;
 
-    
-    r = avl_bsp_wait_semaphore(&(chip->diseqc_sem));
-    r |= AVL_Demod_DVBSx_Diseqc_IsSafeToSwitchMode(chip);
+	r = avl_bsp_wait_semaphore(&(chip->diseqc_sem));
+	r |= AVL_Demod_DVBSx_Diseqc_IsSafeToSwitchMode(chip);
 
-    if( AVL_EC_OK == r )
-    {
-        //No data in FIFO
-        r |= avl_bms_read32(chip->chip_pub->i2c_addr,
-            stBaseAddrSet.hw_diseqc_base + hw_diseqc_tx_cntrl_offset, &i1);
-        i1 &= 0xfffffff8; 
-        i1 |= 0x03;     //switch to continuous mode
-        r |= avl_bms_write32(chip->chip_pub->i2c_addr,
-            stBaseAddrSet.hw_diseqc_base + hw_diseqc_tx_cntrl_offset, i1);
+	if (AVL_EC_OK == r)
+	{
+		//No data in FIFO
+		r |= avl_bms_read32(chip->chip_pub->i2c_addr,
+				    stBaseAddrSet.hw_diseqc_base +
+					hw_diseqc_tx_cntrl_offset,
+				    &i1);
+		i1 &= 0xfffffff8;
+		i1 |= 0x3; //switch to continuous mode
+		r |= avl_bms_write32(chip->chip_pub->i2c_addr,
+				     stBaseAddrSet.hw_diseqc_base +
+					 hw_diseqc_tx_cntrl_offset,
+				     i1);
 
-        //start to send out wave
-        i1 |= (1<<10);  
-        r |= avl_bms_write32(chip->chip_pub->i2c_addr,
-            stBaseAddrSet.hw_diseqc_base + hw_diseqc_tx_cntrl_offset, i1);
-        if( AVL_EC_OK == r )
-        {
-            chip->chip_pub->eDiseqcStatus = AVL_DOS_InContinuous;
-        }
-    }
-    r |= avl_bsp_release_semaphore(&(chip->diseqc_sem));
-    
-    return (r);
+		i1 |= (1 << 10); //start to send out wave
+		r |= avl_bms_write32(chip->chip_pub->i2c_addr,
+				     stBaseAddrSet.hw_diseqc_base +
+					 hw_diseqc_tx_cntrl_offset,
+				     i1);
+		if (AVL_EC_OK == r)
+		{
+			chip->chip_pub->eDiseqcStatus = AVL_DOS_InContinuous;
+		}
+	}
+	r |= avl_bsp_release_semaphore(&(chip->diseqc_sem));
+
+	return (r);
 }
 
-avl_error_code_t AVL_Demod_DVBSx_Diseqc_StopContinuous (avl68x2_chip *chip)
+avl_error_code_t AVL_Demod_DVBSx_Diseqc_StopContinuous(avl68x2_chip *chip)
 {
-    avl_error_code_t r = 0;
-    uint32_t i1 = 0;
+	avl_error_code_t r = 0;
+	uint32_t i1 = 0;
 
+	r = avl_bsp_wait_semaphore(&(chip->diseqc_sem));
+	if (AVL_DOS_InContinuous == chip->chip_pub->eDiseqcStatus)
+	{
+		r |= avl_bms_read32(chip->chip_pub->i2c_addr,
+				    stBaseAddrSet.hw_diseqc_base +
+					hw_diseqc_tx_cntrl_offset,
+				    &i1);
+		i1 &= 0xfffff3ff;
+		r |= avl_bms_write32(chip->chip_pub->i2c_addr,
+				     stBaseAddrSet.hw_diseqc_base +
+					 hw_diseqc_tx_cntrl_offset,
+				     i1);
 
-    r = avl_bsp_wait_semaphore(&(chip->diseqc_sem));
-    if( AVL_DOS_InContinuous == chip->chip_pub->eDiseqcStatus )
-    {
-        r |= avl_bms_read32(chip->chip_pub->i2c_addr,
-            stBaseAddrSet.hw_diseqc_base + hw_diseqc_tx_cntrl_offset, &i1);
-        i1 &= 0xfffff3ff;
-        r |= avl_bms_write32(chip->chip_pub->i2c_addr,
-            stBaseAddrSet.hw_diseqc_base + hw_diseqc_tx_cntrl_offset, i1);
-    }
+		if (r == AVL_EC_OK)
+		{
+			chip->chip_pub->eDiseqcStatus = AVL_DOS_Initialized;
+		}
+	}
 
-    r |= avl_bsp_release_semaphore(&(chip->diseqc_sem));
-    return (r);
+	r |= avl_bsp_release_semaphore(&(chip->diseqc_sem));
+	return (r);
 }
 
 avl_error_code_t DVBSx_Initialize_Demod(avl68x2_chip *chip)
@@ -783,60 +795,87 @@ avl_error_code_t DVBSx_Initialize_Demod(avl68x2_chip *chip)
 
 avl_error_code_t DVBSx_Diseqc_Initialize_Demod(AVL_Diseqc_Para *pDiseqcPara, avl68x2_chip *chip)
 {
-    avl_error_code_t r = AVL_EC_OK;
-    uint32_t i1 = 0;
+	avl_error_code_t r = AVL_EC_OK;
+	uint32_t i1 = 0;
 
-    r = avl_bsp_wait_semaphore(&(chip->diseqc_sem));
-    if( AVL_EC_OK == r )
-    {
-        r |= avl_bms_write32(chip->chip_pub->i2c_addr,
-            stBaseAddrSet.hw_diseqc_base + hw_diseqc_srst_offset, 1);
-        
-        r |= avl_bms_write32(chip->chip_pub->i2c_addr,
-            stBaseAddrSet.hw_diseqc_base + hw_diseqc_samp_frac_n_offset, 2000000);       //2M=200*10kHz
-        r |= avl_bms_write32(chip->chip_pub->i2c_addr,
-            stBaseAddrSet.hw_diseqc_base + hw_diseqc_samp_frac_d_offset, chip->uiDDCFrequencyHz);
+	r = avl_bsp_wait_semaphore(&(chip->diseqc_sem));
+	if (AVL_EC_OK == r)
+	{
+		r |= avl_bms_write32(chip->chip_pub->i2c_addr,
+				     stBaseAddrSet.hw_diseqc_base +
+					 hw_diseqc_srst_offset,
+				     1);
 
-        r |= avl_bms_write32(chip->chip_pub->i2c_addr,
-            stBaseAddrSet.hw_diseqc_base + hw_diseqc_tone_frac_n_offset, ((pDiseqcPara->uiToneFrequencyKHz)<<1));
-        r |= avl_bms_write32(chip->chip_pub->i2c_addr,
-            stBaseAddrSet.hw_diseqc_base + hw_diseqc_tone_frac_d_offset, (chip->uiDDCFrequencyHz/1000));
+		r |= avl_bms_write32(chip->chip_pub->i2c_addr,
+				     stBaseAddrSet.hw_diseqc_base +
+					 hw_diseqc_samp_frac_n_offset,
+				     2000000); //2M=200*10kHz
+		r |= avl_bms_write32(chip->chip_pub->i2c_addr,
+				     stBaseAddrSet.hw_diseqc_base +
+					 hw_diseqc_samp_frac_d_offset,
+				     chip->uiDDCFrequencyHz);
 
-        // Initialize the tx_control
-        r |= avl_bms_read32(chip->chip_pub->i2c_addr,
-        stBaseAddrSet.hw_diseqc_base + hw_diseqc_tx_cntrl_offset, &i1);
-        i1 &= 0x00000300;
-        i1 |= 0x20;     //reset tx_fifo
-        i1 |= ((uint32_t)(pDiseqcPara->eTXGap) << 6);
-        i1 |= ((uint32_t)(pDiseqcPara->eTxWaveForm) << 4);
-        i1 |= (1<<3);           //enable tx gap.
-        r |= avl_bms_write32(chip->chip_pub->i2c_addr,
-            stBaseAddrSet.hw_diseqc_base + hw_diseqc_tx_cntrl_offset, i1);
-        i1 &= ~(0x20);  //release tx_fifo reset
-        r |= avl_bms_write32(chip->chip_pub->i2c_addr,
-            stBaseAddrSet.hw_diseqc_base + hw_diseqc_tx_cntrl_offset, i1);
+		r |= avl_bms_write32(chip->chip_pub->i2c_addr,
+				     stBaseAddrSet.hw_diseqc_base +
+					 hw_diseqc_tone_frac_n_offset,
+				     (pDiseqcPara->uiToneFrequencyKHz * 2));
+		r |= avl_bms_write32(chip->chip_pub->i2c_addr,
+				     stBaseAddrSet.hw_diseqc_base +
+					 hw_diseqc_tone_frac_d_offset,
+				     (chip->uiDDCFrequencyHz / 1000));
 
-        // Initialize the rx_control
-        i1 = ((uint32_t)(pDiseqcPara->eRxWaveForm) << 2);
-        i1 |= (1<<1);   //active the receiver
-        i1 |= (1<<3);   //envelop high when tone present
-        r |= avl_bms_write32(chip->chip_pub->i2c_addr,
-            stBaseAddrSet.hw_diseqc_base + hw_diseqc_rx_cntrl_offset, i1);
-        i1 = (uint32_t)(pDiseqcPara->eRxTimeout);
-        r |= avl_bms_write32(chip->chip_pub->i2c_addr,
-            stBaseAddrSet.hw_diseqc_base + hw_diseqc_rx_msg_tim_offset, i1);
+		// Initialize the tx_control
+		r |= avl_bms_read32(chip->chip_pub->i2c_addr,
+				    stBaseAddrSet.hw_diseqc_base +
+					hw_diseqc_tx_cntrl_offset,
+				    &i1);
+		i1 &= 0x00000300;
+		i1 |= 0x20; //reset tx_fifo
+		i1 |= ((uint32_t)(pDiseqcPara->eTXGap) << 6);
+		i1 |= ((uint32_t)(pDiseqcPara->eTxWaveForm) << 4);
+		i1 |= (1 << 3); //enable tx gap.
+		r |= avl_bms_write32(chip->chip_pub->i2c_addr,
+				     stBaseAddrSet.hw_diseqc_base +
+					 hw_diseqc_tx_cntrl_offset,
+				     i1);
+		i1 &= ~(0x20); //release tx_fifo reset
+		r |= avl_bms_write32(chip->chip_pub->i2c_addr,
+				     stBaseAddrSet.hw_diseqc_base +
+					 hw_diseqc_tx_cntrl_offset,
+				     i1);
 
-        r |= avl_bms_write32(chip->chip_pub->i2c_addr,
-            stBaseAddrSet.hw_diseqc_base + hw_diseqc_srst_offset, 0);
+		// Initialize the rx_control
+		i1 = ((uint32_t)(pDiseqcPara->eRxWaveForm) << 2);
+		i1 |= (1 << 1); //active the receiver
+		i1 |= (1 << 3); //envelop high when tone present
+		r |= avl_bms_write32(chip->chip_pub->i2c_addr,
+				     stBaseAddrSet.hw_diseqc_base +
+					 hw_diseqc_rx_cntrl_offset,
+				     i1);
 
-        if( AVL_EC_OK == r )
-        {
-            chip->chip_pub->eDiseqcStatus = AVL_DOS_Initialized;
-        }
-    }
-    r |= avl_bsp_release_semaphore(&(chip->diseqc_sem));
-    
-    return (r);
+		i1 = (uint32_t)(pDiseqcPara->eRxTimeout);
+		r |= avl_bms_write32(chip->chip_pub->i2c_addr,
+				     stBaseAddrSet.hw_diseqc_base +
+					 hw_diseqc_rx_msg_tim_offset,
+				     i1);
+
+		r |= avl_bms_write32(chip->chip_pub->i2c_addr,
+				     stBaseAddrSet.hw_diseqc_base +
+					 hw_diseqc_srst_offset,
+				     0);
+
+		if (AVL_EC_OK == r)
+		{
+			chip->chip_pub->eDiseqcStatus = AVL_DOS_Initialized;
+		}
+
+		//turn off LNB voltage
+		r = AVL_Demod_SetGPIO(AVL_Pin37, AVL_LOGIC_0, chip);
+		r |= AVL_Demod_SetGPIO(AVL_Pin38, AVL_LOGIC_0, chip);
+	}
+	r |= avl_bsp_release_semaphore(&(chip->diseqc_sem));
+
+	return (r);
 }
 
 avl_error_code_t DVBSx_GetLockStatus_Demod( uint8_t * pucLocked, avl68x2_chip *chip)

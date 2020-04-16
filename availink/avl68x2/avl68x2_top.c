@@ -63,13 +63,16 @@
 	} while (0);
 
 static struct avl68x2_bs_state bs_states[AVL_MAX_NUM_DEMODS] = {0};
+static struct avl68x2_priv *global_priv; //just for debug
 
 //------ module parameters --------
 int debug = 0;
 int cable_auto_symrate = 1;
 int cable_auto_cfo = 1;
-static unsigned short bs_mode = 0;
-static int bs_min_sr = 1000000;
+unsigned short bs_mode = 0;
+int bs_min_sr = 1000000;
+int diseqc_tone = 0;
+int diseqc_voltage = 0;
 //---------------------------------
 
 const AVL_DVBTxConfig default_dvbtx_config =
@@ -155,16 +158,19 @@ static int diseqc_set_voltage(
 	case SEC_VOLTAGE_OFF:
 		pwr = AVL_LOGIC_0;
 		vol = AVL_LOGIC_0;
+		p_debug("voltage OFF");
 		break;
 	case SEC_VOLTAGE_13:
 		//power on
 		pwr = AVL_LOGIC_1;
 		vol = AVL_LOGIC_0;
+		p_debug("voltage 13");
 		break;
 	case SEC_VOLTAGE_18:
 		//power on
 		pwr = AVL_LOGIC_1;
 		vol = AVL_HIGH_Z;
+		p_debug("voltage 18");
 		break;
 	default:
 		return -EINVAL;
@@ -174,32 +180,6 @@ static int diseqc_set_voltage(
 	return ret;
 }
 
-static int avl68x2_init_diseqc(struct dvb_frontend *fe)
-{
-  struct avl68x2_priv *priv = fe->demodulator_priv;
-  struct AVL_Diseqc_Para Diseqc_para;
-  avl_error_code_t r = AVL_EC_OK;
-
-  Diseqc_para.uiToneFrequencyKHz = 22;
-  Diseqc_para.eTXGap = AVL_DTXG_15ms;
-  Diseqc_para.eTxWaveForm = AVL_DWM_Normal;
-  Diseqc_para.eRxTimeout = AVL_DRT_150ms;
-  Diseqc_para.eRxWaveForm = AVL_DWM_Normal;
-
-  r |= DVBSx_Diseqc_Initialize_Demod(&Diseqc_para, priv->chip);
-  if (AVL_EC_OK != r)
-  {
-    p_debug("Diseqc Init failed !\n");
-  }
-  else
-  {
-    priv->chip->chip_pub->eDiseqcStatus = AVL_DOS_Initialized;
-  }
-
-  diseqc_set_voltage(fe, SEC_VOLTAGE_OFF);
-
-  return r;
-}
 
 static int avl68x2_i2c_gate_ctrl(struct dvb_frontend *fe, int enable)
 {
@@ -391,7 +371,9 @@ static int avl68x2_get_firmware(struct dvb_frontend *fe, int force_fw)
 	return r;
 }
 
-static int avl68x2_set_standard(struct dvb_frontend *fe)
+static int avl68x2_set_standard(
+    struct dvb_frontend *fe,
+    enum fe_delivery_system force_delsys)
 {
 	struct avl68x2_priv *priv = fe->demodulator_priv;
 	struct dtv_frontend_properties *c = &fe->dtv_property_cache;
@@ -402,23 +384,46 @@ static int avl68x2_set_standard(struct dvb_frontend *fe)
 	r |= GetMode_Demod(&dmd_mode, priv->chip);
 	p_debug("in mode %d", (unsigned int)dmd_mode);
 
+	if(force_delsys != SYS_UNDEFINED)
+		c->delivery_system = force_delsys;
+
 	//check for (FW) equivalent modes
 	switch (c->delivery_system)
 	{
 	case SYS_DVBS:
 	case SYS_DVBS2:
+		if(dmd_mode == AVL_DVBSX)
+		{
+			p_debug("already in requested mode");
+			return 0;
+		}
 		dmd_mode = AVL_DVBSX;
 		break;
 	case SYS_ISDBT:
+		if(dmd_mode == AVL_ISDBT)
+		{
+			p_debug("already in requested mode");
+			return 0;
+		}
 		dmd_mode = AVL_ISDBT;
 		break;
 	case SYS_DVBC_ANNEX_A: //"DVB-C"
 	case SYS_DVBC_ANNEX_B: //J.83-B
+		if(dmd_mode == AVL_DVBC)
+		{
+			p_debug("already in requested mode");
+			return 0;
+		}
 		dmd_mode = AVL_DVBC;
 		break;
 	case SYS_DVBT:
 	case SYS_DVBT2:
 	default:
+		if(dmd_mode == AVL_DVBTX)
+		{
+			p_debug("already in requested mode");
+			return 0;
+		}
 		dmd_mode = AVL_DVBTX;
 	}
 
@@ -456,11 +461,6 @@ static int avl68x2_set_standard(struct dvb_frontend *fe)
 	p_debug("FW version %d.%d.%d\n", ver_info.firmware.major, ver_info.firmware.minor, ver_info.firmware.build);
 	p_debug("API version %d.%d.%d\n", ver_info.sdk.major, ver_info.sdk.minor, ver_info.sdk.build);
 
-	if (c->delivery_system == SYS_DVBS ||
-	    c->delivery_system == SYS_DVBS2)
-	{
-		r |= avl68x2_init_diseqc(fe);
-	}
 
 	if (r)
 	{
@@ -528,20 +528,27 @@ static int diseqc_set_tone(struct dvb_frontend *fe, enum fe_sec_tone_mode tone)
 	struct avl68x2_chip_pub *chip_pub = priv->chip->chip_pub;
 	avl_error_code_t r = AVL_EC_OK;
 
-	p_debug("tone: %d", tone);
+	p_debug("tone: %s", tone==SEC_TONE_ON ? "ON" : "OFF");
+
+	r |= avl68x2_set_standard(fe, SYS_DVBS2);
+	if(r)
+	{
+		p_error("couldn't set DVBSx mode");
+	}
+
 	switch (tone)
 	{
 	case SEC_TONE_ON:
-		if (chip_pub->eDiseqcStatus !=
-		AVL_DOS_InContinuous)
+		if (chip_pub->eDiseqcStatus != AVL_DOS_InContinuous)
 		{
+			p_debug("start tone");
 			r = AVL_Demod_DVBSx_Diseqc_StartContinuous(priv->chip);
 		}
 		break;
 	case SEC_TONE_OFF:
-		if (chip_pub->eDiseqcStatus ==
-		AVL_DOS_InContinuous)
+		if (chip_pub->eDiseqcStatus == AVL_DOS_InContinuous)
 		{
+			p_debug("stop tone");
 			r = AVL_Demod_DVBSx_Diseqc_StopContinuous(priv->chip);
 		}
 		break;
@@ -1432,7 +1439,7 @@ static int set_frontend(struct dvb_frontend *fe)
 		}
 	}
 
-	ret = avl68x2_set_standard(fe);
+	ret = avl68x2_set_standard(fe, SYS_UNDEFINED);
 	if (ret)
 	{
 		p_error("failed!!!");
@@ -1628,6 +1635,7 @@ struct dvb_frontend *avl68x2_attach(struct avl68x2_config *config,
 	priv = kzalloc(sizeof(struct avl68x2_priv), GFP_KERNEL);
 	if (priv == NULL)
 		goto err;
+	global_priv = priv;
 
 	p_debug("priv alloc'ed = %llx", (unsigned long long int)priv);
 
@@ -1811,6 +1819,62 @@ static const struct kernel_param_ops bs_min_sr_ops = {
 module_param_cb(bs_min_sr, &bs_min_sr_ops, &bs_min_sr, 0644);
 MODULE_PARM_DESC(bs_min_sr, " minimum symbol rate (Hz) for blindscan mode [1000000:55000000]");
 
+
+/////---------------------------------------------------------------------------
+static int diseqc_tone_param_set(const char *val, const struct kernel_param *kp)
+{
+	int n = 0, ret;
+	ret = kstrtoint(val, 10, &n);
+	if (ret != 0)
+		return -EINVAL;
+	if(n > 0)
+	{
+		diseqc_set_tone(&global_priv->frontend, SEC_TONE_ON);
+	}
+	else
+	{
+		diseqc_set_tone(&global_priv->frontend, SEC_TONE_OFF);
+	}
+	
+	return param_set_int(val, kp);
+}
+static const struct kernel_param_ops diseqc_tone_ops = {
+	.set	= diseqc_tone_param_set,
+	.get	= param_get_int
+};
+module_param_cb(diseqc_tone, &diseqc_tone_ops, &diseqc_tone, 0644);
+MODULE_PARM_DESC(diseqc_tone, " tone control");
+
+
+static int diseqc_voltage_param_set(const char *val, const struct kernel_param *kp)
+{
+	int n = 0, ret;
+	ret = kstrtoint(val, 10, &n);
+	if (ret != 0)
+		return -EINVAL;
+	if(n == 0)
+	{
+		diseqc_set_voltage(&global_priv->frontend, SEC_VOLTAGE_OFF);
+	}
+	else if(n == 1)
+	{
+		diseqc_set_voltage(&global_priv->frontend, SEC_VOLTAGE_13);
+	}
+	else
+	{
+		diseqc_set_voltage(&global_priv->frontend, SEC_VOLTAGE_18);
+	}
+	
+	
+	return param_set_int(val, kp);
+}
+static const struct kernel_param_ops diseqc_voltage_ops = {
+	.set	= diseqc_voltage_param_set,
+	.get	= param_get_int
+};
+module_param_cb(diseqc_voltage, &diseqc_voltage_ops, &diseqc_voltage, 0644);
+MODULE_PARM_DESC(diseqc_voltage, " voltage control");
+/////---------------------------------------------------------------------------
 
 
 EXPORT_SYMBOL_GPL(avl68x2_attach);

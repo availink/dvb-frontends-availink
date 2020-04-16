@@ -207,11 +207,7 @@ avl_error_code_t AVL_Demod_SetMode(AVL_DemodMode eDemodMode, avl68x2_chip *chip)
 		return r;
 	}
 
-	printk("%s:%d r=%d\n", __FUNCTION__, __LINE__, r);
-
 	r |= IBase_SendRxOPWait_Demod(AVL_FW_CMD_HALT, chip);
-
-	printk("%s:%d r=%d\n", __FUNCTION__, __LINE__, r);
 
 	if (chip->chip_pub->cur_demod_mode != eDemodMode)
 	{
@@ -241,11 +237,9 @@ avl_error_code_t AVL_Demod_SetMode(AVL_DemodMode eDemodMode, avl68x2_chip *chip)
 		r |= avl_bms_write32(chip->chip_pub->i2c_addr,
 					stBaseAddrSet.hw_mcu_system_reset_base, 0);
 
-		printk("%s:%d r=%d\n", __FUNCTION__, __LINE__, r);
-		r |= AVL_ParseFwPatch_v0(chip, 0);
-		printk("%s:%d r=%d\n", __FUNCTION__, __LINE__, r);
 		
-		printk("%s:%d r=%d\n", __FUNCTION__, __LINE__, r);
+		r |= AVL_ParseFwPatch_v0(chip, 0);
+
 		while (AVL_EC_OK != IBase_CheckChipReady_Demod(chip))
 		{
 			if (uiMaxRetries <= i++)
@@ -256,13 +250,11 @@ avl_error_code_t AVL_Demod_SetMode(AVL_DemodMode eDemodMode, avl68x2_chip *chip)
 			avl_bsp_delay(uiTimeDelay);
 		}
 		avl_bms_read32(chip->chip_pub->i2c_addr,rs_core_ready_word_iaddr_offset, &i);
-		printk("%s:%d r=%d ready word 0x%x\n", __FUNCTION__, __LINE__, r, i);
+		
 		chip->chip_pub->cur_demod_mode = eDemodMode;
 
 		r |= SetInternalFunc_Demod(chip->chip_pub->cur_demod_mode, chip);
-		printk("%s:%d r=%d\n", __FUNCTION__, __LINE__, r);
 
-		printk("%s:%d r=%d\n", __FUNCTION__, __LINE__, r);
 		r |= IRx_Initialize_Demod(chip);
 	}
 
