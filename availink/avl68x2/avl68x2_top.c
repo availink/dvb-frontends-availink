@@ -22,12 +22,11 @@
 #include "avl68x2.h"
 #include "avl_tuner.h"
 
-#include "AVL_Demod.h"
-#include "avl_tuner.h"
-#include "AVL_Demod_DVBSx.h"
-#include "AVL_Demod_DVBTx.h"
-#include "AVL_Demod_DVBC.h"
-#include "AVL_Demod_ISDBT.h"
+#include "avl68x2_common.h"
+#include "avl68x2_dvbsx.h"
+#include "avl68x2_dvbtx.h"
+#include "avl68x2_dvbc.h"
+#include "avl68x2_isdbt.h"
 
 #define INCLUDE_STDOUT	0
 
@@ -175,8 +174,8 @@ static int diseqc_set_voltage(
 	default:
 		return -EINVAL;
 	}
-	ret = AVL_Demod_SetGPIO(AVL_Pin37, pwr, priv->chip);
-	ret |= AVL_Demod_SetGPIO(AVL_Pin38, vol, priv->chip);
+	ret = avl68x2_demod_set_gpio(AVL_Pin37, pwr, priv->chip);
+	ret |= avl68x2_demod_set_gpio(AVL_Pin38, vol, priv->chip);
 	return ret;
 }
 
@@ -190,11 +189,11 @@ static int avl68x2_i2c_gate_ctrl(struct dvb_frontend *fe, int enable)
 
   if (enable)
   {
-    ret =  AVL_Demod_I2CPassThruOn(priv->chip);
+    ret =  avl68x2_demod_i2c_passthru_on(priv->chip);
   }
   else
   {
-    ret = AVL_Demod_I2CPassThruOff(priv->chip);
+    ret = avl68x2_demod_i2c_passthru_off(priv->chip);
   }
   return ret;
 }
@@ -445,17 +444,17 @@ static int avl68x2_set_standard(
 	//   }
 
 	// boot the firmware here
-	r |= AVL_Demod_SetMode(dmd_mode, priv->chip);
+	r |= avl68x2_demod_set_mode(dmd_mode, priv->chip);
 	if (AVL_EC_OK != r)
 	{
-		p_debug("AVL_Demod_SetMode failed !\n");
+		p_debug("avl68x2_demod_set_mode failed !\n");
 		return r;
 	}
 
-	r |= AVL_Demod_GetVersion(&ver_info, priv->chip);
+	r |= avl68x2_demod_get_version(&ver_info, priv->chip);
 	if (AVL_EC_OK != r)
 	{
-		p_debug("AVL_Demod_GetVersion failed\n");
+		p_debug("avl68x2_demod_get_version failed\n");
 		return r;
 	}
 	p_debug("FW version %d.%d.%d\n", ver_info.firmware.major, ver_info.firmware.minor, ver_info.firmware.build);
@@ -966,11 +965,11 @@ static int get_frontend(struct dvb_frontend *fe,
 	props->block_count.len = 1;
 	props->block_count.stat[0].scale = FE_SCALE_NOT_AVAILABLE;
 
-	ret = AVL_Demod_GetLockStatus(&lock, priv->chip);
+	ret = avl68x2_demod_get_lock_status(&lock, priv->chip);
 
 	if(lock)
 	{
-		ret |= AVL_Demod_GetSSI(&ssi, priv->chip);
+		ret |= avl68x2_demod_get_ssi(&ssi, priv->chip);
 
 		props->strength.len = 2;
 
@@ -980,7 +979,7 @@ static int get_frontend(struct dvb_frontend *fe,
 		props->strength.stat[0].scale = FE_SCALE_DECIBEL;
 		props->strength.stat[0].svalue = -80 + ssi / 2;
 
-		ret |= AVL_Demod_GetSNR (&SNR_x100db, priv->chip);
+		ret |= avl68x2_demod_get_snr (&SNR_x100db, priv->chip);
 		props->cnr.len = 2;
 		props->cnr.stat[0].scale = FE_SCALE_DECIBEL; //0.001dB
 		props->cnr.stat[0].svalue = SNR_x100db * 10;
@@ -1036,8 +1035,10 @@ static int avl68x2_read_status(struct dvb_frontend *fe, enum fe_status *status)
 	struct avl68x2_priv *priv = fe->demodulator_priv;
 	int ret = 0;
 	uint8_t lock = 0;
+#if 0
 	uint8_t tempc = 0;
 	uint32_t tempi = 0;
+#endif
 	int32_t SNR_x100db = 0;
 	int32_t ber = 0;
 	int8_t demod_id =
@@ -1052,7 +1053,7 @@ static int avl68x2_read_status(struct dvb_frontend *fe, enum fe_status *status)
 		return AVL_EC_OK;
 	}
 
-	ret = AVL_Demod_GetLockStatus(&lock, priv->chip);
+	ret = avl68x2_demod_get_lock_status(&lock, priv->chip);
 	if (!ret && lock == AVL_STATUS_LOCK)
 	{
 		*status = FE_HAS_SIGNAL | FE_HAS_CARRIER |
@@ -1097,8 +1098,8 @@ static int avl68x2_read_status(struct dvb_frontend *fe, enum fe_status *status)
 	  avl_bms_read8(priv->chip->chip_pub->i2c_addr, stBaseAddrSet.fw_config_reg_base +ts_clock_phase_caddr_offset, &tempc);
 	  printk("AVL: clk_phs:%x\n", tempc);
 #endif	   
-	  ret |= AVL_Demod_GetSNR (&SNR_x100db, priv->chip);
-	  ret = (int)AVL_Demod_GetPER(&ber, priv->chip);
+	  ret |= avl68x2_demod_get_snr (&SNR_x100db, priv->chip);
+	  ret = (int)avl68x2_demod_get_per(&ber, priv->chip);
 	  printk("read status %d, snr = %d, per = %d\n",*status, SNR_x100db, ber);
 	}
 
@@ -1144,7 +1145,7 @@ static int avl68x2_read_ber(struct dvb_frontend *fe, uint32_t *ber)
   int ret;
 
   *ber = 10e7;
-  ret = (int)AVL_Demod_GetPER(ber, priv->chip);
+  ret = (int)avl68x2_demod_get_per(ber, priv->chip);
   if (!ret)
     *ber /= 100;
 
@@ -1695,7 +1696,7 @@ struct dvb_frontend *avl68x2_attach(struct avl68x2_config *config,
 		goto err5;
 	}
 
-	ret |= AVL_Demod_GetChipID(&chip_id, priv->chip);
+	ret |= avl68x2_demod_get_chip_id(&chip_id, priv->chip);
 	p_debug("chip_id= 0x%x\n",chip_id);
 
 	switch (chip_id)
@@ -1741,7 +1742,7 @@ struct dvb_frontend *avl68x2_attach(struct avl68x2_config *config,
 		goto err5;
 	}
 
-	if (!AVL_Demod_Initialize(AVL_DVBC,priv->chip))
+	if (!avl68x2_demod_initialize(AVL_DVBC,priv->chip))
 	{
 		p_info("Firmware booted");
 

@@ -5,8 +5,8 @@
  * Copyright (C) 2020 Availink, Inc. (gpl@availink.com)
  *
  */
-#include "AVL_Demod.h"
-#include "AVL_Demod_ISDBT.h"
+#include "avl68x2_common.h"
+#include "avl68x2_isdbt.h"
 
 struct AVL_ISDBTLayerErrorStats gstISDBTLayerA_ErrorStats, gstISDBTLayerB_ErrorStats, gstISDBTLayerC_ErrorStats;
 

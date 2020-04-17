@@ -5,10 +5,10 @@
  * Copyright (C) 2020 Availink, Inc. (gpl@availink.com)
  *
  */
-#ifndef AVL_DVBSX_H
-#define AVL_DVBSX_H
+#ifndef __avl68x2_dvbsx_h__
+#define __avl68x2_dvbsx_h__
 
-#include "AVL_Demod.h"
+#include "avl68x2_common.h"
 
 
 #define rc_DVBSx_rfagc_pol_iaddr_offset                                  0x00000000
@@ -231,6 +231,17 @@ typedef struct AVL_Diseqc_RxStatus
     uint8_t   m_RxFifoParChk;                     // The parity check result of the received data. This is a bit-mapped field in which each bit represents the parity check result for each each byte in the receive FIFO.  The upper bits without corresponding data are undefined. If a bit is 1, the corresponding byte in the FIFO has good parity. For example, if three bytes are in the FIFO, and the parity check value is 0x03 (value of bit 2 is zero), then the first and the second bytes in the receive FIFO are good. The third byte had bad parity. 
     uint8_t   m_RxDone;                           // 1 if the receiver window is turned off, 0 if it is still in receiving state.
 }AVL_Diseqc_RxStatus;
+
+struct avl68x2_bs_state
+{
+	uint8_t bs_mode;
+	uint8_t num_carriers;
+	int8_t cur_carrier;
+
+	AVL_BlindScanPara params;
+	AVL_BSInfo info;
+	AVL_ChannelInfo *carriers;
+};
 
 avl_error_code_t AVL_Demod_DVBSxAutoLock(uint32_t uiSymbolRateSps, avl68x2_chip *chip);
 avl_error_code_t AVL_Demod_DVBSxGetModulationInfo(AVL_DVBSxModulationInfo *pstModulationInfo, avl68x2_chip *chip);

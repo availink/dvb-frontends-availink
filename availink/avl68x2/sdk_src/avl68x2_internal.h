@@ -6,8 +6,8 @@
  *
  */
 
-#ifndef AVL_COMMONINTERNAL_H
-#define AVL_COMMONINTERNAL_H
+#ifndef __avl68x2_internal_h__
+#define __avl68x2_internal_h__
 
 #include "avl_lib.h"
 

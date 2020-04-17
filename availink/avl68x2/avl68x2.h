@@ -15,8 +15,8 @@
 #include <linux/dvb/version.h>
 #include <media/dvb_frontend.h>
 
-#include "AVL_Demod.h"
-#include "AVL_Demod_DVBSx.h"
+#include "avl68x2_common.h"
+#include "avl68x2_dvbsx.h"
 
 #define str(a) #a
 #define xstr(a) str(a)
@@ -62,19 +62,6 @@ extern const AVL_DVBTxConfig default_dvbtx_config;
 extern const AVL_DVBSxConfig default_dvbsx_config;
 extern const AVL_ISDBTConfig default_isdbt_config;
 extern const AVL_DVBCConfig default_dvbc_config;
-
-struct avl68x2_bs_state
-{
-	uint8_t bs_mode;
-	uint8_t num_carriers;
-	int8_t cur_carrier;
-
-	AVL_BlindScanPara params;
-	AVL_BSInfo info;
-	AVL_ChannelInfo *carriers;
-};
-
-static struct dvb_frontend_ops avl68x2_ops;
 
 extern struct dvb_frontend *avl68x2_attach(struct avl68x2_config *config, struct i2c_adapter *i2c);
 

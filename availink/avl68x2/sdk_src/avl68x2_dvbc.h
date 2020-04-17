@@ -6,9 +6,10 @@
  *
  */
 
-#ifndef AVL_DVBC_H
-#define AVL_DVBC_H
-#include "AVL_Demod.h"
+#ifndef __avl68x2_dvbc_h__
+#define __avl68x2_dvbc_h__
+
+#include "avl68x2_common.h"
 
 //DVBC config registers offset address
 #define rc_DVBC_symbol_rate_Hz_iaddr_offset		0x00000000

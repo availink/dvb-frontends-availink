@@ -5,10 +5,10 @@
  * Copyright (C) 2020 Availink, Inc. (gpl@availink.com)
  *
  */
-#ifndef AVL_ISDBT_H
-#define AVL_ISDBT_H
+#ifndef __avl68x2_isdbt_h__
+#define __avl68x2_isdbt_h__
 
-#include "AVL_Demod.h"
+#include "avl68x2_common.h"
 
 
 #define rc_ISDBT_fund_rate_Hz_iaddr_offset                                0x00000004

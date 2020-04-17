@@ -6,11 +6,11 @@
  *
  */
 
-#include "AVL_Demod.h"
-#include "AVL_Demod_DVBC.h"
-#include "AVL_Demod_DVBSx.h"
-#include "AVL_Demod_DVBTx.h"
-#include "AVL_Demod_ISDBT.h"
+#include "avl68x2_common.h"
+#include "avl68x2_dvbc.h"
+#include "avl68x2_dvbsx.h"
+#include "avl68x2_dvbtx.h"
+#include "avl68x2_isdbt.h"
 
 const AVL_BaseAddressSet stBaseAddrSet = {
   0x110840, //hw_mcu_reset_base           
@@ -1121,7 +1121,7 @@ avl_error_code_t GetBER_Demod(uint32_t *puiBERxe9, AVL_BER_Type eBERType, avl68x
     struct avl_uint64 uiTemp64;
     uint8_t ucLocked;
 
-    r = AVL_Demod_GetLockStatus(&ucLocked,chip);
+    r = avl68x2_demod_get_lock_status(&ucLocked,chip);
 
     //record the lock status before return the BER
     if(1 == ucLocked)

@@ -6,10 +6,10 @@
  *
  */
 
-#ifndef AVL_DVBTX_API_H
-#define AVL_DVBTX_API_H
+#ifndef __avl68x2_dvbtx_h__
+#define __avl68x2_dvbtx_h__
 
-#include "AVL_Demod.h"
+#include "avl68x2_common.h"
 
 
 #define rc_DVBTx_fund_rate_Hz_iaddr_offset                       0x00000004
@@ -321,7 +321,7 @@ typedef struct AVL_DVBTxModulationInfo
 typedef struct AVL_DVBTx_Channel
 {
     AVL_DVBTxBandWidth      eDVBTxBandWith;                       ///< The symbol rate in units of Hz. 
-    AVL_SpectrumInversion   eSpectrumInversion;
+    avl68x2_spectrum_polarity   eSpectrumInversion;
     AVL_DVBTx_LockMode      eDVBTxLockMode;
     AVL_DVBT_Layer          eDVBTLayer;
     uint8_t               ucDVBT2DataPLPID;

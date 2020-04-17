@@ -6,9 +6,9 @@
  *
  */
 
-#include "AVL_Demod.h"
+#include "avl68x2_common.h"
 
-avl_error_code_t AVL_Demod_Initialize(
+avl_error_code_t avl68x2_demod_initialize(
     AVL_DemodMode eStartupMode,
     avl68x2_chip *chip)
 {
@@ -58,7 +58,7 @@ avl_error_code_t AVL_Demod_Initialize(
 	return r;
 }
 
-avl_error_code_t AVL_Demod_GetChipID(uint32_t *puiChipID, avl68x2_chip *chip)
+avl_error_code_t avl68x2_demod_get_chip_id(uint32_t *puiChipID, avl68x2_chip *chip)
 {
 	avl_error_code_t r = AVL_EC_OK;
 
@@ -71,7 +71,7 @@ avl_error_code_t AVL_Demod_GetChipID(uint32_t *puiChipID, avl68x2_chip *chip)
 	return r;
 }
 
-avl_error_code_t AVL_Demod_GetLockStatus(uint8_t * pucDemodLocked, avl68x2_chip *chip)
+avl_error_code_t avl68x2_demod_get_lock_status(uint8_t * pucDemodLocked, avl68x2_chip *chip)
 {
     avl_error_code_t r = AVL_EC_OK;
 
@@ -85,7 +85,7 @@ avl_error_code_t AVL_Demod_GetLockStatus(uint8_t * pucDemodLocked, avl68x2_chip 
     return r;
 }
 
-avl_error_code_t AVL_Demod_GetSNR (uint32_t * puiSNRx100, avl68x2_chip *chip)
+avl_error_code_t avl68x2_demod_get_snr (uint32_t * puiSNRx100, avl68x2_chip *chip)
 {
     avl_error_code_t r = AVL_EC_OK;
 
@@ -99,7 +99,7 @@ avl_error_code_t AVL_Demod_GetSNR (uint32_t * puiSNRx100, avl68x2_chip *chip)
     return (r);
 }
 
-avl_error_code_t AVL_Demod_GetSQI (uint16_t * pusSQI, avl68x2_chip *chip)
+avl_error_code_t avl68x2_demod_get_sqi (uint16_t * pusSQI, avl68x2_chip *chip)
 {
     avl_error_code_t r = AVL_EC_OK;
 
@@ -112,7 +112,7 @@ avl_error_code_t AVL_Demod_GetSQI (uint16_t * pusSQI, avl68x2_chip *chip)
     return (r);
 }
 
-avl_error_code_t AVL_Demod_GetSSI(uint16_t * pusSSI, avl68x2_chip *chip)
+avl_error_code_t avl68x2_demod_get_ssi(uint16_t * pusSSI, avl68x2_chip *chip)
 {
     avl_error_code_t r = AVL_EC_OK;
 
@@ -123,7 +123,7 @@ avl_error_code_t AVL_Demod_GetSSI(uint16_t * pusSSI, avl68x2_chip *chip)
     return (r);
 }
 
-avl_error_code_t AVL_Demod_GetPER(uint32_t *puiPERxe9, avl68x2_chip *chip)
+avl_error_code_t avl68x2_demod_get_per(uint32_t *puiPERxe9, avl68x2_chip *chip)
 {
     avl_error_code_t r = AVL_EC_OK;
     uint32_t uiHwCntPktErrors = 0;
@@ -132,7 +132,7 @@ avl_error_code_t AVL_Demod_GetPER(uint32_t *puiPERxe9, avl68x2_chip *chip)
     struct avl_uint64 uiTemp64 = {0,0};
     uint8_t uclock_status = 0;
 
-    r = AVL_Demod_GetLockStatus(&uclock_status, chip);
+    r = avl68x2_demod_get_lock_status(&uclock_status, chip);
 
     //record the lock status before return the PER
     if(1 == uclock_status)
@@ -193,7 +193,7 @@ avl_error_code_t AVL_Demod_GetPER(uint32_t *puiPERxe9, avl68x2_chip *chip)
 
 }
 
-avl_error_code_t AVL_Demod_SetMode(AVL_DemodMode eDemodMode, avl68x2_chip *chip)
+avl_error_code_t avl68x2_demod_set_mode(AVL_DemodMode eDemodMode, avl68x2_chip *chip)
 {
 	avl_error_code_t r = AVL_EC_OK;
 	uint32_t uiTimeDelay = 10;
@@ -274,7 +274,7 @@ avl_error_code_t AVL_Demod_SetMode(AVL_DemodMode eDemodMode, avl68x2_chip *chip)
 	return r;
 }
 
-avl_error_code_t AVL_Demod_Sleep(avl68x2_chip *chip)
+avl_error_code_t avl68x2_demod_sleep(avl68x2_chip *chip)
 {
     avl_error_code_t r = AVL_EC_OK;
 
@@ -298,7 +298,7 @@ avl_error_code_t AVL_Demod_Sleep(avl68x2_chip *chip)
 
 }
 
-avl_error_code_t AVL_Demod_Wakeup(avl68x2_chip *chip)
+avl_error_code_t avl68x2_demod_wakeup(avl68x2_chip *chip)
 {
 
     avl_error_code_t r = AVL_EC_OK;
@@ -379,7 +379,7 @@ avl_error_code_t AVL_Demod_Wakeup(avl68x2_chip *chip)
 
 }
 
-avl_error_code_t AVL_Demod_I2CPassThruOn(avl68x2_chip *chip)
+avl_error_code_t avl68x2_demod_i2c_passthru_on(avl68x2_chip *chip)
 {
     avl_error_code_t r = AVL_EC_OK;
     uint8_t   ucNum = 0;
@@ -392,7 +392,7 @@ avl_error_code_t AVL_Demod_I2CPassThruOn(avl68x2_chip *chip)
     return (r);
 }
 
-avl_error_code_t AVL_Demod_I2CPassThruOff(avl68x2_chip *chip)
+avl_error_code_t avl68x2_demod_i2c_passthru_off(avl68x2_chip *chip)
 {
     avl_error_code_t r = AVL_EC_OK;
     uint8_t   ucNum = 0;
@@ -405,7 +405,7 @@ avl_error_code_t AVL_Demod_I2CPassThruOff(avl68x2_chip *chip)
     return (r);
 }
 
-avl_error_code_t AVL_Demod_TsOn(avl68x2_chip *chip)
+avl_error_code_t avl68x2_demod_ts_on(avl68x2_chip *chip)
 {
     avl_error_code_t r = AVL_EC_OK;
 
@@ -415,7 +415,7 @@ avl_error_code_t AVL_Demod_TsOn(avl68x2_chip *chip)
     return r;
 }
 
-avl_error_code_t AVL_Demod_TsOff(avl68x2_chip *chip)
+avl_error_code_t avl68x2_demod_ts_off(avl68x2_chip *chip)
 {
     avl_error_code_t r = AVL_EC_OK;
 
@@ -425,7 +425,7 @@ avl_error_code_t AVL_Demod_TsOff(avl68x2_chip *chip)
     return r;
 }
 
-avl_error_code_t AVL_Demod_GetVersion(AVL_DemodVersion *pstDemodVersion, avl68x2_chip *chip)
+avl_error_code_t avl68x2_demod_get_version(AVL_DemodVersion *pstDemodVersion, avl68x2_chip *chip)
 {
     avl_error_code_t r = AVL_EC_OK;
     uint32_t uiTemp = 0;
@@ -455,7 +455,7 @@ avl_error_code_t AVL_Demod_GetVersion(AVL_DemodVersion *pstDemodVersion, avl68x2
     return r;
 }
 
-avl_error_code_t AVL_Demod_SetGPIO(AVL_GPIOPinNumber ePinNumber, AVL_GPIOPinValue ePinValue, avl68x2_chip *chip)
+avl_error_code_t avl68x2_demod_set_gpio(AVL_GPIOPinNumber ePinNumber, AVL_GPIOPinValue ePinValue, avl68x2_chip *chip)
 {
     avl_error_code_t r = AVL_EC_OK;
 
@@ -531,7 +531,7 @@ avl_error_code_t AVL_Demod_SetGPIO(AVL_GPIOPinNumber ePinNumber, AVL_GPIOPinValu
     return r;
 }
 
-avl_error_code_t AVL_Demod_GetGPIOValue(AVL_GPIOPinNumber ePinNumber, AVL_GPIOPinValue *pePinValue, avl68x2_chip *chip)
+avl_error_code_t avl68x2_demod_get_gpio(AVL_GPIOPinNumber ePinNumber, AVL_GPIOPinValue *pePinValue, avl68x2_chip *chip)
 {
     avl_error_code_t r = AVL_EC_OK;
     uint32_t uiTemp = 0;

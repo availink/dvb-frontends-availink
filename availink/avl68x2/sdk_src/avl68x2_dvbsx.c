@@ -5,8 +5,8 @@
  * Copyright (C) 2020 Availink, Inc. (gpl@availink.com)
  *
  */
-#include "AVL_Demod.h"
-#include "AVL_Demod_DVBSx.h"
+#include "avl68x2_common.h"
+#include "avl68x2_dvbsx.h"
 
 #define Diseqc_delay 20
 
@@ -870,8 +870,8 @@ avl_error_code_t DVBSx_Diseqc_Initialize_Demod(AVL_Diseqc_Para *pDiseqcPara, avl
 		}
 
 		//turn off LNB voltage
-		r = AVL_Demod_SetGPIO(AVL_Pin37, AVL_LOGIC_0, chip);
-		r |= AVL_Demod_SetGPIO(AVL_Pin38, AVL_LOGIC_0, chip);
+		r = avl68x2_demod_set_gpio(AVL_Pin37, AVL_LOGIC_0, chip);
+		r |= avl68x2_demod_set_gpio(AVL_Pin38, AVL_LOGIC_0, chip);
 	}
 	r |= avl_bsp_release_semaphore(&(chip->diseqc_sem));
 

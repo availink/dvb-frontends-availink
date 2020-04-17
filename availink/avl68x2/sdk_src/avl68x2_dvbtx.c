@@ -6,8 +6,8 @@
  *
  */
 
-#include "AVL_Demod.h"
-#include "AVL_Demod_DVBTx.h"
+#include "avl68x2_common.h"
+#include "avl68x2_dvbtx.h"
 
 extern avl68x2_chip gstChipInternalArray[2];
 
@@ -57,7 +57,7 @@ avl_error_code_t AVL_Demod_DVBTxGetScanInfo(AVL_DVBTxScanInfo* pstDVBTxScanInfo,
     while((nWait -- ) > 0)
     {
         ucDemodLockStatus = 0;
-        r = AVL_Demod_GetLockStatus(&ucDemodLockStatus, chip);
+        r = avl68x2_demod_get_lock_status(&ucDemodLockStatus, chip);
         if(ucDemodLockStatus != 1 )
         {
             avl_bsp_delay(20);
@@ -167,7 +167,7 @@ avl_error_code_t AVL_Demod_DVBT2GetPLPList(uint8_t * pucPLPIndexArray, uint8_t *
     while((nWait -- ) > 0)
     {
         ucDemodLockStatus = 0;
-        r = AVL_Demod_GetLockStatus(&ucDemodLockStatus, chip);
+        r = avl68x2_demod_get_lock_status(&ucDemodLockStatus, chip);
         if(ucDemodLockStatus != 1)
         {
             avl_bsp_delay(20);

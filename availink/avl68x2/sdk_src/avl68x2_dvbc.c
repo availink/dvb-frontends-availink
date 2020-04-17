@@ -6,8 +6,8 @@
  *
  */
 
-#include "AVL_Demod.h"
-#include "AVL_Demod_DVBC.h"
+#include "avl68x2_common.h"
+#include "avl68x2_dvbc.h"
 
 
 extern avl68x2_chip gstChipInternalArray[2];
