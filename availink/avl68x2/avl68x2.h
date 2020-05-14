@@ -34,13 +34,18 @@
 //MAJOR = public API rev
 //minor = SDK API rev (a.k.a. SDK API MAJOR rev)
 //build number = increment on every change to implementation
-#define AVL68X2_VERSION "1." xstr(AVL68X2_SDK_VER_MAJOR) ".2"
+#define AVL68X2_VERSION "2." xstr(AVL68X2_SDK_VER_MAJOR) ".0"
 
 #define AVL68X2_BS_CTRL_PROP			isdbt_sb_segment_idx
 //isdbt_sb_segment_idx fields
 #define AVL68X2_BS_CTRL_VALID_STREAM_MASK	(0x80000000)
 #define AVL68X2_BS_CTRL_NEW_TUNE_MASK		(0x40000000)
 #define AVL68X2_BS_CTRL_MORE_RESULTS_MASK	(0x20000000)
+
+struct i2cctl_ioctl_lock_req {
+	int demod;
+	int tuner;
+};
 
 struct avl68x2_priv
 {

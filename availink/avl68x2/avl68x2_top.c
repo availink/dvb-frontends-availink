@@ -61,8 +61,23 @@
 			__func__, ##args);			\
 	} while (0);
 
+#define p_warn(fmt, args...)					\
+	do							\
+	{							\
+		printk("avl68x2:%s WARN: " fmt "\n",		\
+			__func__, ##args);			\
+	} while (0);
+
+#define safe_mutex_unlock(m)					\
+	if(mutex_is_locked(m)) {				\
+		mutex_unlock(m);				\
+	} else {						\
+		p_warn("Tried to unlock mutex that wasn't locked"); \
+	}
+
 static struct avl68x2_bs_state bs_states[AVL_MAX_NUM_DEMODS] = {0};
 static struct avl68x2_priv *global_priv; //just for debug
+static struct dvb_frontend_ops avl68x2_ops;
 
 //------ module parameters --------
 int debug = 0;
@@ -73,6 +88,186 @@ int bs_min_sr = 1000000;
 int diseqc_tone = 0;
 int diseqc_voltage = 0;
 //---------------------------------
+
+//---- character device stuff ----
+#define DEVICE_NAME "avl68x2_i2c" //device at /dev/DEVICE_NAME
+#define CLASS_NAME  "avl68x2"     //device class
+#define I2CCTL_IOC_MAGIC 'k'
+#define I2CCTL_IOCLOCK _IO(I2CCTL_IOC_MAGIC, 0)
+#define I2CCTL_IOCUNLOCK _IO(I2CCTL_IOC_MAGIC, 1)
+#define I2CCTL_IOC_MAXNR 1
+
+static DEFINE_MUTEX(i2cctl_dev_mutex); //mutex for char device
+//-----
+//N.B. these mutexes are monolithic - there's only one for all demod instances
+//this may be improved in future versions of this driver
+static DEFINE_MUTEX(i2cctl_fe_mutex); //mutex for whole FE controlled thru ioctl
+static DEFINE_MUTEX(i2cctl_tuneri2c_mutex); //mutex for tuneri2c access
+//-----
+
+static int    i2cctl_maj_num;                  ///< Stores the device number -- determined automatically
+static struct class*  i2cctl_class  = NULL; ///< The device-driver class struct pointer
+static struct device* i2cctl_device = NULL; ///< The device-driver device struct pointer
+ 
+// The prototype functions for the character driver -- must come before the struct definition
+static int     i2cctl_dev_open(struct inode *, struct file *);
+static int     i2cctl_dev_release(struct inode *, struct file *);
+static ssize_t i2cctl_dev_read(struct file *, char *, size_t, loff_t *);
+static ssize_t i2cctl_dev_write(struct file *, const char *, size_t, loff_t *);
+static long    i2cctl_dev_ioctl(struct file *file, unsigned int cmd, unsigned long arg);
+
+static struct file_operations i2cctl_fops =
+    {
+	.owner = THIS_MODULE,
+	.open = i2cctl_dev_open,
+	.read = i2cctl_dev_read,
+	.write = i2cctl_dev_write,
+	.release = i2cctl_dev_release,
+	.unlocked_ioctl = i2cctl_dev_ioctl};
+
+void init_avl68x2_i2cctl_device(struct avl68x2_priv *priv)
+{
+	i2cctl_maj_num = register_chrdev(0, DEVICE_NAME, &i2cctl_fops);
+	if (i2cctl_maj_num < 0)
+	{
+		p_error("failed to register a major number");
+		return i2cctl_maj_num;
+	}
+
+	// Register the device class
+	i2cctl_class = class_create(THIS_MODULE, CLASS_NAME);
+	if (IS_ERR(i2cctl_class))
+	{ // Check for error and clean up if there is
+		unregister_chrdev(i2cctl_maj_num, DEVICE_NAME);
+		p_error("Failed to register device class");
+		return PTR_ERR(i2cctl_class); // Correct way to return an error on a pointer
+	}
+
+	// Register the device driver
+	i2cctl_device = device_create(i2cctl_class, NULL, MKDEV(i2cctl_maj_num, 0), NULL, DEVICE_NAME);
+	if (IS_ERR(i2cctl_device))
+	{				     // Clean up if there is an error
+		class_destroy(i2cctl_class); // Repeated code but the alternative is goto statements
+		unregister_chrdev(i2cctl_maj_num, DEVICE_NAME);
+		p_error("Failed to create the device");
+		return PTR_ERR(i2cctl_device);
+	}
+
+	mutex_init(&i2cctl_dev_mutex);
+	mutex_init(&i2cctl_fe_mutex);
+	mutex_init(&i2cctl_tuneri2c_mutex);
+}
+
+void deinit_avl68x2_i2cctl_device(struct avl68x2_priv *priv)
+{
+	device_destroy(i2cctl_class, MKDEV(i2cctl_maj_num, 0)); // remove the device
+	class_unregister(i2cctl_class);			     // unregister the device class
+	class_destroy(i2cctl_class);			     // remove the device class
+	unregister_chrdev(i2cctl_maj_num, DEVICE_NAME);	     // unregister the major number
+
+	mutex_unlock(&i2cctl_fe_mutex);
+	mutex_unlock(&i2cctl_tuneri2c_mutex);
+
+	mutex_destroy(&i2cctl_dev_mutex);
+}
+
+static long i2cctl_dev_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
+{
+	int err = 0, tmp;
+	int ret = 0;
+
+
+	/*
+	* extract the type and number bitfields, and don't decode
+	* wrong cmds: return ENOTTY (inappropriate ioctl) before access_ok()
+	*/
+	if (_IOC_TYPE(cmd) != I2CCTL_IOC_MAGIC)
+		return -ENOTTY;
+	if (_IOC_NR(cmd) > I2CCTL_IOC_MAXNR)
+		return -ENOTTY;
+
+
+	struct i2cctl_ioctl_lock_req *req = (struct i2cctl_ioctl_lock_req *)arg;
+
+	switch (cmd)
+	{
+	case I2CCTL_IOCLOCK:
+		if(req->demod) {
+			mutex_lock(&i2cctl_fe_mutex);
+			p_debug_lvl(4,"locked demod");
+		}
+		if(req->tuner) {
+			mutex_lock(&i2cctl_tuneri2c_mutex);
+			p_debug_lvl(4,"locked tuner");
+		}
+		break;
+	case I2CCTL_IOCUNLOCK:
+		if(req->demod) {
+			if(mutex_is_locked(&i2cctl_fe_mutex)) {
+				mutex_unlock(&i2cctl_fe_mutex);
+				p_debug_lvl(4,"unlocked demod");
+			}
+		}
+		if(req->tuner) {
+			if(mutex_is_locked(&i2cctl_tuneri2c_mutex)) {
+				mutex_unlock(&i2cctl_tuneri2c_mutex);
+				p_debug_lvl(4,"unlocked tuner");
+			}
+		}
+		break;
+	default: /* redundant, as cmd was checked against MAXNR */
+		p_error("Unknown IOCTL %d",cmd);
+		return -ENOTTY;
+	}
+
+	return 0;
+}
+
+static int i2cctl_dev_open(struct inode *inodep, struct file *filep)
+{
+	p_debug_lvl(4,"");
+	if (!mutex_trylock(&i2cctl_dev_mutex))
+	{	/// Try to acquire the mutex (i.e., put the lock on/down)
+		/// returns 1 if successful and 0 if there is contention
+		p_error("Device in use by another process");
+		return -EBUSY;
+	}
+	return 0;
+}
+
+//read from device from userspace
+static ssize_t i2cctl_dev_read(
+    struct file *filep,
+    char *buffer,   /* The buffer to fill with data */
+    size_t len,	    /* The length of the buffer     */
+    loff_t *offset) /* Our offset in the file       */
+{
+	int error_count = 0;
+
+	char msg[1024];
+
+	snprintf(msg, 1023, "i2c_device=%d,i2c_addr=0x%.2X",
+		i2c_adapter_id(global_priv->i2c),
+		global_priv->chip->chip_pub->i2c_addr & 0xFF);
+	p_debug_lvl(4,"%s",msg);
+
+	return simple_read_from_buffer(buffer, len, offset, msg, strlen(msg));
+}
+
+//write to device from userspace
+static ssize_t i2cctl_dev_write(struct file *filep, const char *buffer, size_t len, loff_t *offset)
+{
+	p_debug_lvl(4,"%d",len);
+	return len;
+}
+
+static int i2cctl_dev_release(struct inode *inodep, struct file *filep)
+{
+	p_debug_lvl(4,"");
+	mutex_unlock(&i2cctl_dev_mutex);
+	return 0;
+}
+//--------------------------------
 
 const AVL_DVBTxConfig default_dvbtx_config =
     {
@@ -152,6 +347,8 @@ static int diseqc_set_voltage(
 
 	p_debug("volt: %d", voltage);
 
+	mutex_lock(&i2cctl_fe_mutex);
+
 	switch (voltage)
 	{
 	case SEC_VOLTAGE_OFF:
@@ -172,30 +369,36 @@ static int diseqc_set_voltage(
 		p_debug("voltage 18");
 		break;
 	default:
+		safe_mutex_unlock(&i2cctl_fe_mutex);
 		return -EINVAL;
 	}
 	ret = avl68x2_demod_set_gpio(AVL_Pin37, pwr, priv->chip);
 	ret |= avl68x2_demod_set_gpio(AVL_Pin38, vol, priv->chip);
+	safe_mutex_unlock(&i2cctl_fe_mutex);
 	return ret;
 }
 
-
 static int avl68x2_i2c_gate_ctrl(struct dvb_frontend *fe, int enable)
 {
-  struct avl68x2_priv *priv = fe->demodulator_priv;
-  avl_error_code_t ret = AVL_EC_OK;
+	struct avl68x2_priv *priv = fe->demodulator_priv;
+	avl_error_code_t ret = AVL_EC_OK;
 
-  p_debug("%d\n", enable);
+	p_debug("%d\n", enable);
 
-  if (enable)
-  {
-    ret =  avl68x2_demod_i2c_passthru_on(priv->chip);
-  }
-  else
-  {
-    ret = avl68x2_demod_i2c_passthru_off(priv->chip);
-  }
-  return ret;
+	mutex_lock(&i2cctl_fe_mutex);
+
+	if (enable)
+	{
+		mutex_lock(&i2cctl_tuneri2c_mutex);
+		ret = avl68x2_demod_i2c_passthru_on(priv->chip);
+	}
+	else
+	{
+		ret = avl68x2_demod_i2c_passthru_off(priv->chip);
+		safe_mutex_unlock(&i2cctl_tuneri2c_mutex);
+	}
+	safe_mutex_unlock(&i2cctl_fe_mutex);
+	return ret;
 }
 
 static int avl68x2_acquire_dvbsx(struct dvb_frontend *fe)
@@ -471,36 +674,39 @@ static int avl68x2_set_standard(
 	return r;
 }
 
-avl_error_code_t AVL_SX_DiseqcSendCmd(
-	struct avl68x2_priv *priv,
-	uint8_t * pCmd,
-	uint8_t CmdSize)
+avl_error_code_t avl68x2_diseqc_cmd_guts(
+    struct avl68x2_priv *priv,
+    uint8_t *pCmd,
+    uint8_t CmdSize)
 {
-  avl_error_code_t r = AVL_EC_OK;
-  struct AVL_Diseqc_TxStatus TxStatus;
-  p_debug(" %*ph", CmdSize, pCmd);
+	avl_error_code_t r = AVL_EC_OK;
+	struct AVL_Diseqc_TxStatus TxStatus;
+	p_debug(" %*ph", CmdSize, pCmd);
 
-  r = AVL_Demod_DVBSx_Diseqc_SendModulationData(pCmd, CmdSize, priv->chip);
-  if (r != AVL_EC_OK)
-  {
-    p_error("AVL_SX_DiseqcSendCmd failed !\n");
-  }
-  else
-  {
-    do
-    {
-      msleep(5);
-      r |= AVL_Demod_DVBSx_Diseqc_GetTxStatus(&TxStatus, priv->chip);
-    } while (TxStatus.m_TxDone != 1);
-    if (r == AVL_EC_OK)
-    {
-    }
-    else
-    {
-      p_error("AVL_SX_DiseqcSendCmd Err. !\n");
-    }
-  }
-  return (int)(r);
+	mutex_lock(&i2cctl_fe_mutex);
+
+	r = AVL_Demod_DVBSx_Diseqc_SendModulationData(pCmd, CmdSize, priv->chip);
+	if (r != AVL_EC_OK)
+	{
+		p_error("AVL_Demod_DVBSx_Diseqc_SendModulationData failed");
+	}
+	else
+	{
+		do
+		{
+			msleep(5);
+			r |= AVL_Demod_DVBSx_Diseqc_GetTxStatus(&TxStatus,
+								priv->chip);
+		} while (TxStatus.m_TxDone != 1);
+		if (r != AVL_EC_OK)
+		{
+			p_error("AVL_Demod_DVBSx_Diseqc_GetTxStatus failed");
+		}
+	}
+
+	safe_mutex_unlock(&i2cctl_fe_mutex);
+
+	return (int)(r);
 }
 
 static int avl68x2_diseqc_cmd(struct dvb_frontend *fe,
@@ -508,17 +714,24 @@ static int avl68x2_diseqc_cmd(struct dvb_frontend *fe,
 {
   struct avl68x2_priv *priv = fe->demodulator_priv;
 
-  return AVL_SX_DiseqcSendCmd(priv, cmd->msg, cmd->msg_len);
+  return avl68x2_diseqc_cmd_guts(priv, cmd->msg, cmd->msg_len);
 }
 
 static int avl68x2_burst(struct dvb_frontend *fe, enum fe_sec_mini_cmd burst)
 {
 	struct avl68x2_priv *priv = fe->demodulator_priv;
+	int ret;
 
-	return AVL_Demod_DVBSx_Diseqc_SendTone(
+	mutex_lock(&i2cctl_fe_mutex);
+
+	ret = AVL_Demod_DVBSx_Diseqc_SendTone(
 	    burst == SEC_MINI_A ? 1 : 0,
 	    1,
 	    priv->chip);
+
+	safe_mutex_unlock(&i2cctl_fe_mutex);
+
+	return ret;
 }
 
 static int diseqc_set_tone(struct dvb_frontend *fe, enum fe_sec_tone_mode tone)
@@ -528,6 +741,8 @@ static int diseqc_set_tone(struct dvb_frontend *fe, enum fe_sec_tone_mode tone)
 	avl_error_code_t r = AVL_EC_OK;
 
 	p_debug("tone: %s", tone==SEC_TONE_ON ? "ON" : "OFF");
+
+	mutex_lock(&i2cctl_fe_mutex);
 
 	r |= avl68x2_set_standard(fe, SYS_DVBS2);
 	if(r)
@@ -552,8 +767,10 @@ static int diseqc_set_tone(struct dvb_frontend *fe, enum fe_sec_tone_mode tone)
 		}
 		break;
 	default:
-		return -EINVAL;
+		r = -EINVAL;
 	}
+
+	safe_mutex_unlock(&i2cctl_fe_mutex);
 	return r;
 }
 
@@ -948,10 +1165,13 @@ static int get_frontend(struct dvb_frontend *fe,
 	    (priv->chip->chip_pub->i2c_addr >> AVL_DEMOD_ID_SHIFT) &
 	    AVL_DEMOD_ID_MASK;
 
+	p_debug_lvl(10,"");
+
 	if(bs_states[demod_id].bs_mode) {
 		return ret;
 	}
 
+	mutex_lock(&i2cctl_fe_mutex);
 
 	props->cnr.len = 1;
 	props->cnr.stat[0].scale = FE_SCALE_NOT_AVAILABLE;
@@ -1022,6 +1242,8 @@ static int get_frontend(struct dvb_frontend *fe,
 			ret |= update_fe_props_isdbt(fe, props);
 		}
 	}
+
+	safe_mutex_unlock(&i2cctl_fe_mutex);
 	return ret;
 }
 
@@ -1053,6 +1275,8 @@ static int avl68x2_read_status(struct dvb_frontend *fe, enum fe_status *status)
 		return AVL_EC_OK;
 	}
 
+	mutex_lock(&i2cctl_fe_mutex);
+	
 	ret = avl68x2_demod_get_lock_status(&lock, priv->chip);
 	if (!ret && lock == AVL_STATUS_LOCK)
 	{
@@ -1068,36 +1292,6 @@ static int avl68x2_read_status(struct dvb_frontend *fe, enum fe_status *status)
 	}
 	
 	if(debug > 1) {
-#if 0	  
-	  avl_bms_read32(priv->chip->chip_pub->i2c_addr, stBaseAddrSet.fw_config_reg_base +rc_ts_cntns_clk_frac_d_iaddr_offset, &tempi);
-	  printk("AVL: d:%x\n", tempi);
-	  avl_bms_read32(priv->chip->chip_pub->i2c_addr, stBaseAddrSet.fw_config_reg_base +rc_ts_cntns_clk_frac_n_iaddr_offset, &tempi);
-	  printk("AVL: n:%x\n", tempi);
-	  avl_bms_read8(priv->chip->chip_pub->i2c_addr, stBaseAddrSet.fw_config_reg_base +rc_enable_ts_continuous_caddr_offset, &tempc);
-	  printk("AVL: cont:%x\n", tempc);
-	  avl_bms_read8(priv->chip->chip_pub->i2c_addr, stBaseAddrSet.fw_config_reg_base +rc_ts_clock_edge_caddr_offset, &tempc);
-	  printk("AVL: clk_edge:%x\n", tempc);	  
-	  avl_bms_read8(priv->chip->chip_pub->i2c_addr, stBaseAddrSet.fw_config_reg_base +rc_ts_serial_caddr_offset,&tempc);
-	  printk("AVL: ser:%x\n", tempc);
-	  avl_bms_read8(priv->chip->chip_pub->i2c_addr, stBaseAddrSet.fw_config_reg_base +rc_ts_serial_outpin_caddr_offset, &tempc);
-	  printk("AVL: ser_pin:%x\n", tempc);
-	  avl_bms_read8(priv->chip->chip_pub->i2c_addr, stBaseAddrSet.fw_config_reg_base +rc_ts_serial_msb_caddr_offset, &tempc);
-	  printk("AVL: ser_msb:%x\n", tempc);
-	  avl_bms_read8(priv->chip->chip_pub->i2c_addr, stBaseAddrSet.fw_config_reg_base +rc_ts_ts0_tsp1_caddr_offset, &tempc);
-	  printk("AVL: ts0_tsp1:%x\n", tempc);
-	  avl_bms_read8(priv->chip->chip_pub->i2c_addr, stBaseAddrSet.fw_config_reg_base +rc_ts_packet_order_caddr_offset, &tempc);
-	  printk("AVL: pkt_ord:%x\n", tempc);
-	  avl_bms_read8(priv->chip->chip_pub->i2c_addr, stBaseAddrSet.fw_config_reg_base +rc_ts_error_bit_en_caddr_offset, &tempc);
-	  printk("AVL: ts_err:%x\n", tempc);
-	  avl_bms_read8(priv->chip->chip_pub->i2c_addr, stBaseAddrSet.fw_config_reg_base +rc_ts_error_polarity_caddr_offset, &tempc);
-	  printk("AVL: err_pol:%x\n", tempc);
-	  avl_bms_read8(priv->chip->chip_pub->i2c_addr, stBaseAddrSet.fw_config_reg_base +rc_ts_valid_polarity_caddr_offset, &tempc);
-	  printk("AVL: val_pol:%x\n", tempc);
-	  avl_bms_read8(priv->chip->chip_pub->i2c_addr, stBaseAddrSet.fw_config_reg_base +rc_ts_sync_pulse_caddr_offset, &tempc);
-	  printk("AVL: sync_pul:%x\n", tempc);
-	  avl_bms_read8(priv->chip->chip_pub->i2c_addr, stBaseAddrSet.fw_config_reg_base +ts_clock_phase_caddr_offset, &tempc);
-	  printk("AVL: clk_phs:%x\n", tempc);
-#endif	   
 	  ret |= avl68x2_demod_get_snr (&SNR_x100db, priv->chip);
 	  ret = (int)avl68x2_demod_get_per(&ber, priv->chip);
 	  printk("read status %d, snr = %d, per = %d\n",*status, SNR_x100db, ber);
@@ -1108,6 +1302,8 @@ static int avl68x2_read_status(struct dvb_frontend *fe, enum fe_status *status)
 		printk("%s",read_stdout(fe));
 	}
 #endif
+
+	safe_mutex_unlock(&i2cctl_fe_mutex);
 	return ret;
 }
 
@@ -1141,15 +1337,21 @@ static int avl68x2_read_snr(struct dvb_frontend *fe, uint16_t *snr)
 
 static int avl68x2_read_ber(struct dvb_frontend *fe, uint32_t *ber)
 {
-  struct avl68x2_priv *priv = fe->demodulator_priv;
-  int ret;
+	struct avl68x2_priv *priv = fe->demodulator_priv;
+	int ret;
 
-  *ber = 10e7;
-  ret = (int)avl68x2_demod_get_per(ber, priv->chip);
-  if (!ret)
-    *ber /= 100;
+	p_debug_lvl(10, "");
 
-  return ret;
+	mutex_lock(&i2cctl_fe_mutex);
+
+	*ber = 10e7;
+	ret = (int)avl68x2_demod_get_per(ber, priv->chip);
+	if (!ret)
+		*ber /= 100;
+
+	safe_mutex_unlock(&i2cctl_fe_mutex);
+
+	return ret;
 }
 
 static enum dvbfe_algo avl68x2fe_algo(struct dvb_frontend *fe)
@@ -1424,25 +1626,46 @@ static int set_frontend(struct dvb_frontend *fe)
 	      (c->AVL68X2_BS_CTRL_PROP & AVL68X2_BS_CTRL_NEW_TUNE_MASK)) ||
 	     !bs_states[demod_id].bs_mode))
 	{
-		if (fe->ops.i2c_gate_ctrl)
-			fe->ops.i2c_gate_ctrl(fe, 1);
-		ret = fe->ops.tuner_ops.set_params(fe);
-		priv->chip->chip_pub->tuner_freq_hz = c->frequency * 1000;
-		//p_debug("tuner_freq: %d", priv->chip->chip_pub->tuner_freq_hz);
-		if (fe->ops.i2c_gate_ctrl)
-			fe->ops.i2c_gate_ctrl(fe, 0);
-		if (ret) {
-			p_debug("Tuning FAILED\n");
+		ret = fe->ops.i2c_gate_ctrl(fe, 1);
+		if (ret)
+		{
+			p_debug("I2C gate control FAILED\n");
 			return ret;
-		} else {
-			p_debug("Tuned to %d kHz",c->frequency);
+		}
+
+		if(fe->ops.tuner_ops.set_params)
+		{
+			p_debug("calling tuner_ops.set_params()\n");
+			mutex_lock(&i2cctl_fe_mutex);
+			ret = fe->ops.tuner_ops.set_params(fe);
+			priv->chip->chip_pub->tuner_freq_hz = c->frequency * 1000;
+			safe_mutex_unlock(&i2cctl_fe_mutex);
+			if (ret)
+			{
+				p_debug("Tuning FAILED\n");
+				return ret;
+			}
+			else
+			{
+				p_debug("Tuned to %d kHz", c->frequency);
+			}
+		}
+
+		ret = fe->ops.i2c_gate_ctrl(fe, 0);
+		if (ret)
+		{
+			p_debug("I2C gate control FAILED\n");
+			return ret;
 		}
 	}
+
+	mutex_lock(&i2cctl_fe_mutex);
 
 	ret = avl68x2_set_standard(fe, SYS_UNDEFINED);
 	if (ret)
 	{
 		p_error("failed!!!");
+		safe_mutex_unlock(&i2cctl_fe_mutex);
 		return ret;
 	}
 
@@ -1453,8 +1676,6 @@ static int set_frontend(struct dvb_frontend *fe)
 	  annex_b = 1;
 	}
 
-
-	
 	switch (c->delivery_system)
 	{
 	case SYS_DVBT:
@@ -1491,6 +1712,8 @@ static int set_frontend(struct dvb_frontend *fe)
 		break;
 	}
 
+	safe_mutex_unlock(&i2cctl_fe_mutex);
+
 	return ret;
 }
 
@@ -1525,6 +1748,7 @@ static void avl68x2_release(struct dvb_frontend *fe)
 	struct avl68x2_priv *priv = fe->demodulator_priv;
 	int lock_led = priv->chip->chip_pub->gpio_lock_led;
 	p_debug("release");
+	deinit_avl68x2_i2cctl_device(fe);
 	if(gpio_is_valid(lock_led))
 	{
 		gpio_free(lock_led);
@@ -1748,6 +1972,8 @@ struct dvb_frontend *avl68x2_attach(struct avl68x2_config *config,
 
 		release_firmware(priv->fw);
 
+		init_avl68x2_i2cctl_device(priv);
+
 		if(gpio_is_valid(priv->chip->chip_pub->gpio_lock_led))
 		{
 			gpio_request(priv->chip->chip_pub->gpio_lock_led,
@@ -1771,6 +1997,35 @@ err1:
 err:
 	return NULL;
 }
+
+static int __init mod_init(void) {
+	uint8_t i;
+
+	p_debug("");
+
+	for(i=0; i<AVL_MAX_NUM_DEMODS; i++) {
+		bs_states[i].bs_mode = (bs_mode>>i) & 1;
+		bs_states[i].num_carriers = 0;
+		bs_states[i].cur_carrier = 0;
+		bs_states[i].carriers = NULL;
+	}
+	return 0;
+}
+module_init(mod_init);
+
+static void __exit mod_exit(void) {
+	uint8_t i;
+	for(i=0; i<AVL_MAX_NUM_DEMODS; i++) {
+		if(bs_states[i].carriers != NULL)
+			kfree(bs_states[i].carriers);
+
+	}
+	
+}
+module_exit(mod_exit);
+
+
+
 
 module_param(debug, int, 0644);
 MODULE_PARM_DESC(debug, "\n\t\tEnable debug information");

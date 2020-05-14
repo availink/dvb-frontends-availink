@@ -30,7 +30,7 @@
 //MAJOR = public API rev
 //minor = SDK API rev (a.k.a. SDK API MAJOR rev)
 //build number = increment on every change to implementation
-#define AVL62X1_VERSION "2." xstr(AVL62X1_SDK_VER_MAJOR) ".4"
+#define AVL62X1_VERSION "3." xstr(AVL62X1_SDK_VER_MAJOR) ".0"
 
 #define AVL62X1_BS_CTRL_PROP			isdbt_sb_segment_idx
 //isdbt_sb_segment_idx fields
@@ -43,7 +43,10 @@
 #define AVL62X1_BS_T2MI_PID_SHIFT	16
 #define AVL62X1_BS_T2MI_PLP_ID_SHIFT	8
 
-
+struct i2cctl_ioctl_lock_req {
+	int demod;
+	int tuner;
+};
 
 struct avl62x1_priv
 {
