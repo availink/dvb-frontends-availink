@@ -11,16 +11,18 @@
 
 #include "avl_lib.h"
 
-#define MAX_II2C_READ_SIZE 64
-#define MAX_II2C_WRITE_SIZE 64
+//MAJOR.minor.build
+//MAJOR = public API rev
+//minor = FW-driver interface rev
+//build number = increment on every change to implementation
+#define AVL68X2_VER_MAJOR	2
+#define AVL68X2_VER_MINOR	19
+#define AVL68X2_VER_BUILD	1
 
-//SDK Version
-#define AVL68X2_SDK_VER_MAJOR                  2
-#define AVL68X2_SDK_VER_MINOR                  19
-#define AVL68X2_SDK_VER_BUILD                  24
+#define AVL68XX			0x68624955
 
-
-#define AVL68XX                            0x68624955
+#define MAX_II2C_READ_SIZE	64
+#define MAX_II2C_WRITE_SIZE	64
 
 #define AVL_FW_CMD_IDLE                          0
 #define AVL_FW_CMD_LD_DEFAULT                    1
@@ -708,17 +710,17 @@ typedef struct avl68x2_chip_pub
   // The Availink version structure.
   typedef struct AVL_Version
   {
-    uint8_t   major;                            // The major version number.
-    uint8_t   minor;                            // The minor version number.
-    uint16_t  build;                            // The build version number.
+    uint8_t   major;
+    uint8_t   minor;
+    uint16_t  build;
   }AVL_Version;
   
   // Stores AVLEM61 device version information.
   typedef struct AVL_DemodVersion
   {
-    uint32_t  hardware;                             // Hardware version information. 0xYYYYMMDD
-    AVL_Version sdk;                              // SDK version information.
-    AVL_Version firmware;                            // The version of the internal patch.
+    uint32_t  hardware;
+    AVL_Version firmware;
+    AVL_Version driver;
   } AVL_DemodVersion;
   
   

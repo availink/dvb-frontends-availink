@@ -425,34 +425,39 @@ avl_error_code_t avl68x2_demod_ts_off(avl68x2_chip *chip)
     return r;
 }
 
-avl_error_code_t avl68x2_demod_get_version(AVL_DemodVersion *pstDemodVersion, avl68x2_chip *chip)
+avl_error_code_t avl68x2_demod_get_version(
+    AVL_DemodVersion *pstDemodVersion,
+    avl68x2_chip *chip)
 {
-    avl_error_code_t r = AVL_EC_OK;
-    uint32_t uiTemp = 0;
-    uint8_t ucBuff[4] = {0};
+	avl_error_code_t r = AVL_EC_OK;
+	uint32_t uiTemp = 0;
+	uint8_t ucBuff[4] = {0};
 
-    r =  avl_bms_read32(chip->chip_pub->i2c_addr, 0x40000, &uiTemp);
-    if( AVL_EC_OK == r )
-    {
-        pstDemodVersion->hardware = uiTemp;
-    }
+	r = avl_bms_read32(chip->chip_pub->i2c_addr, 0x40000, &uiTemp);
+	if (AVL_EC_OK == r)
+	{
+		pstDemodVersion->hardware = uiTemp;
+	}
 
-    r |=  avl_bms_read32(chip->chip_pub->i2c_addr, 
-        stBaseAddrSet.fw_status_reg_base + rs_patch_ver_iaddr_offset, &uiTemp);
-    if( AVL_EC_OK == r )
-    {
-        avl_int_to_bytes(uiTemp, ucBuff);
-        pstDemodVersion->firmware.major = ucBuff[0];
-        pstDemodVersion->firmware.minor = ucBuff[1];
-        pstDemodVersion->firmware.build = ucBuff[2];
-        pstDemodVersion->firmware.build = ((uint16_t)((pstDemodVersion->firmware.build)<<8)) + ucBuff[3];
+	r |= avl_bms_read32(chip->chip_pub->i2c_addr,
+			    stBaseAddrSet.fw_status_reg_base +
+				rs_patch_ver_iaddr_offset,
+			    &uiTemp);
+	if (AVL_EC_OK == r)
+	{
+		avl_int_to_bytes(uiTemp, ucBuff);
+		pstDemodVersion->firmware.major = ucBuff[0];
+		pstDemodVersion->firmware.minor = ucBuff[1];
+		pstDemodVersion->firmware.build = ucBuff[2];
+		pstDemodVersion->firmware.build =
+		    ((uint16_t)((pstDemodVersion->firmware.build) << 8)) + ucBuff[3];
 
-        pstDemodVersion->sdk.major = AVL68X2_SDK_VER_MAJOR;
-        pstDemodVersion->sdk.minor = AVL68X2_SDK_VER_MINOR;
-        pstDemodVersion->sdk.build = AVL68X2_SDK_VER_BUILD;
-    }
+		pstDemodVersion->driver.major = AVL68X2_VER_MAJOR;
+		pstDemodVersion->driver.minor = AVL68X2_VER_MINOR;
+		pstDemodVersion->driver.build = AVL68X2_VER_BUILD;
+	}
 
-    return r;
+	return r;
 }
 
 avl_error_code_t avl68x2_demod_set_gpio(AVL_GPIOPinNumber ePinNumber, AVL_GPIOPinValue ePinValue, avl68x2_chip *chip)

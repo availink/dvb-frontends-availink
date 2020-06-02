@@ -13,9 +13,13 @@
 #include "avl_tuner.h"
 #include "avl_lib.h"
 
-#define AVL62X1_SDK_VER_MAJOR		2 //Public API rev
-#define AVL62X1_SDK_VER_MINOR		8 //SDK-FW API rev
-#define AVL62X1_SDK_VER_BUILD		1 //internal rev
+//MAJOR.minor.build
+//MAJOR = public API rev
+//minor = FW-driver interface rev
+//build number = increment on every change to implementation
+#define AVL62X1_VER_MAJOR	3
+#define AVL62X1_VER_MINOR	8
+#define AVL62X1_VER_BUILD	1
 
 #define AVL62X1_CHIP_ID			0x62615ca8
 
@@ -643,8 +647,8 @@ struct avl_ver_info
 struct avl62x1_ver_info
 {
 	uint32_t hw_version; //silicon version
-	struct avl_ver_info sdk;
 	struct avl_ver_info firmware;
+	struct avl_ver_info driver;
 };
 
 struct avl62x1_chip_priv

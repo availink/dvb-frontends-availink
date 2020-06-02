@@ -115,7 +115,7 @@ static struct file_operations i2cctl_fops =
 	.release = i2cctl_dev_release,
 	.unlocked_ioctl = i2cctl_dev_ioctl};
 
-void init_avl62x1_i2cctl_device(struct avl62x1_priv *priv)
+int init_avl62x1_i2cctl_device(struct avl62x1_priv *priv)
 {
 	i2cctl_maj_num = register_chrdev(0, DEVICE_NAME, &i2cctl_fops);
 	if (i2cctl_maj_num < 0)
@@ -146,6 +146,7 @@ void init_avl62x1_i2cctl_device(struct avl62x1_priv *priv)
 	mutex_init(&i2cctl_dev_mutex);
 	mutex_init(&i2cctl_fe_mutex);
 	mutex_init(&i2cctl_tuneri2c_mutex);
+	return 0;
 }
 
 void deinit_avl62x1_i2cctl_device(struct avl62x1_priv *priv)
@@ -163,8 +164,7 @@ void deinit_avl62x1_i2cctl_device(struct avl62x1_priv *priv)
 
 static long i2cctl_dev_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 {
-	int err = 0, tmp;
-	int ret = 0;
+	struct i2cctl_ioctl_lock_req *req;
 
 	/*
 	* extract the type and number bitfields, and don't decode
@@ -175,7 +175,7 @@ static long i2cctl_dev_ioctl(struct file *file, unsigned int cmd, unsigned long 
 	if (_IOC_NR(cmd) > I2CCTL_IOC_MAXNR)
 		return -ENOTTY;
 
-	struct i2cctl_ioctl_lock_req *req = (struct i2cctl_ioctl_lock_req *)arg;
+	req = (struct i2cctl_ioctl_lock_req *)arg;
 
 	switch (cmd)
 	{
@@ -230,11 +230,9 @@ static ssize_t i2cctl_dev_read(
     size_t len,	    /* The length of the buffer     */
     loff_t *offset) /* Our offset in the file       */
 {
-	int error_count = 0;
+	char msg[128];
 
-	char msg[1024];
-
-	snprintf(msg, 1023, "i2c_device=%d,i2c_addr=0x%.2X",
+	snprintf(msg, 127, "i2c_device=%d,i2c_addr=0x%.2X",
 		i2c_adapter_id(global_priv->i2c),
 		global_priv->chip->chip_pub->i2c_addr & 0xFF);
 	p_debug_lvl(4,"%s",msg);
@@ -245,7 +243,7 @@ static ssize_t i2cctl_dev_read(
 //write to device from userspace
 static ssize_t i2cctl_dev_write(struct file *filep, const char *buffer, size_t len, loff_t *offset)
 {
-	p_debug_lvl(4,"%d",len);
+	p_debug_lvl(4,"%lu",len);
 	return len;
 }
 
@@ -462,10 +460,10 @@ static int set_dvb_mode(struct dvb_frontend *fe,
 		ver_info.firmware.major,
 		ver_info.firmware.minor,
 		ver_info.firmware.build);
-	p_debug("SDK version %d.%d.%d\n",
-		ver_info.sdk.major,
-		ver_info.sdk.minor,
-		ver_info.sdk.build);
+	p_debug("Driver version %d.%d.%d\n",
+		ver_info.driver.major,
+		ver_info.driver.minor,
+		ver_info.driver.build);
 
 	switch (priv->delivery_system)
 	{
@@ -1436,7 +1434,7 @@ static void release_fe(struct dvb_frontend *fe)
 	struct avl62x1_priv *priv = fe->demodulator_priv;
 
 	p_debug("");
-	deinit_avl62x1_i2cctl_device(fe);
+	deinit_avl62x1_i2cctl_device(priv);
 	kfree(priv->chip->chip_pub);
 	kfree(priv->chip->chip_priv);
 	kfree(priv->chip);
@@ -1589,13 +1587,13 @@ struct dvb_frontend *avl62x1_attach(struct avl62x1_config *config,
 		fw_min = priv->chip->chip_priv->patch_data[25]; //SDK-FW API rev
 		fw_build = (priv->chip->chip_priv->patch_data[26] << 8) |
 			   priv->chip->chip_priv->patch_data[27]; //internal rev
-		if(fw_min != AVL62X1_SDK_VER_MINOR)
+		if(fw_min != AVL62X1_VER_MINOR)
 		{
 			//SDK-FW API rev must match
 			p_error("Firmware version %d.%d.%d incompatible with this driver version",
 				fw_maj, fw_min, fw_build);
 			p_error("Firmware minor version must be %d",
-				AVL62X1_SDK_VER_MINOR);
+				AVL62X1_VER_MINOR);
 			goto err5;
 		}
 		else

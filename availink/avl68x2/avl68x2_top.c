@@ -125,7 +125,7 @@ static struct file_operations i2cctl_fops =
 	.release = i2cctl_dev_release,
 	.unlocked_ioctl = i2cctl_dev_ioctl};
 
-void init_avl68x2_i2cctl_device(struct avl68x2_priv *priv)
+int init_avl68x2_i2cctl_device(struct avl68x2_priv *priv)
 {
 	i2cctl_maj_num = register_chrdev(0, DEVICE_NAME, &i2cctl_fops);
 	if (i2cctl_maj_num < 0)
@@ -156,6 +156,7 @@ void init_avl68x2_i2cctl_device(struct avl68x2_priv *priv)
 	mutex_init(&i2cctl_dev_mutex);
 	mutex_init(&i2cctl_fe_mutex);
 	mutex_init(&i2cctl_tuneri2c_mutex);
+	return 0;
 }
 
 void deinit_avl68x2_i2cctl_device(struct avl68x2_priv *priv)
@@ -173,9 +174,7 @@ void deinit_avl68x2_i2cctl_device(struct avl68x2_priv *priv)
 
 static long i2cctl_dev_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 {
-	int err = 0, tmp;
-	int ret = 0;
-
+	struct i2cctl_ioctl_lock_req *req;
 
 	/*
 	* extract the type and number bitfields, and don't decode
@@ -187,7 +186,7 @@ static long i2cctl_dev_ioctl(struct file *file, unsigned int cmd, unsigned long 
 		return -ENOTTY;
 
 
-	struct i2cctl_ioctl_lock_req *req = (struct i2cctl_ioctl_lock_req *)arg;
+	req = (struct i2cctl_ioctl_lock_req *)arg;
 
 	switch (cmd)
 	{
@@ -242,11 +241,9 @@ static ssize_t i2cctl_dev_read(
     size_t len,	    /* The length of the buffer     */
     loff_t *offset) /* Our offset in the file       */
 {
-	int error_count = 0;
+	char msg[128];
 
-	char msg[1024];
-
-	snprintf(msg, 1023, "i2c_device=%d,i2c_addr=0x%.2X",
+	snprintf(msg, 127, "i2c_device=%d,i2c_addr=0x%.2X",
 		i2c_adapter_id(global_priv->i2c),
 		global_priv->chip->chip_pub->i2c_addr & 0xFF);
 	p_debug_lvl(4,"%s",msg);
@@ -257,7 +254,7 @@ static ssize_t i2cctl_dev_read(
 //write to device from userspace
 static ssize_t i2cctl_dev_write(struct file *filep, const char *buffer, size_t len, loff_t *offset)
 {
-	p_debug_lvl(4,"%d",len);
+	p_debug_lvl(4,"%lu",len);
 	return len;
 }
 
@@ -550,16 +547,16 @@ static int avl68x2_get_firmware(struct dvb_frontend *fe, int force_fw)
 	{
 		priv->chip->chip_priv->patch_data = (unsigned char *)(priv->fw->data);
 		fw_maj = priv->chip->chip_priv->patch_data[24]; //major rev
-		fw_min = priv->chip->chip_priv->patch_data[25]; //SDK-FW API rev
+		fw_min = priv->chip->chip_priv->patch_data[25]; //FW-driver API rev
 		fw_build = (priv->chip->chip_priv->patch_data[26] << 8) |
 			   priv->chip->chip_priv->patch_data[27]; //internal rev
-		if (fw_min != AVL68X2_SDK_VER_MINOR)
+		if (fw_min != AVL68X2_VER_MINOR)
 		{
 			//SDK-FW API rev must match
 			p_error("Firmware version %d.%d.%d incompatible with this driver version",
 				fw_maj, fw_min, fw_build);
 			p_error("Firmware minor version must be %d",
-				AVL68X2_SDK_VER_MINOR);
+				AVL68X2_VER_MINOR);
 			r = 1;
 			release_firmware(priv->fw);
 		}
@@ -661,7 +658,7 @@ static int avl68x2_set_standard(
 		return r;
 	}
 	p_debug("FW version %d.%d.%d\n", ver_info.firmware.major, ver_info.firmware.minor, ver_info.firmware.build);
-	p_debug("API version %d.%d.%d\n", ver_info.sdk.major, ver_info.sdk.minor, ver_info.sdk.build);
+	p_debug("Driver version %d.%d.%d\n", ver_info.driver.major, ver_info.driver.minor, ver_info.driver.build);
 
 
 	if (r)
@@ -1748,7 +1745,7 @@ static void avl68x2_release(struct dvb_frontend *fe)
 	struct avl68x2_priv *priv = fe->demodulator_priv;
 	int lock_led = priv->chip->chip_pub->gpio_lock_led;
 	p_debug("release");
-	deinit_avl68x2_i2cctl_device(fe);
+	deinit_avl68x2_i2cctl_device(priv);
 	if(gpio_is_valid(lock_led))
 	{
 		gpio_free(lock_led);

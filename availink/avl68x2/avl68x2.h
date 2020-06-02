@@ -30,11 +30,7 @@
 #define AVL68X2_DVBTX_FW "availink/dvb-fe-avl68x2-dvbtx.fw"
 #define AVL68X2_ISDBT_FW "availink/dvb-fe-avl68x2-isdbt.fw"
 
-//MAJOR.minor.build
-//MAJOR = public API rev
-//minor = SDK API rev (a.k.a. SDK API MAJOR rev)
-//build number = increment on every change to implementation
-#define AVL68X2_VERSION "2." xstr(AVL68X2_SDK_VER_MAJOR) ".0"
+#define AVL68X2_VERSION xstr(AVL68X2_VER_MAJOR) "." xstr(AVL68X2_VER_MINOR) "." xstr(AVL68X2_VER_BUILD)
 
 #define AVL68X2_BS_CTRL_PROP			isdbt_sb_segment_idx
 //isdbt_sb_segment_idx fields

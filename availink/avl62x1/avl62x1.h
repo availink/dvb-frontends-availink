@@ -26,11 +26,7 @@
 
 #define AVL62X1_FIRMWARE	"availink/dvb-fe-avl62x1.fw"
 
-//MAJOR.minor.build
-//MAJOR = public API rev
-//minor = SDK API rev (a.k.a. SDK API MAJOR rev)
-//build number = increment on every change to implementation
-#define AVL62X1_VERSION "3." xstr(AVL62X1_SDK_VER_MAJOR) ".0"
+#define AVL62X1_VERSION xstr(AVL62X1_VER_MAJOR) "." xstr(AVL62X1_VER_MINOR) "." xstr(AVL62X1_VER_BUILD)
 
 #define AVL62X1_BS_CTRL_PROP			isdbt_sb_segment_idx
 //isdbt_sb_segment_idx fields

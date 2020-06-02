@@ -45,9 +45,9 @@ uint16_t avl62x1_get_version(struct avl62x1_ver_info *version,
 	version->firmware.build =
 	    (uint16_t)((version->firmware.build) << 8) + buf[3];
 
-	version->sdk.major = AVL62X1_SDK_VER_MAJOR;
-	version->sdk.minor = AVL62X1_SDK_VER_MINOR;
-	version->sdk.build = AVL62X1_SDK_VER_BUILD;
+	version->driver.major = AVL62X1_VER_MAJOR;
+	version->driver.minor = AVL62X1_VER_MINOR;
+	version->driver.build = AVL62X1_VER_BUILD;
 
 	return (r);
 }
