@@ -1,6 +1,8 @@
 ## dvb-frontends-availink
 This repository is the temporary home for Availink demodulator drivers until
 they can be upstreamed into media_tree.
+
+Releases are tagged in the format: ```<drivername>_<driverversion>_fw<firmwareversion>```  e.g. avl68x2_2.19.1_fw2.19.27531
 ### Directory Structure
 ```
 availink/
