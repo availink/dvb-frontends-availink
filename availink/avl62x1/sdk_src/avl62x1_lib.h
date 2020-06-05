@@ -19,7 +19,7 @@
 //build number = increment on every change to implementation
 #define AVL62X1_VER_MAJOR	3
 #define AVL62X1_VER_MINOR	8
-#define AVL62X1_VER_BUILD	1
+#define AVL62X1_VER_BUILD	2
 
 #define AVL62X1_CHIP_ID			0x62615ca8
 
@@ -122,6 +122,7 @@ typedef enum avl62x1_xtal
 	avl62x1_refclk_16mhz,
 	avl62x1_refclk_27mhz,
 	avl62x1_refclk_30mhz,
+	avl62x1_refclk_25mhz
 } avl62x1_xtal;
 
 // Defines the device functional mode.
