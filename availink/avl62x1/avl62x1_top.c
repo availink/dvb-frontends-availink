@@ -892,7 +892,10 @@ static int read_status(struct dvb_frontend *fe, enum fe_status *status)
 	mutex_lock(&i2cctl_fe_mutex);
 
 	r = avl62x1_get_lock_status(&lock, priv->chip);
-	if (!r && lock == avl62x1_status_locked)
+
+	safe_mutex_unlock(&i2cctl_fe_mutex);
+
+        if (!r && lock == avl62x1_status_locked)
 	{
 		*status = FE_HAS_SIGNAL | FE_HAS_CARRIER |
 			  FE_HAS_VITERBI | FE_HAS_SYNC |
@@ -905,7 +908,6 @@ static int read_status(struct dvb_frontend *fe, enum fe_status *status)
 		*status = FE_HAS_SIGNAL;
 	}
 
-	safe_mutex_unlock(&i2cctl_fe_mutex);
 
 	return r;
 }

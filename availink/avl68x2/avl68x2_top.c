@@ -192,26 +192,26 @@ static long i2cctl_dev_ioctl(struct file *file, unsigned int cmd, unsigned long 
 	{
 	case I2CCTL_IOCLOCK:
 		if(req->demod) {
-			mutex_lock(&i2cctl_fe_mutex);
-			p_debug_lvl(4,"locked demod");
+                  mutex_lock(&i2cctl_fe_mutex);
+		  	p_debug_lvl(4,"locked demod");
 		}
 		if(req->tuner) {
-			mutex_lock(&i2cctl_tuneri2c_mutex);
+                  mutex_lock(&i2cctl_tuneri2c_mutex);
 			p_debug_lvl(4,"locked tuner");
 		}
 		break;
 	case I2CCTL_IOCUNLOCK:
 		if(req->demod) {
-			if(mutex_is_locked(&i2cctl_fe_mutex)) {
-				mutex_unlock(&i2cctl_fe_mutex);
-				p_debug_lvl(4,"unlocked demod");
-			}
+                  if(mutex_is_locked(&i2cctl_fe_mutex)) {
+                  		mutex_unlock(&i2cctl_fe_mutex);
+                   		p_debug_lvl(4,"unlocked demod");
+                  }
 		}
 		if(req->tuner) {
-			if(mutex_is_locked(&i2cctl_tuneri2c_mutex)) {
-				mutex_unlock(&i2cctl_tuneri2c_mutex);
-				p_debug_lvl(4,"unlocked tuner");
-			}
+                  if(mutex_is_locked(&i2cctl_tuneri2c_mutex)) {
+                  		mutex_unlock(&i2cctl_tuneri2c_mutex);
+                  		p_debug_lvl(4,"unlocked tuner");
+                  }
 		}
 		break;
 	default: /* redundant, as cmd was checked against MAXNR */
@@ -366,7 +366,7 @@ static int diseqc_set_voltage(
 		p_debug("voltage 18");
 		break;
 	default:
-		safe_mutex_unlock(&i2cctl_fe_mutex);
+          safe_mutex_unlock(&i2cctl_fe_mutex);
 		return -EINVAL;
 	}
 	ret = avl68x2_demod_set_gpio(AVL_Pin37, pwr, priv->chip);
@@ -386,7 +386,7 @@ static int avl68x2_i2c_gate_ctrl(struct dvb_frontend *fe, int enable)
 
 	if (enable)
 	{
-		mutex_lock(&i2cctl_tuneri2c_mutex);
+          mutex_lock(&i2cctl_tuneri2c_mutex);
 		ret = avl68x2_demod_i2c_passthru_on(priv->chip);
 	}
 	else
@@ -1275,7 +1275,16 @@ static int avl68x2_read_status(struct dvb_frontend *fe, enum fe_status *status)
 	mutex_lock(&i2cctl_fe_mutex);
 	
 	ret = avl68x2_demod_get_lock_status(&lock, priv->chip);
-	if (!ret && lock == AVL_STATUS_LOCK)
+
+	if(debug > 1) {
+	  ret |= avl68x2_demod_get_snr (&SNR_x100db, priv->chip);
+	  ret = (int)avl68x2_demod_get_per(&ber, priv->chip);
+	  printk("read status %d, snr = %d, per = %d\n",*status, SNR_x100db, ber);
+	}
+
+	safe_mutex_unlock(&i2cctl_fe_mutex);
+        
+        if (!ret && lock == AVL_STATUS_LOCK)
 	{
 		*status = FE_HAS_SIGNAL | FE_HAS_CARRIER |
 			  FE_HAS_VITERBI | FE_HAS_SYNC | FE_HAS_LOCK;
@@ -1288,11 +1297,6 @@ static int avl68x2_read_status(struct dvb_frontend *fe, enum fe_status *status)
 		avl68x2_set_lock_led(fe,0);
 	}
 	
-	if(debug > 1) {
-	  ret |= avl68x2_demod_get_snr (&SNR_x100db, priv->chip);
-	  ret = (int)avl68x2_demod_get_per(&ber, priv->chip);
-	  printk("read status %d, snr = %d, per = %d\n",*status, SNR_x100db, ber);
-	}
 
 #if INCLUDE_STDOUT
 	if(debug > 2) {
@@ -1300,7 +1304,6 @@ static int avl68x2_read_status(struct dvb_frontend *fe, enum fe_status *status)
 	}
 #endif
 
-	safe_mutex_unlock(&i2cctl_fe_mutex);
 	return ret;
 }
 
