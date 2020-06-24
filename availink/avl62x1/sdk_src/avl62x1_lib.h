@@ -19,7 +19,7 @@
 //build number = increment on every change to implementation
 #define AVL62X1_VER_MAJOR	3
 #define AVL62X1_VER_MINOR	8
-#define AVL62X1_VER_BUILD	2
+#define AVL62X1_VER_BUILD	3
 
 #define AVL62X1_CHIP_ID			0x62615ca8
 
