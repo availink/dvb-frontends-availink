@@ -17,7 +17,7 @@
 //build number = increment on every change to implementation
 #define AVL68X2_VER_MAJOR	2
 #define AVL68X2_VER_MINOR	19
-#define AVL68X2_VER_BUILD	2
+#define AVL68X2_VER_BUILD	3
 
 #define AVL68XX			0x68624955
 

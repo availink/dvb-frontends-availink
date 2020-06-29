@@ -89,9 +89,10 @@ int diseqc_tone = 0;
 int diseqc_voltage = 0;
 //---------------------------------
 
+//--------- i2c control device ---------------------------------------------
 //---- character device stuff ----
-#define DEVICE_NAME "avl68x2_i2c" //device at /dev/DEVICE_NAME
-#define CLASS_NAME  "avl68x2"     //device class
+#define I2CCTL_DEVICE_NAME "avl68x2_i2c" //device at /dev/DEVICE_NAME
+#define I2CCTL_CLASS_NAME  "avl68x2_i2c"     //device class
 #define I2CCTL_IOC_MAGIC 'k'
 #define I2CCTL_IOCLOCK _IO(I2CCTL_IOC_MAGIC, 0)
 #define I2CCTL_IOCUNLOCK _IO(I2CCTL_IOC_MAGIC, 1)
@@ -127,7 +128,7 @@ static struct file_operations i2cctl_fops =
 
 int init_avl68x2_i2cctl_device(struct avl68x2_priv *priv)
 {
-	i2cctl_maj_num = register_chrdev(0, DEVICE_NAME, &i2cctl_fops);
+	i2cctl_maj_num = register_chrdev(0, I2CCTL_DEVICE_NAME, &i2cctl_fops);
 	if (i2cctl_maj_num < 0)
 	{
 		p_error("failed to register a major number");
@@ -135,20 +136,20 @@ int init_avl68x2_i2cctl_device(struct avl68x2_priv *priv)
 	}
 
 	// Register the device class
-	i2cctl_class = class_create(THIS_MODULE, CLASS_NAME);
+	i2cctl_class = class_create(THIS_MODULE, I2CCTL_CLASS_NAME);
 	if (IS_ERR(i2cctl_class))
 	{ // Check for error and clean up if there is
-		unregister_chrdev(i2cctl_maj_num, DEVICE_NAME);
+		unregister_chrdev(i2cctl_maj_num, I2CCTL_DEVICE_NAME);
 		p_error("Failed to register device class");
 		return PTR_ERR(i2cctl_class); // Correct way to return an error on a pointer
 	}
 
 	// Register the device driver
-	i2cctl_device = device_create(i2cctl_class, NULL, MKDEV(i2cctl_maj_num, 0), NULL, DEVICE_NAME);
+	i2cctl_device = device_create(i2cctl_class, NULL, MKDEV(i2cctl_maj_num, 0), NULL, I2CCTL_DEVICE_NAME);
 	if (IS_ERR(i2cctl_device))
 	{				     // Clean up if there is an error
 		class_destroy(i2cctl_class); // Repeated code but the alternative is goto statements
-		unregister_chrdev(i2cctl_maj_num, DEVICE_NAME);
+		unregister_chrdev(i2cctl_maj_num, I2CCTL_DEVICE_NAME);
 		p_error("Failed to create the device");
 		return PTR_ERR(i2cctl_device);
 	}
@@ -164,10 +165,10 @@ void deinit_avl68x2_i2cctl_device(struct avl68x2_priv *priv)
 	device_destroy(i2cctl_class, MKDEV(i2cctl_maj_num, 0)); // remove the device
 	class_unregister(i2cctl_class);			     // unregister the device class
 	class_destroy(i2cctl_class);			     // remove the device class
-	unregister_chrdev(i2cctl_maj_num, DEVICE_NAME);	     // unregister the major number
+	unregister_chrdev(i2cctl_maj_num, I2CCTL_DEVICE_NAME);	     // unregister the major number
 
-	mutex_unlock(&i2cctl_fe_mutex);
-	mutex_unlock(&i2cctl_tuneri2c_mutex);
+	safe_mutex_unlock(&i2cctl_fe_mutex);
+	safe_mutex_unlock(&i2cctl_tuneri2c_mutex);
 
 	mutex_destroy(&i2cctl_dev_mutex);
 }
@@ -266,10 +267,105 @@ static ssize_t i2cctl_dev_write(struct file *filep, const char *buffer, size_t l
 static int i2cctl_dev_release(struct inode *inodep, struct file *filep)
 {
 	p_debug_lvl(4,"");
-	mutex_unlock(&i2cctl_dev_mutex);
+	safe_mutex_unlock(&i2cctl_fe_mutex);
+	safe_mutex_unlock(&i2cctl_tuneri2c_mutex);
+	safe_mutex_unlock(&i2cctl_dev_mutex);
 	return 0;
 }
-//--------------------------------
+//--------------------------------------------------------------------------
+
+//-------------- stdout character device -----------------------------------
+#if INCLUDE_STDOUT
+#include "read_stdout_68x2.c"
+#define STDOUT_DEVICE_NAME "avl68x2_stdout"
+#define STDOUT_CLASS_NAME "avl68x2_stdout"
+static DEFINE_MUTEX(stdout_dev_mutex);
+static int stdout_maj_num;
+static struct class*  stdout_class  = NULL;
+static struct device* stdout_device = NULL;
+static int     stdout_dev_open(struct inode *, struct file *);
+static int     stdout_dev_release(struct inode *, struct file *);
+static ssize_t stdout_dev_read(struct file *, char *, size_t, loff_t *);
+static struct file_operations stdout_fops =
+    {
+	.owner = THIS_MODULE,
+	.open = stdout_dev_open,
+	.read = stdout_dev_read,
+	.release = stdout_dev_release};
+int init_avl68x2_stdout_device(struct avl68x2_priv *priv)
+{
+	stdout_maj_num = register_chrdev(0, STDOUT_DEVICE_NAME, &stdout_fops);
+	if (stdout_maj_num < 0)
+	{
+		p_error("failed to register a major number");
+		return stdout_maj_num;
+	}
+
+	// Register the device class
+	stdout_class = class_create(THIS_MODULE, STDOUT_CLASS_NAME);
+	if (IS_ERR(stdout_class))
+	{ // Check for error and clean up if there is
+		unregister_chrdev(stdout_maj_num, STDOUT_DEVICE_NAME);
+		p_error("Failed to register device class");
+		return PTR_ERR(stdout_class); // Correct way to return an error on a pointer
+	}
+
+	// Register the device driver
+	stdout_device = device_create(stdout_class, NULL, MKDEV(stdout_maj_num, 0), NULL, STDOUT_DEVICE_NAME);
+	if (IS_ERR(stdout_device))
+	{				     // Clean up if there is an error
+		class_destroy(stdout_class); // Repeated code but the alternative is goto statements
+		unregister_chrdev(stdout_maj_num, STDOUT_DEVICE_NAME);
+		p_error("Failed to create the device");
+		return PTR_ERR(stdout_device);
+	}
+
+	mutex_init(&stdout_dev_mutex);
+	return 0;
+}
+
+void deinit_avl68x2_stdout_device(struct avl68x2_priv *priv)
+{
+	device_destroy(stdout_class, MKDEV(stdout_maj_num, 0)); // remove the device
+	class_unregister(stdout_class);			     // unregister the device class
+	class_destroy(stdout_class);			     // remove the device class
+	unregister_chrdev(stdout_maj_num, STDOUT_DEVICE_NAME);	     // unregister the major number
+
+	mutex_destroy(&stdout_dev_mutex);
+}
+
+static int stdout_dev_open(struct inode *inodep, struct file *filep)
+{
+	p_debug_lvl(4,"");
+	if (!mutex_trylock(&stdout_dev_mutex))
+	{	/// Try to acquire the mutex (i.e., put the lock on/down)
+		/// returns 1 if successful and 0 if there is contention
+		p_error("Device in use by another process");
+		return -EBUSY;
+	}
+	return 0;
+}
+
+static ssize_t stdout_dev_read(
+    struct file *filep,
+    char *buffer,   /* The buffer to fill with data */
+    size_t len,	    /* The length of the buffer     */
+    loff_t *offset) /* Our offset in the file       */
+{
+
+	char *stdout_buf;
+	stdout_buf = read_stdout(&global_priv->frontend);
+	return simple_read_from_buffer(buffer, len, offset, stdout_buf, strlen(stdout_buf));
+}
+
+static int stdout_dev_release(struct inode *inodep, struct file *filep)
+{
+	p_debug_lvl(4,"");
+	safe_mutex_unlock(&stdout_dev_mutex);
+	return 0;
+}
+#endif
+//--------------------------------------------------------------------------
 
 const AVL_DVBTxConfig default_dvbtx_config =
     {
@@ -1249,11 +1345,6 @@ static int get_frontend(struct dvb_frontend *fe,
 	return ret;
 }
 
-
-#if INCLUDE_STDOUT
-#include "read_stdout_68x2.c"
-#endif
-
 static int avl68x2_read_status(struct dvb_frontend *fe, enum fe_status *status)
 {
 	struct avl68x2_priv *priv = fe->demodulator_priv;
@@ -1304,13 +1395,6 @@ static int avl68x2_read_status(struct dvb_frontend *fe, enum fe_status *status)
 		*status = FE_HAS_SIGNAL;
 		avl68x2_set_lock_led(fe, 0);
 	}
-
-#if INCLUDE_STDOUT
-	if (debug > 2)
-	{
-		printk("%s", read_stdout(fe));
-	}
-#endif
 
 	return ret;
 }
@@ -1757,6 +1841,9 @@ static void avl68x2_release(struct dvb_frontend *fe)
 	int lock_led = priv->chip->chip_pub->gpio_lock_led;
 	p_debug("release");
 	deinit_avl68x2_i2cctl_device(priv);
+#if INCLUDE_STDOUT
+	deinit_avl68x2_stdout_device(priv);
+#endif
 	if(gpio_is_valid(lock_led))
 	{
 		gpio_free(lock_led);
@@ -1981,6 +2068,9 @@ struct dvb_frontend *avl68x2_attach(struct avl68x2_config *config,
 		release_firmware(priv->fw);
 
 		init_avl68x2_i2cctl_device(priv);
+#if INCLUDE_STDOUT
+		init_avl68x2_stdout_device(priv);
+#endif
 
 		if(gpio_is_valid(priv->chip->chip_pub->gpio_lock_led))
 		{
