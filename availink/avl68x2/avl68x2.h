@@ -25,10 +25,10 @@
 #define DVB_VER_ATLEAST(maj, min) \
 	(DVB_VER_INT(DVB_API_VERSION, DVB_API_VERSION_MINOR) >= DVB_VER_INT(maj, min))
 
-#define AVL68X2_DVBSX_FW "availink/dvb-fe-avl68x2-dvbsx.fw"
-#define AVL68X2_DVBC_FW "availink/dvb-fe-avl68x2-dvbc.fw"
-#define AVL68X2_DVBTX_FW "availink/dvb-fe-avl68x2-dvbtx.fw"
-#define AVL68X2_ISDBT_FW "availink/dvb-fe-avl68x2-isdbt.fw"
+#define AVL68X2_DVBSX_FW	"availink/dvb-fe-avl68x2-dvbsx.fw"
+#define AVL68X2_DVBC_FW		"availink/dvb-fe-avl68x2-dvbc.fw"
+#define AVL68X2_DVBTX_FW	"availink/dvb-fe-avl68x2-dvbtx.fw"
+#define AVL68X2_ISDBT_FW	"availink/dvb-fe-avl68x2-isdbt.fw"
 
 #define AVL68X2_VERSION xstr(AVL68X2_VER_MAJOR) "." xstr(AVL68X2_VER_MINOR) "." xstr(AVL68X2_VER_BUILD)
 
