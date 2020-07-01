@@ -71,12 +71,14 @@
 	}
 
 static struct avl62x1_bs_state bs_states[AVL_MAX_NUM_DEMODS] = {0};
-static struct avl62x1_priv *global_priv; //just for debug
+static struct avl62x1_priv *global_priv = NULL;
+static char sel_fw[256] = {0};
 
 //--- module params ---
 static int debug = 0;
 static unsigned short bs_mode = 0;
 static int bs_min_sr = 1000000;
+char fw_path[256] = {0};
 //-------------------
 
 //---- character device stuff ----
@@ -504,7 +506,8 @@ static int acquire_dvbs_s2(struct dvb_frontend *fe)
 }
 
 static int set_dvb_mode(struct dvb_frontend *fe,
-			enum fe_delivery_system delsys)
+			enum fe_delivery_system delsys,
+			bool force_reload)
 {
 	struct avl62x1_priv *priv = fe->demodulator_priv;
 	uint16_t ret = AVL_EC_OK;
@@ -512,7 +515,7 @@ static int set_dvb_mode(struct dvb_frontend *fe,
 	struct avl62x1_ver_info ver_info;
 
 	/* already in desired mode */
-	if (priv->delivery_system == delsys)
+	if (!force_reload && (priv->delivery_system == delsys))
 		return 0;
 
 	p_debug("initing demod for delsys=%d", delsys);
@@ -1583,14 +1586,50 @@ static struct dvb_frontend_ops avl62x1_ops = {
     .get_frontend = get_frontend,
 };
 
+static int avl62x1_get_firmware(struct dvb_frontend *fe) {
+	unsigned int fw_maj, fw_min, fw_build;
+	int fw_status;
+	struct avl62x1_priv *priv = fe->demodulator_priv;
+
+	fw_status = request_firmware(&priv->fw,
+				     sel_fw,
+				     priv->i2c->dev.parent);
+	if (fw_status != 0)
+	{
+		p_error("firmware file %s not found",sel_fw);
+		return fw_status;
+	}
+
+	priv->chip->chip_priv->patch_data = (unsigned char *)(priv->fw->data);
+	fw_maj = priv->chip->chip_priv->patch_data[24]; //major rev
+	fw_min = priv->chip->chip_priv->patch_data[25]; //SDK-FW API rev
+	fw_build = (priv->chip->chip_priv->patch_data[26] << 8) |
+			priv->chip->chip_priv->patch_data[27]; //internal rev
+	if(fw_min != AVL62X1_VER_MINOR)
+	{
+		//SDK-FW API rev must match
+		p_error("Firmware version %d.%d.%d incompatible with this driver version",
+			fw_maj, fw_min, fw_build);
+		p_error("Firmware minor version must be %d",
+			AVL62X1_VER_MINOR);
+		release_firmware(priv->fw);
+		return 1;
+	}
+	else
+	{
+		p_info("Firmware version %d.%d.%d found",
+				fw_maj, fw_min, fw_build);
+	}
+
+	return 0;
+}
+
 struct dvb_frontend *avl62x1_attach(struct avl62x1_config *config,
 				    struct i2c_adapter *i2c)
 {
 	struct avl62x1_priv *priv;
 	uint16_t ret;
 	uint32_t id;
-	int fw_status;
-	unsigned int fw_maj, fw_min, fw_build;
 
 	p_info("driver version %s\n", AVL62X1_VERSION);
 
@@ -1663,51 +1702,20 @@ struct dvb_frontend *avl62x1_attach(struct avl62x1_config *config,
 
 	p_info("found AVL62x1 id=0x%x", id);
 
-	fw_status = request_firmware(&priv->fw,
-				     AVL62X1_FIRMWARE,
-				     i2c->dev.parent);
-	if (fw_status != 0)
-	{
-		p_error("firmware file not found");
-		goto err4;
-	}
-	else
-	{
-		priv->chip->chip_priv->patch_data = (unsigned char *)(priv->fw->data);
-		fw_maj = priv->chip->chip_priv->patch_data[24]; //major rev
-		fw_min = priv->chip->chip_priv->patch_data[25]; //SDK-FW API rev
-		fw_build = (priv->chip->chip_priv->patch_data[26] << 8) |
-			   priv->chip->chip_priv->patch_data[27]; //internal rev
-		if(fw_min != AVL62X1_VER_MINOR)
+	if(!avl62x1_get_firmware(&priv->frontend)) {
+		if(!set_dvb_mode(&priv->frontend, SYS_DVBS2, false))
 		{
-			//SDK-FW API rev must match
-			p_error("Firmware version %d.%d.%d incompatible with this driver version",
-				fw_maj, fw_min, fw_build);
-			p_error("Firmware minor version must be %d",
-				AVL62X1_VER_MINOR);
-			goto err5;
-		}
-		else
-		{
-			p_info("Firmware version %d.%d.%d found",
-				 fw_maj, fw_min, fw_build);
-		}
-	}
-
-	if (!set_dvb_mode(&priv->frontend, SYS_DVBS2))
-	{
-		p_info("Firmware booted");
-		release_firmware(priv->fw);
-		init_avl62x1_i2cctl_device(priv);
+			p_info("Firmware booted");
+			release_firmware(priv->fw);
+			init_avl62x1_i2cctl_device(priv);
 #if INCLUDE_STDOUT
-		init_avl62x1_stdout_device(priv);
+			init_avl62x1_stdout_device(priv);
 #endif
-		
-		return &priv->frontend;
+			
+			return &priv->frontend;
+		}
 	}
 
-err5:
-	release_firmware(priv->fw);
 err4:
 	kfree(priv->chip->chip_pub);
 err3:
@@ -1726,6 +1734,8 @@ static int __init mod_init(void) {
 
 	p_debug("");
 
+	global_priv = NULL;
+
 	for(i=0; i<AVL_MAX_NUM_DEMODS; i++) {
 		bs_states[i].bs_mode = (bs_mode>>i) & 1;
 		bs_states[i].num_carriers = 0;
@@ -1734,6 +1744,11 @@ static int __init mod_init(void) {
 		bs_states[i].carriers = NULL;
 		bs_states[i].streams = NULL;
 	}
+
+	if(strlen(sel_fw) == 0) {
+		strscpy(sel_fw, AVL62X1_FIRMWARE, sizeof(sel_fw));
+	}
+
 	return 0;
 }
 module_init(mod_init);
@@ -1793,6 +1808,39 @@ static const struct kernel_param_ops bs_min_sr_ops = {
 };
 module_param_cb(bs_min_sr, &bs_min_sr_ops, &bs_min_sr, 0644);
 MODULE_PARM_DESC(bs_min_sr, " minimum symbol rate (Hz) for blindscan mode [1000000:55000000]");
+
+static int fw_path_set(const char *val, const struct kernel_param *kp)
+{
+	char *clean_val = strim((char *)val);
+	strscpy(sel_fw, clean_val, sizeof(sel_fw));
+	strscpy(fw_path, clean_val, sizeof(fw_path));
+
+	if (global_priv != NULL)
+	{
+		if (!avl62x1_get_firmware(&global_priv->frontend))
+		{
+			if (!set_dvb_mode(&global_priv->frontend, SYS_DVBS2, true))
+			{
+				p_info("New firmware %s booted",sel_fw);
+				release_firmware(global_priv->fw);
+			}
+		}
+	}
+
+	return 0;
+}
+static int fw_path_get(char *buffer, const struct kernel_param *kp)
+{
+	sprintf(buffer, "%s",sel_fw);
+	return strlen(buffer);
+}
+static const struct kernel_param_ops fw_path_ops = {
+	.set	= fw_path_set,
+	.get	= fw_path_get
+};
+module_param_cb(fw_path, &fw_path_ops, fw_path, 0644);
+MODULE_PARM_DESC(fw_path, "<path>");
+
 
 MODULE_DESCRIPTION("Availink AVL62X1 DVB-S/S2/S2X demodulator driver");
 MODULE_AUTHOR("Availink, Inc. (gpl@availink.com)");

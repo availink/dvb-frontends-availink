@@ -628,19 +628,19 @@ static int avl68x2_get_firmware(struct dvb_frontend *fe, int force_fw)
 	{
 	case SYS_DVBS:
 	case SYS_DVBS2:
-		strncpy(fw_path, sel_dvbsx_fw, 255);
+		strscpy(fw_path, sel_dvbsx_fw, sizeof(fw_path));
 		break;
 	case SYS_ISDBT:
-		strncpy(fw_path, sel_isdbt_fw, 255);
+		strscpy(fw_path, sel_isdbt_fw, sizeof(fw_path));
 		break;
 	case SYS_DVBC_ANNEX_A:		  //"DVB-C"
 	case SYS_DVBC_ANNEX_B:		  //J.83-B
-		strncpy(fw_path, sel_dvbc_fw, 255);
+		strscpy(fw_path, sel_dvbc_fw, sizeof(fw_path));
 		break;
 	case SYS_DVBT:
 	case SYS_DVBT2:
 	default:
-		strncpy(fw_path, sel_dvbtx_fw, 255);
+		strscpy(fw_path, sel_dvbtx_fw, sizeof(fw_path));
 	}
 
 	fw_status = request_firmware(&priv->fw, fw_path, priv->i2c->dev.parent);
@@ -2029,28 +2029,28 @@ struct dvb_frontend *avl68x2_attach(struct avl68x2_config *config,
 		//C, I, S, T
 		memcpy(&avl68x2_ops.delsys,
 		       delsys_b, sizeof(delsys_b));
-		strncpy(feat_str,"DVB-C/Sx/Tx, J.83B, and ISDB-T",255);
+		strscpy(feat_str,"DVB-C/Sx/Tx, J.83B, and ISDB-T",sizeof(feat_str));
 		part_num = 6882;
 		break;
 	case 0xd:
 		//C, I, S
 		memcpy(&avl68x2_ops.delsys,
 		       delsys_d, sizeof(delsys_d));
-		strncpy(feat_str,"DVB-C/Sx, J.83B, and ISDB-T",255);
+		strscpy(feat_str,"DVB-C/Sx, J.83B, and ISDB-T",sizeof(feat_str));
 		part_num = 6812;
 		break;
 	case 0xe:
 		//C, T
 		memcpy(&avl68x2_ops.delsys,
 		       delsys_e, sizeof(delsys_e));
-		strncpy(feat_str,"DVB-C/Tx and J.83B",255);
+		strscpy(feat_str,"DVB-C/Tx and J.83B",sizeof(feat_str));
 		part_num = 6762;
 		break;
 	case 0xf:
 		//C, S, T
 		memcpy(&avl68x2_ops.delsys,
 		       delsys_f, sizeof(delsys_f));
-		strncpy(feat_str,"DVB-C/Sx/Tx and J.83B",255);
+		strscpy(feat_str,"DVB-C/Sx/Tx and J.83B",sizeof(feat_str));
 		part_num = 6862;
 		break;
 	default:
@@ -2117,16 +2117,16 @@ static int __init mod_init(void) {
 	}
 
 	if(strlen(sel_dvbsx_fw) == 0) {
-		strncpy(sel_dvbsx_fw, AVL68X2_DVBSX_FW, 255);
+		strscpy(sel_dvbsx_fw, AVL68X2_DVBSX_FW, sizeof(sel_dvbsx_fw));
 	}
 	if(strlen(sel_dvbtx_fw) == 0) {
-		strncpy(sel_dvbtx_fw, AVL68X2_DVBTX_FW, 255);
+		strscpy(sel_dvbtx_fw, AVL68X2_DVBTX_FW, sizeof(sel_dvbtx_fw));
 	}
 	if(strlen(sel_dvbc_fw) == 0) {
-		strncpy(sel_dvbc_fw, AVL68X2_DVBC_FW, 255);
+		strscpy(sel_dvbc_fw, AVL68X2_DVBC_FW, sizeof(sel_dvbc_fw));
 	}
 	if(strlen(sel_isdbt_fw) == 0) {
-		strncpy(sel_isdbt_fw, AVL68X2_ISDBT_FW, 255);
+		strscpy(sel_isdbt_fw, AVL68X2_ISDBT_FW, sizeof(sel_isdbt_fw));
 	}
 
 	return 0;
@@ -2254,7 +2254,7 @@ MODULE_PARM_DESC(diseqc_voltage, " voltage control");
 size_t get_fw_path(const char *val, const char *prefix, char **begin) {
 	char *b = NULL;
 	size_t len = 0;
-	b = strstr(val,prefix);
+	b = strstr(strim((char *)val),prefix);
 	if(b != NULL) {
 		len = strcspn(b,";");
 		p_debug("len %d",(int)len);
@@ -2276,7 +2276,9 @@ static int fw_paths_set(const char *val, const struct kernel_param *kp)
 	len = get_fw_path(val,"C=",&b);
 	if(len != 0) {
 		memset(sel_dvbc_fw,0,sizeof(sel_dvbc_fw));
-		strncpy(sel_dvbc_fw,&b[2],len-2);
+		strscpy(sel_dvbc_fw,
+			&b[2],
+			min(len - 2, sizeof(sel_dvbc_fw)));
 		p_info("set C=%s",sel_dvbc_fw);
 		mode = AVL_DVBC;
 		delsys = SYS_DVBC_ANNEX_A;
@@ -2285,7 +2287,9 @@ static int fw_paths_set(const char *val, const struct kernel_param *kp)
 	len = get_fw_path(val,"I=",&b);
 	if(len != 0) {
 		memset(sel_isdbt_fw,0,sizeof(sel_isdbt_fw));
-		strncpy(sel_isdbt_fw,&b[2],len-2);
+		strscpy(sel_isdbt_fw,
+			&b[2],
+			min(len - 2, sizeof(sel_isdbt_fw)));
 		p_info("set I=%s",sel_isdbt_fw);
 		mode = AVL_ISDBT;
 		delsys = SYS_ISDBT;
@@ -2294,7 +2298,9 @@ static int fw_paths_set(const char *val, const struct kernel_param *kp)
 	len = get_fw_path(val,"S=",&b);
 	if(len != 0) {
 		memset(sel_dvbsx_fw,0,sizeof(sel_dvbsx_fw));
-		strncpy(sel_dvbsx_fw,&b[2],len-2);
+		strscpy(sel_dvbsx_fw,
+			&b[2],
+			min(len - 2, sizeof(sel_dvbsx_fw)));
 		p_info("set S=%s",sel_dvbsx_fw);
 		mode = AVL_DVBSX;
 		delsys = SYS_DVBS2;
@@ -2303,12 +2309,14 @@ static int fw_paths_set(const char *val, const struct kernel_param *kp)
 	len = get_fw_path(val,"T=",&b);
 	if(len != 0) {
 		memset(sel_dvbtx_fw,0,sizeof(sel_dvbtx_fw));
-		strncpy(sel_dvbtx_fw,&b[2],len-2);
+		strscpy(sel_dvbtx_fw,
+			&b[2],
+			min(len - 2, sizeof(sel_dvbtx_fw)));
 		p_info("set T=%s",sel_dvbtx_fw);
 		mode = AVL_DVBTX;
 		delsys = SYS_DVBT2;
 	}
-	strcpy(fw_paths,val);
+	strscpy(fw_paths,val,sizeof(fw_paths));
 
 	if(global_priv != NULL) {
 		if(avl68x2_get_firmware(&global_priv->frontend,delsys))
