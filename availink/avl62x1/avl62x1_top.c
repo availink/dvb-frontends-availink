@@ -1746,7 +1746,7 @@ static int __init mod_init(void) {
 	}
 
 	if(strlen(sel_fw) == 0) {
-		strscpy(sel_fw, AVL62X1_FIRMWARE, sizeof(sel_fw));
+		strlcpy(sel_fw, AVL62X1_FIRMWARE, sizeof(sel_fw));
 	}
 
 	return 0;
@@ -1812,8 +1812,8 @@ MODULE_PARM_DESC(bs_min_sr, " minimum symbol rate (Hz) for blindscan mode [10000
 static int fw_path_set(const char *val, const struct kernel_param *kp)
 {
 	char *clean_val = strim((char *)val);
-	strscpy(sel_fw, clean_val, sizeof(sel_fw));
-	strscpy(fw_path, clean_val, sizeof(fw_path));
+	strlcpy(sel_fw, clean_val, sizeof(sel_fw));
+	strlcpy(fw_path, clean_val, sizeof(fw_path));
 
 	if (global_priv != NULL)
 	{
