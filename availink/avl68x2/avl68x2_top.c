@@ -2276,9 +2276,10 @@ static int fw_paths_set(const char *val, const struct kernel_param *kp)
 	len = get_fw_path(val,"C=",&b);
 	if(len != 0) {
 		memset(sel_dvbc_fw,0,sizeof(sel_dvbc_fw));
+		//len - 1 to account for null terminator
 		strlcpy(sel_dvbc_fw,
 			&b[2],
-			min(len - 2, sizeof(sel_dvbc_fw)));
+			min(len - 1, sizeof(sel_dvbc_fw)));
 		p_info("set C=%s",sel_dvbc_fw);
 		mode = AVL_DVBC;
 		delsys = SYS_DVBC_ANNEX_A;
@@ -2289,7 +2290,7 @@ static int fw_paths_set(const char *val, const struct kernel_param *kp)
 		memset(sel_isdbt_fw,0,sizeof(sel_isdbt_fw));
 		strlcpy(sel_isdbt_fw,
 			&b[2],
-			min(len - 2, sizeof(sel_isdbt_fw)));
+			min(len - 1, sizeof(sel_isdbt_fw)));
 		p_info("set I=%s",sel_isdbt_fw);
 		mode = AVL_ISDBT;
 		delsys = SYS_ISDBT;
@@ -2300,7 +2301,7 @@ static int fw_paths_set(const char *val, const struct kernel_param *kp)
 		memset(sel_dvbsx_fw,0,sizeof(sel_dvbsx_fw));
 		strlcpy(sel_dvbsx_fw,
 			&b[2],
-			min(len - 2, sizeof(sel_dvbsx_fw)));
+			min(len - 1, sizeof(sel_dvbsx_fw)));
 		p_info("set S=%s",sel_dvbsx_fw);
 		mode = AVL_DVBSX;
 		delsys = SYS_DVBS2;
@@ -2311,7 +2312,7 @@ static int fw_paths_set(const char *val, const struct kernel_param *kp)
 		memset(sel_dvbtx_fw,0,sizeof(sel_dvbtx_fw));
 		strlcpy(sel_dvbtx_fw,
 			&b[2],
-			min(len - 2, sizeof(sel_dvbtx_fw)));
+			min(len - 1, sizeof(sel_dvbtx_fw)));
 		p_info("set T=%s",sel_dvbtx_fw);
 		mode = AVL_DVBTX;
 		delsys = SYS_DVBT2;
